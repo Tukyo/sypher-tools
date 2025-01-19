@@ -228,6 +228,8 @@ const CryptoModule = {
         const account = await this.connect(chain);
         if (!account) { return null; }
 
+        console.log("Getting details for:", { chain, contractAddress, poolAddress, version });
+
         const tokenBalance = await this.getBalance(contractAddress);
 
         let tokenPrice = null;
