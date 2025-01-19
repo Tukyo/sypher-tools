@@ -48,7 +48,7 @@
     // Expose to global namespace
     global.sypher = sypher;
 
-    console.log("sypher initialized:", sypher);
+    console.log("Sypher Modules Initialized!");
 })(window);
 ////
 // #endregion Namespace Declaration & Initialization

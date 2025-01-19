@@ -28,11 +28,69 @@ const UNISWAP_V3_POOL_ABI = [
     "function decimals() view returns (uint8)",
     "function liquidity() view returns (uint128)"
 ];
+const CHAINS = {
+    ethereum: {
+        params: [{
+            chainId: "0x1",
+            chainName: "Ethereum",
+            nativeCurrency: {
+                name: "Ethereum",
+                symbol: "ETH",
+                decimals: 18
+            },
+            rpcUrls: ['https://eth.llamarpc.com'],
+            blockExplorerUrls: ['https://etherscan.io']
+        }],
+        chainlinkAddress: "0x71041dddad3595F9CEd3DcCFBe3D1F4b0a16Bb70"
+    },
+    arbitrum: {
+        params: [{
+            chainId: "0xa4b1",
+            chainName: "Arbitrum",
+            nativeCurrency: {
+                name: "Arbitrum",
+                symbol: "ETH",
+                decimals: 18
+            },
+            rpcUrls: ['https://arbitrum.llamarpc.com'],
+            blockExplorerUrls: ['https://arbiscan.io']
+        }],
+        chainlinkAddress: "0x639Fe6ab55C921f74e7fac1ee960C0B6293ba612"
+    },
+    optimism: {
+        params: [{
+            chainId: "0xa",
+            chainName: "Optimism",
+            nativeCurrency: {
+                name: "Optimism",
+                symbol: "ETH",
+                decimals: 18
+            },
+            rpcUrls: ['https://optimism.llamarpc.com'],
+            blockExplorerUrls: ['https://optimistic.etherscan.io']
+        }],
+        chainlinkAddress: "0xb7B9A39CC63f856b90B364911CC324dC46aC1770"
+    },
+    base: {
+        params: [{
+            chainId: "0x2105",
+            chainName: "Base",
+            nativeCurrency: {
+                name: "Base",
+                symbol: "ETH",
+                decimals: 18
+            },
+            rpcUrls: ['https://mainnet.base.org'],
+            blockExplorerUrls: ['https://basescan.org']
+        }],
+        chainlinkAddress: "0x71041dddad3595F9CEd3DcCFBe3D1F4b0a16Bb70"
+    }
+};
 const CHAINLINK_ADDRESSES = {
-    ethereum: "0x71041dddad3595F9CEd3DcCFBe3D1F4b0a16Bb70",
-    arbitrum: "0x639Fe6ab55C921f74e7fac1ee960C0B6293ba612",
-    optimism: "0xb7B9A39CC63f856b90B364911CC324dC46aC1770",
-    base: "0x71041dddad3595F9CEd3DcCFBe3D1F4b0a16Bb70"
+    ethereum: CHAINS.ethereum.chainlinkAddress,
+    arbitrum: CHAINS.arbitrum.chainlinkAddress,
+    optimism: CHAINS.optimism.chainlinkAddress,
+    base: CHAINS.base.chainlinkAddress
 };
 const CryptoModule = {
     /**
@@ -48,8 +106,13 @@ const CryptoModule = {
      * 
      * -------> Call this function to get started! <-------
      * 
+     * Supported Chains: "ethereum", "arbitrum", "optimism", "base"
+     * 
      */
     initCrypto: async function (chain, contractAddress, poolAddress, version) {
+        const account = await this.connect(chain);
+        if (!account) { return null; }
+
         const tokenBalance = await this.getBalance(contractAddress);
 
         let tokenPrice = null;
@@ -77,6 +140,51 @@ const CryptoModule = {
      * @returns {Promise<string>} The current price of Ethereum on the specified chain.
      * 
      */
+    connect: async function (chain) {
+        if (!window.ethereum) { return; }
+        try {
+            const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+            console.log("Accounts:", accounts);
+    
+            await this.switchChain(chain);
+    
+            if (accounts[0]) {
+                console.log("Wallet connected...");
+                return accounts[0];
+            } else {
+                console.log("Wallet not connected...");
+                return null;
+            }
+        } catch (error) {
+            console.error('Connection error:', error);
+            return null;
+        }
+    },
+    switchChain: async function (chain) { 
+        if (!window.ethereum) { return; }
+        const chainID = CHAINS[chain].params[0].chainId;
+        if (!chainID) { return; }
+
+        const currentChainID = await window.ethereum.request({ method: 'eth_chainId' });
+        if (currentChainID === chainID) { return; }
+
+        try {
+            console.log(`Switching to ${chain} chain...`);
+            await window.ethereum.request({
+                method: 'wallet_switchEthereumChain',
+                params: CHAINS[chain].params
+            });
+        } catch (switchError) {
+            console.log('Switch error:', switchError);
+            if (switchError.code === 4902) {
+                console.log(`Adding ${chain} chain...`);
+                await window.ethereum.request({
+                    method: 'wallet_addEthereumChain',
+                    params: CHAINS[chain].params
+                });
+            }
+        }
+    },
     getETHPrice: async function (chain) {
         if (!window.ethereum) { return null; }
         if (!(chain in CHAINLINK_ADDRESSES)) { return null; }
@@ -335,3 +443,38 @@ const CryptoModule = {
 
     }
 };
+
+
+
+
+
+
+
+
+async function switchChain() {
+    const currentChainID = await window.ethereum.request({ method: 'eth_chainId' });
+    if (currentChainID === chainID) { return; }
+  
+    try {
+      console.log('Switching to Base chain...');
+      await window.ethereum.request({
+        method: 'wallet_switchEthereumChain',
+        params: [{ chainId: chainID }]
+      });
+    } catch (switchError) {
+      console.log('Switch error:', switchError);
+      if (switchError.code === 4902) {
+        console.log('Adding Base chain...');
+        await window.ethereum.request({
+          method: 'wallet_addEthereumChain',
+          params: [{
+            chainId: chainID,
+            chainName: chainName,
+            nativeCurrency: { name: 'ETH', symbol: 'ETH', decimals: 18 },
+            rpcUrls: ['https://mainnet.base.org'],
+            blockExplorerUrls: ['https://basescan.org']
+          }]
+        });
+      }
+    }
+  }
