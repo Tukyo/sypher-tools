@@ -245,14 +245,14 @@ const CryptoModule = {
         return { tokenBalance, tokenPrice, userValue };
     },
     /**
-     * Get the current price of Ethereum on a specified chain.
+     * Connect the user's wallet to the website.
      * 
-     * @example getETHPrice("ethereum") => "1234.56"
+     * @example connect("ethereum") => "0x1234567890abcdef1234567890abcdef12345678"
      * 
-     * @see CHAINLINK_ADDRESSES - for supported chains.
+     * @param {string} chain - The target chain to connect to
+     * @returns {Promise<string>} The connected wallet address
      * 
-     * @param {string} chain - The target chain to get the price from. Connected wallet must be on a supported chain.
-     * @returns {Promise<string>} The current price of Ethereum on the specified chain.
+     * @see CHAINS - for supported chains
      * 
      */
     connect: async function (chain) {
@@ -275,6 +275,16 @@ const CryptoModule = {
             return null;
         }
     },
+    /**
+     * Switch the connected wallet to a specified chain.
+     * 
+     * @example switchChain("ethereum")
+     * 
+     * @param {string} chain - The target chain to switch to
+     * 
+     * @see CHAINS - for supported chains
+     * 
+     */
     switchChain: async function (chain) { 
         if (!window.ethereum) { return; }
         const chainID = CHAINS[chain].params[0].chainId;
@@ -300,6 +310,17 @@ const CryptoModule = {
             }
         }
     },
+    /**
+     * Get the current price of Ethereum on a specified chain
+     * 
+     * @example getETHPrice("ethereum") => "1234.56"
+     * 
+     * @see CHAINLINK_ADDRESSES - for supported chains
+     * 
+     * @param {string} chain - The target chain to get the price from. Connected wallet must be on a supported chain
+     * @returns {Promise<string>} The current price of Ethereum on the specified chain
+     * 
+     */
     getETHPrice: async function (chain) {
         if (!window.ethereum) { return null; }
         if (!(chain in CHAINLINK_ADDRESSES)) { return null; }
@@ -329,8 +350,8 @@ const CryptoModule = {
      * 
      * @example getBalance("0x1234567890abcdef1234567890abcdef12345678") => "1234.56"
      * 
-     * @param {string} contractAddress - The target ERC20 contract address.
-     * @returns {Promise<string>} The balance of the connected wallet in the specified ERC20 token.
+     * @param {string} contractAddress - The target ERC20 contract address
+     * @returns {Promise<string>} The balance of the connected wallet in the specified ERC20 token
      * 
      */
     getBalance: async function (contractAddress) {
@@ -357,9 +378,9 @@ const CryptoModule = {
      * 
      * @example getPriceV2("0x1234567890abcdef1234567890abcdef12345678", "ethereum") => "1234.56"
      * 
-     * @param {string} chain - The target chain to get the price from. Connected wallet must be on a supported chain.
-     * @param {string} poolAddress - The target Uniswap V2 pool address.
-     * @returns {Promise<string>} The price of the token in the specified Uniswap V2 pool.
+     * @param {string} chain - The target chain to get the price from. Connected wallet must be on a supported chain
+     * @param {string} poolAddress - The target Uniswap V2 pool address
+     * @returns {Promise<string>} The price of the token in the specified Uniswap V2 pool
      * 
      * @see getETHPrice
      * 
@@ -539,10 +560,10 @@ const CryptoModule = {
      * 
      * @example getUserValue("1000", "1200") => "1200000"
      * 
-     * @param {string} balance - The user's token balance.
-     * @param {string} price - The current price of the token.
+     * @param {string} balance - The user's token balance
+     * @param {string} price - The current price of the token
      * 
-     * @returns {number} The value of the user's token holdings.
+     * @returns {number} The value of the user's token holdings
      * 
      */
     getUserValue: async function (balance, price) {
@@ -558,41 +579,6 @@ const CryptoModule = {
 
     }
 };
-
-
-
-
-
-
-
-
-async function switchChain() {
-    const currentChainID = await window.ethereum.request({ method: 'eth_chainId' });
-    if (currentChainID === chainID) { return; }
-  
-    try {
-      console.log('Switching to Base chain...');
-      await window.ethereum.request({
-        method: 'wallet_switchEthereumChain',
-        params: [{ chainId: chainID }]
-      });
-    } catch (switchError) {
-      console.log('Switch error:', switchError);
-      if (switchError.code === 4902) {
-        console.log('Adding Base chain...');
-        await window.ethereum.request({
-          method: 'wallet_addEthereumChain',
-          params: [{
-            chainId: chainID,
-            chainName: chainName,
-            nativeCurrency: { name: 'ETH', symbol: 'ETH', decimals: 18 },
-            rpcUrls: ['https://mainnet.base.org'],
-            blockExplorerUrls: ['https://basescan.org']
-          }]
-        });
-      }
-    }
-  }
 /***************************************
  * [Namespace] "sypher"
  * [Modules]:
