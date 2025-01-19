@@ -398,7 +398,7 @@ const CryptoModule = {
         if (!(chain in CHAINLINK_ADDRESSES)) { return null; }
         try {
             // 1: Get all pool details
-            const { sqrtPriceX96, token0, token1, decimals0, decimals1 } = await this.getPoolV3(poolAddress, contractAddress);
+            const { sqrtPriceX96, token0, token1, decimals0, decimals1 } = await this.getPoolV3(contractAddress, poolAddress);
 
             // 2: Calculate the price ratio = token1/token0 using precise big-number math
             const formattedSqrtPricex96 = ethers.BigNumber.from(sqrtPriceX96);
