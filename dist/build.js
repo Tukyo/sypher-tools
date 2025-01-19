@@ -156,7 +156,12 @@ const CHAINS = {
             rpcUrls: ['https://eth.llamarpc.com'],
             blockExplorerUrls: ['https://etherscan.io']
         }],
-        chainlinkAddress: "0x71041dddad3595F9CEd3DcCFBe3D1F4b0a16Bb70"
+        priceFeeds: {
+            eth: "0x71041dddad3595F9CEd3DcCFBe3D1F4b0a16Bb70"
+        },
+        pairAddresses: {
+            eth: "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2"
+        }
     },
     arbitrum: {
         params: [{
@@ -170,7 +175,14 @@ const CHAINS = {
             rpcUrls: ['https://arbitrum.llamarpc.com'],
             blockExplorerUrls: ['https://arbiscan.io']
         }],
-        chainlinkAddress: "0x639Fe6ab55C921f74e7fac1ee960C0B6293ba612"
+        priceFeeds: {
+            eth: "0x639Fe6ab55C921f74e7fac1ee960C0B6293ba612",
+            arb: "0xb2A824043730FE05F3DA2efaFa1CBbe83fa548D6"
+        },
+        pairAddresses: {
+            eth: "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
+            arb: "0xB50721BCf8d664c30412Cfbc6cf7a15145234ad1"
+        }
     },
     optimism: {
         params: [{
@@ -184,7 +196,14 @@ const CHAINS = {
             rpcUrls: ['https://optimism.llamarpc.com'],
             blockExplorerUrls: ['https://optimistic.etherscan.io']
         }],
-        chainlinkAddress: "0xb7B9A39CC63f856b90B364911CC324dC46aC1770"
+        priceFeeds: {
+            eth: "0xb7B9A39CC63f856b90B364911CC324dC46aC1770",
+            op: "0x0D276FC14719f9292D5C1eA2198673d1f4269246"
+        },
+        pairAddresses: {
+            eth: "0x4200000000000000000000000000000000000006",
+            op: "0x4200000000000000000000000000000000000042"
+        }
     },
     base: {
         params: [{
@@ -198,14 +217,79 @@ const CHAINS = {
             rpcUrls: ['https://mainnet.base.org'],
             blockExplorerUrls: ['https://basescan.org']
         }],
-        chainlinkAddress: "0x71041dddad3595F9CEd3DcCFBe3D1F4b0a16Bb70"
+        priceFeeds: {
+            eth: "0x71041dddad3595F9CEd3DcCFBe3D1F4b0a16Bb70"
+        },
+        pairAddresses: {
+            eth: "0x4200000000000000000000000000000000000006"
+        }
+    },
+    polygon: {
+        params: [{
+            chainId: "0x89",
+            chainName: "Polygon",
+            nativeCurrency: {
+                name: "Polygon",
+                symbol: "POL",
+                decimals: 18
+            },
+            rpcUrls: ['https://polygon.llamarpc.com'],
+            blockExplorerUrls: ['https://polygonscan.com']
+
+        }],
+        priceFeeds: {
+            eth: "0xF9680D99D6C9589e2a93a78A04A279e509205945",
+            matic: "0xAB594600376Ec9fD91F8e885dADF0CE036862dE0"
+        },
+        pairAddresses: {
+            eth: "0x11CD37bb86F65419713f30673A480EA33c826872",
+            matic: "0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270"
+        }
+    },
+    avalanche: {
+        params: [{
+            chainID: "0xa86a",
+            chainName: "Avalanche",
+            nativeCurrency: {
+                name: "Avalanche",
+                symbol: "AVAX",
+                decimals: 18
+            },
+            rpcUrls: ['https://avalanche.drpc.org'],
+            blockExplorerUrls: ['https://snowtrace.io']
+
+        }],
+        priceFeeds: {
+            eth: "0x976B3D034E162d8bD72D6b9C989d545b839003b0",
+            avax: "0x0A77230d17318075983913bC2145DB16C7366156"
+        },
+        pairAddresses: { 
+            eth: "",
+            avax: ""
+        }
+    },
+    fantom: {
+        params: [{
+            chainId: "0xfa",
+            chainName: "Fantom",
+            nativeCurrency: {
+                name: "Fantom",
+                symbol: "FTM",
+                decimals: 18
+            },
+            rpcUrls: ['https://rpc.ftm.tools'],
+            blockExplorerUrls: ['https://ftmscan.com']
+
+        }],
+        priceFeeds: {
+            eth: "0x11DdD3d147E5b83D01cee7070027092397d63658",
+            ftm: "0xf4766552D15AE4d256Ad41B6cf2933482B0680dc"
+        },
+        pairAddresses: {
+            eth: "",
+            ftm: ""
+        }
     }
-};
-const CHAINLINK_ADDRESSES = {
-    ethereum: CHAINS.ethereum.chainlinkAddress,
-    arbitrum: CHAINS.arbitrum.chainlinkAddress,
-    optimism: CHAINS.optimism.chainlinkAddress,
-    base: CHAINS.base.chainlinkAddress
 };
 const CryptoModule = {
     /**
@@ -224,23 +308,23 @@ const CryptoModule = {
      * Supported Chains: "ethereum", "arbitrum", "optimism", "base"
      * 
      */
-    initCrypto: async function (chain, contractAddress, poolAddress, version) {
+    initCrypto: async function (chain, contractAddress, poolAddress, version, pair = "eth") {
         const account = await this.connect(chain);
         if (!account) { return null; }
 
-        console.log("Getting details for:", { chain, contractAddress, poolAddress, version });
+        console.log("Getting details for:", { chain, contractAddress, poolAddress, version, pair });
 
         const tokenBalance = await this.getBalance(contractAddress);
 
         let tokenPrice = null;
         if (version === "V2") {
-            tokenPrice = await this.getPriceV2(chain, poolAddress);
+            tokenPrice = await this.getPriceV2(chain, poolAddress, pair);
         }
         if (version === "V3") {
-            tokenPrice = await this.getPriceV3(chain, contractAddress, poolAddress);
+            tokenPrice = await this.getPriceV3(chain, contractAddress, poolAddress, pair);
         }
 
-        const userValue = await this.getUserValue(tokenBalance, tokenPrice);
+        const userValue = this.getUserValue(tokenBalance, tokenPrice);
 
         console.log("Token Details: ", { tokenBalance, tokenPrice, userValue });
 
@@ -315,19 +399,21 @@ const CryptoModule = {
     /**
      * Get the current price of Ethereum on a specified chain
      * 
-     * @example getETHPrice("ethereum") => "1234.56"
+     * @example getChainlinkPrice("optimism", "ethereum") => "1234.56"
      * 
-     * @see CHAINLINK_ADDRESSES - for supported chains
+     * > This will fetch the price for a token on "optimism" chain with "ETH" as the paired asset
+     * 
+     * @see CHAINS - for supported chains
      * 
      * @param {string} chain - The target chain to get the price from. Connected wallet must be on a supported chain
      * @returns {Promise<string>} The current price of Ethereum on the specified chain
      * 
      */
-    getETHPrice: async function (chain) {
+    getChainlinkPrice: async function (chain, pair = "eth") {
         if (!window.ethereum) { return null; }
-        if (!(chain in CHAINLINK_ADDRESSES)) { return null; }
+        if (!(chain in CHAINS)) { return null; }
         try {
-            const chainlinkAddress = CHAINLINK_ADDRESSES[chain];
+            const chainlinkAddress = CHAINS[chain].priceFeeds[pair];
             if (!chainlinkAddress) {
                 throw new Error(`Chain ${chain} is not supported`);
             }
@@ -384,16 +470,16 @@ const CryptoModule = {
      * @param {string} poolAddress - The target Uniswap V2 pool address
      * @returns {Promise<string>} The price of the token in the specified Uniswap V2 pool
      * 
-     * @see getETHPrice
+     * @see getChainlinkPrice
      * 
      */
-    getPriceV2: async function (chain, poolAddress) {
+    getPriceV2: async function (chain, poolAddress, pair) {
         if (!window.ethereum) { return null; }
         if (!poolAddress) { return null; }
-        if (!(chain in CHAINLINK_ADDRESSES)) { return null; }
+        if (!(chain in CHAINS)) { return null; }
         try {
-            const currentETHPrice = await this.getETHPrice(chain);
-            if (!currentETHPrice) return null;
+            const chainlinkResult = await this.getChainlinkPrice(chain, pair);
+            if (!chainlinkResult) return null;
 
             const provider = new ethers.providers.Web3Provider(window.ethereum);
             const signer = provider.getSigner();
@@ -429,17 +515,20 @@ const CryptoModule = {
             const reserve0Float = parseFloat(ethers.utils.formatUnits(reserve0BN, decimals0));
             const reserve1Float = parseFloat(ethers.utils.formatUnits(reserve1BN, decimals1));
 
-            let priceInWETH;
-            if (token1.toLowerCase() === wethAddress.toLowerCase()) {
-                priceInWETH = reserve1Float / reserve0Float; // Price in WETH = (reserve1 / 10^decimals1) / (reserve0 / 10^decimals0)
-            } else if (token0.toLowerCase() === wethAddress.toLowerCase()) {
-                priceInWETH = reserve0Float / reserve1Float; // Price in WETH = (reserve0 / 10^decimals0) / (reserve1 / 10^decimals1)
+            const pairAddress = CHAINS[chain].pairAddresses[pair];
+            console.log("Pair Address:", pairAddress);
+
+            let priceRatio;
+            if (token1.toLowerCase() === pairAddress.toLowerCase()) {
+                priceRatio = reserve1Float / reserve0Float; // Price in pair = (reserve1 / 10^decimals1) / (reserve0 / 10^decimals0)
+            } else if (token0.toLowerCase() === pairAddress.toLowerCase()) {
+                priceRatio = reserve0Float / reserve1Float; // Price in pair = (reserve0 / 10^decimals0) / (reserve1 / 10^decimals1)
             } else {
-                console.log(`Skipping pool ${poolAddress} - Neither token is WETH.`);
+                console.log(`Skipping pool ${poolAddress} - Neither token is ${pair}`);
                 return null;
             }
 
-            const tokenPriceUSD = priceInWETH * currentETHPrice;
+            const tokenPriceUSD = priceInWETH * chainlinkResult;
             console.log(`V2 Price for token in pool ${poolAddress}: ${tokenPriceUSD} USD`);
 
             return tokenPriceUSD;
@@ -503,17 +592,19 @@ const CryptoModule = {
      * @param {string} poolAddress - The LP address for the token
      * @returns {Promise<string>} The price of the token in the specified Uniswap V3 pool
      * 
-     * @see getETHPrice
+     * @see getChainlinkPrice
      * @see getPoolV3
      * 
      */
-    getPriceV3: async function (chain, contractAddress, poolAddress) {
+    getPriceV3: async function (chain, contractAddress, poolAddress, pair) {
         if (!window.ethereum) { return null; }
         if (!poolAddress || !contractAddress) { return null; }
-        if (!(chain in CHAINLINK_ADDRESSES)) { return null; }
+        if (!(chain in CHAINS)) { return null; }
         try {
             // 1: Get all pool details
             const { sqrtPriceX96, token0, token1, decimals0, decimals1 } = await this.getPoolV3(contractAddress, poolAddress);
+            const pairAddress = CHAINS[chain].pairAddresses[pair];
+            console.log("Pair Address:", pairAddress);
 
             // 2: Calculate the price ratio = token1/token0 using precise big-number math
             const formattedSqrtPricex96 = ethers.BigNumber.from(sqrtPriceX96);
@@ -532,23 +623,23 @@ const CryptoModule = {
                 parseFloat(ratioBN.toString()) +
                 parseFloat(remainderScaled.toString()) / Math.pow(10, decimalsWanted);
 
-            // 3: Determine how many WETH per token or tokens per WETH
-            let tokenWETH;
-            if (token1.toLowerCase() === wethAddress.toLowerCase()) {
-                tokenWETH = ratioFloat;
-            } else if (token0.toLowerCase() === wethAddress.toLowerCase()) {
-                tokenWETH = 1 / ratioFloat;
+            // 3: Determine which token is in the pool and calculate the token price
+            let tokenRatio;
+            if (token1.toLowerCase() === pairAddress.toLowerCase()) {
+                tokenRatio = ratioFloat;
+            } else if (token0.toLowerCase() === pairAddress.toLowerCase()) {
+                tokenRatio = 1 / ratioFloat;
             } else {
-                console.log(`Skipping pool ${poolAddress} - Neither token is WETH.`);
+                console.log(`Skipping pool ${poolAddress} - Neither token is ${pair}`);
                 return null;
             }
 
             // 4: Fetch the ETH price in USD
-            const currentETHPrice = await this.getETHPrice(chain);
-            if (!currentETHPrice) return null;
+            const chainlinkResult = await this.getChainlinkPrice(chain);
+            if (!chainlinkResult) return null;
 
             // 5: Convert token price from WETH to USD
-            const tokenPriceUSD = tokenWETH * parseFloat(currentETHPrice);
+            const tokenPriceUSD = tokenRatio * parseFloat(chainlinkResult);
             console.log(`V3 Price for token in pool ${poolAddress}: ${tokenPriceUSD} USD`);
 
             return tokenPriceUSD;
@@ -568,7 +659,7 @@ const CryptoModule = {
      * @returns {number} The value of the user's token holdings
      * 
      */
-    getUserValue: async function (balance, price) {
+    getUserValue: function (balance, price) {
         if (!balance || !price) { return null; }
         try {
             const value = parseFloat(balance) * parseFloat(price);
