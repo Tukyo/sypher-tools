@@ -182,14 +182,14 @@ const CryptoModule = {
     /**
      * Initialize the Crypto Module by fetching the token balance, price, and user value.
      * 
-     * @example initCrypto("ethereum", "0x1234567890abcdef1234567890abcdef12345678", "0x1234567890abcdef1234567890abcdef12345678", "V2") => { contractAddress, poolAddress, balance, decimals, name, symbol, tokenPrice, userValue }
+     * @example initCrypto("ethereum", "0x1234567890abcdef1234567890abcdef12345678", "0x1234567890abcdef1234567890abcdef12345678", "V2") => { contractAddress, poolAddress, balance, decimals, name, symbol, totalSupply, tokenPrice, userValue }
      * 
      * @param {string} chain - The target chain to get the price from. Connected wallet must be on a supported chain.
      * @param {string} contractAddress - The CA for the token
      * @param {string} poolAddress - The LP address for the token
      * @param {string} version - The target Uniswap version (V2 or V3).
      * @param {string} pair - The paired asset to get the price in (default: "eth")
-     * @returns {Promise<object>} { contractAddress, poolAddress, balance, decimals, name, symbol, tokenPrice, userValue }
+     * @returns {Promise<object>} { contractAddress, poolAddress, balance, decimals, name, symbol, totalSupply, tokenPrice, userValue }
      * 
      * -------> Call this function to get started! <-------
      * 
@@ -200,7 +200,7 @@ const CryptoModule = {
 
         console.log("Getting details for:", { chain, contractAddress, poolAddress, version, pair });
 
-        const { balance, decimals, name, symbol } = await this.getTokenDetails(contractAddress);
+        const { balance, decimals, name, symbol } = await this.getTokenDetails(chain, contractAddress);
 
         let tokenPrice = null;
         if (version === "V2") {
@@ -211,7 +211,7 @@ const CryptoModule = {
         }
 
         const userValue = this.getUserValue(balance, tokenPrice);
-        const cleanedDetails = this.clean({ contractAddress, poolAddress, balance, decimals, name, symbol, tokenPrice, userValue });
+        const cleanedDetails = this.clean({ contractAddress, poolAddress, balance, decimals, name, symbol, totalSupply, tokenPrice, userValue });
 
         return cleanedDetails;
     },
@@ -284,7 +284,7 @@ const CryptoModule = {
     /**
      * Get the current price of Ethereum on a specified chain
      * 
-     * @example getPricefeed("optimism", "ethereum") => "1234.56"
+     * @example getPricefeed("optimism", "eth") => "1234.56"
      * 
      * > This will fetch the price for a token on "optimism" chain with "ETH" as the paired asset
      * 
@@ -299,6 +299,9 @@ const CryptoModule = {
         if (!window.ethereum) { return null; }
         if (!(chain in CHAINS)) { return null; }
         try {
+            const account = await this.connect(chain);
+            if (!account) { return null; }
+
             const chainlinkAddress = CHAINS[chain].priceFeeds[pair];
             if (!chainlinkAddress) {
                 throw new Error(`Chain ${chain} is not supported`);
@@ -322,16 +325,19 @@ const CryptoModule = {
     /**
      * Get the details of a specified ERC20 token.
      * 
-     * @example getTokenDetails("0x1234567890abcdef1234567890abcdef12345678") => { balance, decimals, name, symbol }
+     * @example getTokenDetails("optimism", "0x1234567890abcdef1234567890abcdef12345678") => { balance, decimals, name, symbol }
      * 
      * @param {string} contractAddress - The target ERC20 contract address
      * @returns {Promise<object>} The details of the specified ERC20 token
      * 
      */
-    getTokenDetails: async function (contractAddress) {
+    getTokenDetails: async function (chain, contractAddress) {
         if (!window.ethereum) { return null; }
         if (!contractAddress) { return null; }
         try {
+            const account = await this.connect(chain);
+            if (!account) { return null; }
+
             const provider = new ethers.providers.Web3Provider(window.ethereum);
             const signer = provider.getSigner();
             const address = await signer.getAddress();
@@ -342,8 +348,9 @@ const CryptoModule = {
             const decimals = await contract.decimals();
             const name = await contract.name();
             const symbol = await contract.symbol();
+            const totalSupply = await contract.totalSupply();
 
-            return { balance, decimals, name, symbol };
+            return { balance, decimals, name, symbol, totalSupply };
         } catch (error) {
             console.error("Error getting balance:", error);
             return null;
@@ -352,7 +359,7 @@ const CryptoModule = {
     /**
      * Get the price of a token in a Uniswap V2 pool.
      * 
-     * @example getPriceV2("0x1234567890abcdef1234567890abcdef12345678", "ethereum") => "1234.56"
+     * @example getPriceV2("base", "0x1234567890abcdef1234567890abcdef12345678", "eth") => "1234.56"
      * 
      * @param {string} chain - The target chain to get the price from. Connected wallet must be on a supported chain
      * @param {string} poolAddress - The target Uniswap V2 pool address
@@ -366,6 +373,9 @@ const CryptoModule = {
         if (!poolAddress) { return null; }
         if (!(chain in CHAINS)) { return null; }
         try {
+            const account = await this.connect(chain);
+            if (!account) { return null; }
+
             const chainlinkResult = await this.getPricefeed(chain, pair);
             if (!chainlinkResult) return null;
 
@@ -428,7 +438,7 @@ const CryptoModule = {
     /**
      * Get the price of a token in a Uniswap V3 pool.
      * 
-     * @example getPriceV3("ethereum", "0x1234567890abcdef1234567890abcdef12345678", "0x1234567890abcdef1234567890abcdef12345678") => "1234.56"
+     * @example getPriceV3("ethereum", "0x1234567890abcdef1234567890abcdef12345678", "0x1234567890abcdef1234567890abcdef12345678", "eth") => "1234.56"
      * 
      * @param {string} chain - The target chain to get the price from - Connected wallet must be on a supported chain
      * @param {string} contractAddress - The CA for the token
@@ -444,8 +454,11 @@ const CryptoModule = {
         if (!poolAddress || !contractAddress) { return null; }
         if (!(chain in CHAINS)) { return null; }
         try {
+            const account = await this.connect(chain);
+            if (!account) { return null; }
+
             // 1: Get all pool details
-            const { sqrtPriceX96, token0, token1, decimals0, decimals1 } = await this.getPoolV3(contractAddress, poolAddress);
+            const { sqrtPriceX96, token0, token1, decimals0, decimals1 } = await this.getPoolV3(chain, contractAddress, poolAddress);
             const pairAddress = CHAINS[chain].pairAddresses[pair];
             console.log("Pair Address:", pairAddress);
 
@@ -478,7 +491,7 @@ const CryptoModule = {
             }
 
             // 4: Fetch the ETH price in USD
-            const chainlinkResult = await this.getPricefeed(chain);
+            const chainlinkResult = await this.getPricefeed(chain, pair);
             if (!chainlinkResult) return null;
 
             // 5: Convert token price from WETH to USD
@@ -494,17 +507,20 @@ const CryptoModule = {
     /**
      * Get the pool details of a Uniswap V3 pool.
      * 
-     * @example getPoolV3("0x1234567890abcdef1234567890abcdef12345678", "0x1234567890abcdef1234567890abcdef12345678") => { sqrtPriceX96, token0, token1, decimals0, decimals1, liquidity }
+     * @example getPoolV3("base", "0x1234567890abcdef1234567890abcdef12345678", "0x1234567890abcdef1234567890abcdef12345678") => { sqrtPriceX96, token0, token1, decimals0, decimals1, liquidity }
      * 
      * @param {string} contractAddress - The CA for the token
      * @param {string} poolAddress - The LP address for the token
      * @returns {Promise<object>} The pool details of the specified Uniswap V3 pool
      * 
      */
-    getPoolV3: async function (contractAddress, poolAddress) {
+    getPoolV3: async function (chain, contractAddress, poolAddress) {
         if (!window.ethereum) { return null; }
         if (!poolAddress || !contractAddress) { return null; }
         try {
+            const account = await this.connect(chain);
+            if (!account) { return null; }
+
             const provider = new ethers.providers.Web3Provider(window.ethereum);
             const signer = provider.getSigner();
 
@@ -561,7 +577,7 @@ const CryptoModule = {
     /**
      * Clean up the token details for easier readability.
      * 
-     * @example clean({ contractAddress, poolAddress, balance, decimals, name, symbol, tokenPrice, userValue }) => { contractAddress, poolAddress, balance, decimals, name, symbol, tokenPrice, userValue }
+     * @example clean({ contractAddress, poolAddress, balance, decimals, name, symbol, totalSupply, tokenPrice, userValue }) => { contractAddress, poolAddress, balance, decimals, name, symbol, totalSupply, tokenPrice, userValue }
      * 
      * @param {object} tokenDetails - The raw token details object
      * @returns {object} The cleaned token details object
@@ -571,7 +587,7 @@ const CryptoModule = {
         if (!window.ethereum) { return null; }
         if (!tokenDetails) { return null; }
         
-        const { contractAddress, poolAddress, balance, decimals, name, symbol, tokenPrice, userValue } = tokenDetails;
+        const { contractAddress, poolAddress, totalSupply, tokenPrice, userValue } = tokenDetails;
 
         const cleanedDetails = {
             contractAddress,
@@ -580,6 +596,7 @@ const CryptoModule = {
             decimals,
             name,
             symbol,
+            totalSupply: parseFloat(ethers.utils.formatUnits(totalSupply, decimals)),
             tokenPrice: parseFloat(tokenPrice),
             userValue: (parseFloat(userValue) / Math.pow(10, decimals)).toFixed(decimals)
         };
