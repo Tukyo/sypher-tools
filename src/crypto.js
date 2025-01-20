@@ -188,11 +188,10 @@ const CryptoModule = {
      * @param {string} contractAddress - The CA for the token
      * @param {string} poolAddress - The LP address for the token
      * @param {string} version - The target Uniswap version (V2 or V3).
+     * @param {string} pair - The paired asset to get the price in (default: "eth")
      * @returns {Promise<object>} { contractAddress, poolAddress, balance, decimals, name, symbol, tokenPrice, userValue }
      * 
      * -------> Call this function to get started! <-------
-     * 
-     * Supported Chains: "ethereum", "arbitrum", "optimism", "base"
      * 
      */
     initCrypto: async function (chain, contractAddress, poolAddress, version, pair = "eth") {
@@ -285,17 +284,18 @@ const CryptoModule = {
     /**
      * Get the current price of Ethereum on a specified chain
      * 
-     * @example getChainlinkPrice("optimism", "ethereum") => "1234.56"
+     * @example getPricefeed("optimism", "ethereum") => "1234.56"
      * 
      * > This will fetch the price for a token on "optimism" chain with "ETH" as the paired asset
      * 
      * @see CHAINS - for supported chains
      * 
      * @param {string} chain - The target chain to get the price from. Connected wallet must be on a supported chain
+     * @param {string} pair - The paired asset to get the price in (default: "eth")
      * @returns {Promise<string>} The current price of Ethereum on the specified chain
      * 
      */
-    getChainlinkPrice: async function (chain, pair = "eth") {
+    getPricefeed: async function (chain, pair = "eth") {
         if (!window.ethereum) { return null; }
         if (!(chain in CHAINS)) { return null; }
         try {
@@ -320,12 +320,12 @@ const CryptoModule = {
         }
     },
     /**
-     * Get the balance of a specified ERC20 token.
+     * Get the details of a specified ERC20 token.
      * 
-     * @example getBalance("0x1234567890abcdef1234567890abcdef12345678") => "1234.56"
+     * @example getTokenDetails("0x1234567890abcdef1234567890abcdef12345678") => { balance, decimals, name, symbol }
      * 
      * @param {string} contractAddress - The target ERC20 contract address
-     * @returns {Promise<string>} The balance of the connected wallet in the specified ERC20 token
+     * @returns {Promise<object>} The details of the specified ERC20 token
      * 
      */
     getTokenDetails: async function (contractAddress) {
@@ -358,7 +358,7 @@ const CryptoModule = {
      * @param {string} poolAddress - The target Uniswap V2 pool address
      * @returns {Promise<string>} The price of the token in the specified Uniswap V2 pool
      * 
-     * @see getChainlinkPrice
+     * @see getPricefeed
      * 
      */
     getPriceV2: async function (chain, poolAddress, pair) {
@@ -366,7 +366,7 @@ const CryptoModule = {
         if (!poolAddress) { return null; }
         if (!(chain in CHAINS)) { return null; }
         try {
-            const chainlinkResult = await this.getChainlinkPrice(chain, pair);
+            const chainlinkResult = await this.getPricefeed(chain, pair);
             if (!chainlinkResult) return null;
 
             const provider = new ethers.providers.Web3Provider(window.ethereum);
@@ -417,11 +417,77 @@ const CryptoModule = {
             }
 
             const tokenPriceUSD = priceRatio * chainlinkResult;
-            console.log(`V2 Price for token in pool ${poolAddress}: ${tokenPriceUSD} USD`);
+            console.log(`V2 Price for token in pool ${poolAddress}: $${tokenPriceUSD}`);
 
             return tokenPriceUSD;
         } catch (error) {
             console.error('Error calculating V2 token price:', error);
+            return null;
+        }
+    },
+    /**
+     * Get the price of a token in a Uniswap V3 pool.
+     * 
+     * @example getPriceV3("ethereum", "0x1234567890abcdef1234567890abcdef12345678", "0x1234567890abcdef1234567890abcdef12345678") => "1234.56"
+     * 
+     * @param {string} chain - The target chain to get the price from - Connected wallet must be on a supported chain
+     * @param {string} contractAddress - The CA for the token
+     * @param {string} poolAddress - The LP address for the token
+     * @returns {Promise<string>} The price of the token in the specified Uniswap V3 pool
+     * 
+     * @see getPricefeed
+     * @see getPoolV3
+     * 
+     */
+    getPriceV3: async function (chain, contractAddress, poolAddress, pair) {
+        if (!window.ethereum) { return null; }
+        if (!poolAddress || !contractAddress) { return null; }
+        if (!(chain in CHAINS)) { return null; }
+        try {
+            // 1: Get all pool details
+            const { sqrtPriceX96, token0, token1, decimals0, decimals1 } = await this.getPoolV3(contractAddress, poolAddress);
+            const pairAddress = CHAINS[chain].pairAddresses[pair];
+            console.log("Pair Address:", pairAddress);
+
+            // 2: Calculate the price ratio = token1/token0 using precise big-number math
+            const formattedSqrtPricex96 = ethers.BigNumber.from(sqrtPriceX96);
+            const Q96 = ethers.BigNumber.from("79228162514264337593543950336");
+            const numerator = formattedSqrtPricex96
+                .mul(formattedSqrtPricex96)
+                .mul(ethers.BigNumber.from(10).pow(decimals0));
+            const denominator = Q96.mul(Q96).mul(ethers.BigNumber.from(10).pow(decimals1));
+            const ratioBN = numerator.div(denominator);
+            const remainder = numerator.mod(denominator);
+
+            const decimalsWanted = 8;
+            const scaleFactor = ethers.BigNumber.from(10).pow(decimalsWanted);
+            const remainderScaled = remainder.mul(scaleFactor).div(denominator);
+            const ratioFloat =
+                parseFloat(ratioBN.toString()) +
+                parseFloat(remainderScaled.toString()) / Math.pow(10, decimalsWanted);
+
+            // 3: Determine which token is in the pool and calculate the token price
+            let tokenRatio;
+            if (token1.toLowerCase() === pairAddress.toLowerCase()) {
+                tokenRatio = ratioFloat;
+            } else if (token0.toLowerCase() === pairAddress.toLowerCase()) {
+                tokenRatio = 1 / ratioFloat;
+            } else {
+                console.log(`Skipping pool ${poolAddress} - Neither token is ${pair}`);
+                return null;
+            }
+
+            // 4: Fetch the ETH price in USD
+            const chainlinkResult = await this.getPricefeed(chain);
+            if (!chainlinkResult) return null;
+
+            // 5: Convert token price from WETH to USD
+            const tokenPriceUSD = tokenRatio * parseFloat(chainlinkResult);
+            console.log(`V3 Price for token in pool ${poolAddress}: $${tokenPriceUSD}`);
+
+            return tokenPriceUSD;
+        } catch (error) {
+            console.error("Error calculating V3 token price:", error);
             return null;
         }
     },
@@ -471,72 +537,6 @@ const CryptoModule = {
         }
     },
     /**
-     * Get the price of a token in a Uniswap V3 pool.
-     * 
-     * @example getPriceV3("ethereum", "0x1234567890abcdef1234567890abcdef12345678", "0x1234567890abcdef1234567890abcdef12345678") => "1234.56"
-     * 
-     * @param {string} chain - The target chain to get the price from - Connected wallet must be on a supported chain
-     * @param {string} contractAddress - The CA for the token
-     * @param {string} poolAddress - The LP address for the token
-     * @returns {Promise<string>} The price of the token in the specified Uniswap V3 pool
-     * 
-     * @see getChainlinkPrice
-     * @see getPoolV3
-     * 
-     */
-    getPriceV3: async function (chain, contractAddress, poolAddress, pair) {
-        if (!window.ethereum) { return null; }
-        if (!poolAddress || !contractAddress) { return null; }
-        if (!(chain in CHAINS)) { return null; }
-        try {
-            // 1: Get all pool details
-            const { sqrtPriceX96, token0, token1, decimals0, decimals1 } = await this.getPoolV3(contractAddress, poolAddress);
-            const pairAddress = CHAINS[chain].pairAddresses[pair];
-            console.log("Pair Address:", pairAddress);
-
-            // 2: Calculate the price ratio = token1/token0 using precise big-number math
-            const formattedSqrtPricex96 = ethers.BigNumber.from(sqrtPriceX96);
-            const Q96 = ethers.BigNumber.from("79228162514264337593543950336");
-            const numerator = formattedSqrtPricex96
-                .mul(formattedSqrtPricex96)
-                .mul(ethers.BigNumber.from(10).pow(decimals0));
-            const denominator = Q96.mul(Q96).mul(ethers.BigNumber.from(10).pow(decimals1));
-            const ratioBN = numerator.div(denominator);
-            const remainder = numerator.mod(denominator);
-
-            const decimalsWanted = 8;
-            const scaleFactor = ethers.BigNumber.from(10).pow(decimalsWanted);
-            const remainderScaled = remainder.mul(scaleFactor).div(denominator);
-            const ratioFloat =
-                parseFloat(ratioBN.toString()) +
-                parseFloat(remainderScaled.toString()) / Math.pow(10, decimalsWanted);
-
-            // 3: Determine which token is in the pool and calculate the token price
-            let tokenRatio;
-            if (token1.toLowerCase() === pairAddress.toLowerCase()) {
-                tokenRatio = ratioFloat;
-            } else if (token0.toLowerCase() === pairAddress.toLowerCase()) {
-                tokenRatio = 1 / ratioFloat;
-            } else {
-                console.log(`Skipping pool ${poolAddress} - Neither token is ${pair}`);
-                return null;
-            }
-
-            // 4: Fetch the ETH price in USD
-            const chainlinkResult = await this.getChainlinkPrice(chain);
-            if (!chainlinkResult) return null;
-
-            // 5: Convert token price from WETH to USD
-            const tokenPriceUSD = tokenRatio * parseFloat(chainlinkResult);
-            console.log(`V3 Price for token in pool ${poolAddress}: ${tokenPriceUSD} USD`);
-
-            return tokenPriceUSD;
-        } catch (error) {
-            console.error("Error calculating V3 token price:", error);
-            return null;
-        }
-    },
-    /**
      * Calculate the value of a user's token holdings.
      * 
      * @example getUserValue("1000", "1200") => "1200000"
@@ -581,7 +581,7 @@ const CryptoModule = {
             name,
             symbol,
             tokenPrice: parseFloat(tokenPrice),
-            userValue: parseFloat(userValue).toFixed(decimals)
+            userValue: (parseFloat(userValue) / Math.pow(10, decimals)).toFixed(decimals)
         };
 
         console.log("Token Details:", cleanedDetails);

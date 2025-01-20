@@ -1,36 +1,50 @@
 /***************************************
  * [Namespace] "sypher"
+ * --------------------------
+ * [Description]:
+ * | Sypher is a collection of utility functions for web development.
+ * ----> Window management, text truncation, interface effects, and crypto functions.
+ * | > Entry Point
+ * | /dist/build.js | /dist/build.min.js
+ * --------------------------
  * [Modules]:
  * | > WindowModule
- * | /modules/utils.js
+ * | /src/utils.js
  * --------------------------
  * ----> pageFocus
  * --------------------------
  * | > TruncationModule
- * | /modules/utils.js
+ * | /src/utils.js
  * --------------------------
  * ----> truncate
  * ----> truncateBalance
  * --------------------------
  * | > InterfaceModule
- * | /modules/interface.js
+ * | /src/interface.js
  * --------------------------
  * ----> toggleLoader
+ * ----> parallax
+ * ----> fade
  * --------------------------
  * | > CryptoModule
- * | /modules/crypto.js
+ * | /src/crypto.js
  * --------------------------
  * ----> initCrypto
- * ----> getETHPrice
- * ----> getBalance
+ * ----> connect
+ * ----> switchChain
+ * ----> getPricefeed
+ * ----> getTokenDetails
  * ----> getPriceV2
  * ----> getPriceV3
  * ----> getPoolV3
  * ----> getUserValue
+ * ----> clean
  * --------------------------
  * [Guide] <-----------------
- * | > Load the sypher in the header of your HTML file.
- * <script src="path/to/sypher.js"></script> // TODO: Update path
+ * | > Include ethers.js in the header of your HTML file.
+ * <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.0/ethers.umd.min.js"></script>
+ * | > Load the sypher namespace in the header of your HTML file.
+ * <script src="https://cdn.jsdelivr.net/gh/Tukyo/sypher-tools@latest/dist/build.min.js"></script>
  * | > Call functions from the sypher namespace using "sypher.functionName()"
  ***************************************/
 ////////////////////////////////////////

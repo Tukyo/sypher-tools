@@ -111,6 +111,71 @@ const InterfaceModule = {
         } else {
             element.innerHTML = newText;
         }
+    },
+    /**
+     * Applies parallax effect to elements based on the [data-speed] attribute.
+     * 
+     * @example 
+     * // HTML
+     * <div data-speed="0.5"></div>
+     * // JS
+     * window.addEventListener('load', () => { sypher.parallax(); });
+     * 
+     * @param {HTMLElement} element - The target HTML element where the parallax effect will be applied.
+     * 
+     */
+    parallax: function () {
+        const parallaxElements = document.querySelectorAll('[data-speed]');
+
+        function applyParallax() {
+            parallaxElements.forEach(element => {
+                const speed = parseFloat(element.dataset.speed) || 0.5;
+                const offset = window.scrollY * speed;
+                element.style.transform = `translateY(${-offset}px)`;
+            });
+        }
+        function onScroll() { requestAnimationFrame(applyParallax); }
+        window.addEventListener('scroll', onScroll);
+        applyParallax();
+    },
+    /**
+     * Fades in elements when they are in the viewport.
+     * 
+     * @example
+     * // HTML
+     * <div data-fade></div>
+     * // JS
+     * document.addEventListener('DOMContentLoaded', function () { sypher.fade('30px', '0.25s'); });
+     * // ---> This will fade in the element over 0.25 seconds while moving it 30px upwards
+     * 
+     * @param {string} [distance] - The distance to move the element when fading in. [Default: '20px']
+     * @param {string} [length] - The duration of the fade effect. [Default: '0.5s']
+     * 
+     */
+    fade: function (distance = '20px', length = '0.5s') {
+        const elements = document.querySelectorAll('[data-fade]');
+        if (elements.length === 0) { return; }
+    
+        elements.forEach(el => {
+            el.style.opacity = 0;
+            el.style.transform = `translateY(${distance})`;
+            el.style.transition = `opacity ${length} ease-out, transform ${length} ease-out`;
+        });   
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                const el = entry.target;
+                if (entry.isIntersecting && entry.intersectionRatio > 0.1) {
+                    el.style.opacity = 1;
+                    el.style.transform = 'translateY(0)';
+                } else {
+                    el.style.opacity = 0;
+                    el.style.transform = `translateY(${distance})`;
+                }
+            });
+        }, { threshold: 0.1 });
+    
+        elements.forEach(el => observer.observe(el));
     }
 }
 const CHAINLINK_ABI = [
@@ -303,11 +368,10 @@ const CryptoModule = {
      * @param {string} contractAddress - The CA for the token
      * @param {string} poolAddress - The LP address for the token
      * @param {string} version - The target Uniswap version (V2 or V3).
+     * @param {string} pair - The paired asset to get the price in (default: "eth")
      * @returns {Promise<object>} { contractAddress, poolAddress, balance, decimals, name, symbol, tokenPrice, userValue }
      * 
      * -------> Call this function to get started! <-------
-     * 
-     * Supported Chains: "ethereum", "arbitrum", "optimism", "base"
      * 
      */
     initCrypto: async function (chain, contractAddress, poolAddress, version, pair = "eth") {
@@ -400,17 +464,18 @@ const CryptoModule = {
     /**
      * Get the current price of Ethereum on a specified chain
      * 
-     * @example getChainlinkPrice("optimism", "ethereum") => "1234.56"
+     * @example getPricefeed("optimism", "ethereum") => "1234.56"
      * 
      * > This will fetch the price for a token on "optimism" chain with "ETH" as the paired asset
      * 
      * @see CHAINS - for supported chains
      * 
      * @param {string} chain - The target chain to get the price from. Connected wallet must be on a supported chain
+     * @param {string} pair - The paired asset to get the price in (default: "eth")
      * @returns {Promise<string>} The current price of Ethereum on the specified chain
      * 
      */
-    getChainlinkPrice: async function (chain, pair = "eth") {
+    getPricefeed: async function (chain, pair = "eth") {
         if (!window.ethereum) { return null; }
         if (!(chain in CHAINS)) { return null; }
         try {
@@ -435,12 +500,12 @@ const CryptoModule = {
         }
     },
     /**
-     * Get the balance of a specified ERC20 token.
+     * Get the details of a specified ERC20 token.
      * 
-     * @example getBalance("0x1234567890abcdef1234567890abcdef12345678") => "1234.56"
+     * @example getTokenDetails("0x1234567890abcdef1234567890abcdef12345678") => { balance, decimals, name, symbol }
      * 
      * @param {string} contractAddress - The target ERC20 contract address
-     * @returns {Promise<string>} The balance of the connected wallet in the specified ERC20 token
+     * @returns {Promise<object>} The details of the specified ERC20 token
      * 
      */
     getTokenDetails: async function (contractAddress) {
@@ -473,7 +538,7 @@ const CryptoModule = {
      * @param {string} poolAddress - The target Uniswap V2 pool address
      * @returns {Promise<string>} The price of the token in the specified Uniswap V2 pool
      * 
-     * @see getChainlinkPrice
+     * @see getPricefeed
      * 
      */
     getPriceV2: async function (chain, poolAddress, pair) {
@@ -481,7 +546,7 @@ const CryptoModule = {
         if (!poolAddress) { return null; }
         if (!(chain in CHAINS)) { return null; }
         try {
-            const chainlinkResult = await this.getChainlinkPrice(chain, pair);
+            const chainlinkResult = await this.getPricefeed(chain, pair);
             if (!chainlinkResult) return null;
 
             const provider = new ethers.providers.Web3Provider(window.ethereum);
@@ -532,11 +597,77 @@ const CryptoModule = {
             }
 
             const tokenPriceUSD = priceRatio * chainlinkResult;
-            console.log(`V2 Price for token in pool ${poolAddress}: ${tokenPriceUSD} USD`);
+            console.log(`V2 Price for token in pool ${poolAddress}: $${tokenPriceUSD}`);
 
             return tokenPriceUSD;
         } catch (error) {
             console.error('Error calculating V2 token price:', error);
+            return null;
+        }
+    },
+    /**
+     * Get the price of a token in a Uniswap V3 pool.
+     * 
+     * @example getPriceV3("ethereum", "0x1234567890abcdef1234567890abcdef12345678", "0x1234567890abcdef1234567890abcdef12345678") => "1234.56"
+     * 
+     * @param {string} chain - The target chain to get the price from - Connected wallet must be on a supported chain
+     * @param {string} contractAddress - The CA for the token
+     * @param {string} poolAddress - The LP address for the token
+     * @returns {Promise<string>} The price of the token in the specified Uniswap V3 pool
+     * 
+     * @see getPricefeed
+     * @see getPoolV3
+     * 
+     */
+    getPriceV3: async function (chain, contractAddress, poolAddress, pair) {
+        if (!window.ethereum) { return null; }
+        if (!poolAddress || !contractAddress) { return null; }
+        if (!(chain in CHAINS)) { return null; }
+        try {
+            // 1: Get all pool details
+            const { sqrtPriceX96, token0, token1, decimals0, decimals1 } = await this.getPoolV3(contractAddress, poolAddress);
+            const pairAddress = CHAINS[chain].pairAddresses[pair];
+            console.log("Pair Address:", pairAddress);
+
+            // 2: Calculate the price ratio = token1/token0 using precise big-number math
+            const formattedSqrtPricex96 = ethers.BigNumber.from(sqrtPriceX96);
+            const Q96 = ethers.BigNumber.from("79228162514264337593543950336");
+            const numerator = formattedSqrtPricex96
+                .mul(formattedSqrtPricex96)
+                .mul(ethers.BigNumber.from(10).pow(decimals0));
+            const denominator = Q96.mul(Q96).mul(ethers.BigNumber.from(10).pow(decimals1));
+            const ratioBN = numerator.div(denominator);
+            const remainder = numerator.mod(denominator);
+
+            const decimalsWanted = 8;
+            const scaleFactor = ethers.BigNumber.from(10).pow(decimalsWanted);
+            const remainderScaled = remainder.mul(scaleFactor).div(denominator);
+            const ratioFloat =
+                parseFloat(ratioBN.toString()) +
+                parseFloat(remainderScaled.toString()) / Math.pow(10, decimalsWanted);
+
+            // 3: Determine which token is in the pool and calculate the token price
+            let tokenRatio;
+            if (token1.toLowerCase() === pairAddress.toLowerCase()) {
+                tokenRatio = ratioFloat;
+            } else if (token0.toLowerCase() === pairAddress.toLowerCase()) {
+                tokenRatio = 1 / ratioFloat;
+            } else {
+                console.log(`Skipping pool ${poolAddress} - Neither token is ${pair}`);
+                return null;
+            }
+
+            // 4: Fetch the ETH price in USD
+            const chainlinkResult = await this.getPricefeed(chain);
+            if (!chainlinkResult) return null;
+
+            // 5: Convert token price from WETH to USD
+            const tokenPriceUSD = tokenRatio * parseFloat(chainlinkResult);
+            console.log(`V3 Price for token in pool ${poolAddress}: $${tokenPriceUSD}`);
+
+            return tokenPriceUSD;
+        } catch (error) {
+            console.error("Error calculating V3 token price:", error);
             return null;
         }
     },
@@ -586,72 +717,6 @@ const CryptoModule = {
         }
     },
     /**
-     * Get the price of a token in a Uniswap V3 pool.
-     * 
-     * @example getPriceV3("ethereum", "0x1234567890abcdef1234567890abcdef12345678", "0x1234567890abcdef1234567890abcdef12345678") => "1234.56"
-     * 
-     * @param {string} chain - The target chain to get the price from - Connected wallet must be on a supported chain
-     * @param {string} contractAddress - The CA for the token
-     * @param {string} poolAddress - The LP address for the token
-     * @returns {Promise<string>} The price of the token in the specified Uniswap V3 pool
-     * 
-     * @see getChainlinkPrice
-     * @see getPoolV3
-     * 
-     */
-    getPriceV3: async function (chain, contractAddress, poolAddress, pair) {
-        if (!window.ethereum) { return null; }
-        if (!poolAddress || !contractAddress) { return null; }
-        if (!(chain in CHAINS)) { return null; }
-        try {
-            // 1: Get all pool details
-            const { sqrtPriceX96, token0, token1, decimals0, decimals1 } = await this.getPoolV3(contractAddress, poolAddress);
-            const pairAddress = CHAINS[chain].pairAddresses[pair];
-            console.log("Pair Address:", pairAddress);
-
-            // 2: Calculate the price ratio = token1/token0 using precise big-number math
-            const formattedSqrtPricex96 = ethers.BigNumber.from(sqrtPriceX96);
-            const Q96 = ethers.BigNumber.from("79228162514264337593543950336");
-            const numerator = formattedSqrtPricex96
-                .mul(formattedSqrtPricex96)
-                .mul(ethers.BigNumber.from(10).pow(decimals0));
-            const denominator = Q96.mul(Q96).mul(ethers.BigNumber.from(10).pow(decimals1));
-            const ratioBN = numerator.div(denominator);
-            const remainder = numerator.mod(denominator);
-
-            const decimalsWanted = 8;
-            const scaleFactor = ethers.BigNumber.from(10).pow(decimalsWanted);
-            const remainderScaled = remainder.mul(scaleFactor).div(denominator);
-            const ratioFloat =
-                parseFloat(ratioBN.toString()) +
-                parseFloat(remainderScaled.toString()) / Math.pow(10, decimalsWanted);
-
-            // 3: Determine which token is in the pool and calculate the token price
-            let tokenRatio;
-            if (token1.toLowerCase() === pairAddress.toLowerCase()) {
-                tokenRatio = ratioFloat;
-            } else if (token0.toLowerCase() === pairAddress.toLowerCase()) {
-                tokenRatio = 1 / ratioFloat;
-            } else {
-                console.log(`Skipping pool ${poolAddress} - Neither token is ${pair}`);
-                return null;
-            }
-
-            // 4: Fetch the ETH price in USD
-            const chainlinkResult = await this.getChainlinkPrice(chain);
-            if (!chainlinkResult) return null;
-
-            // 5: Convert token price from WETH to USD
-            const tokenPriceUSD = tokenRatio * parseFloat(chainlinkResult);
-            console.log(`V3 Price for token in pool ${poolAddress}: ${tokenPriceUSD} USD`);
-
-            return tokenPriceUSD;
-        } catch (error) {
-            console.error("Error calculating V3 token price:", error);
-            return null;
-        }
-    },
-    /**
      * Calculate the value of a user's token holdings.
      * 
      * @example getUserValue("1000", "1200") => "1200000"
@@ -696,7 +761,7 @@ const CryptoModule = {
             name,
             symbol,
             tokenPrice: parseFloat(tokenPrice),
-            userValue: parseFloat(userValue).toFixed(decimals)
+            userValue: (parseFloat(userValue) / Math.pow(10, decimals)).toFixed(decimals)
         };
 
         console.log("Token Details:", cleanedDetails);
@@ -705,37 +770,51 @@ const CryptoModule = {
 };
 /***************************************
  * [Namespace] "sypher"
+ * --------------------------
+ * [Description]:
+ * | Sypher is a collection of utility functions for web development.
+ * ----> Window management, text truncation, interface effects, and crypto functions.
+ * | > Entry Point
+ * | /dist/build.js | /dist/build.min.js
+ * --------------------------
  * [Modules]:
  * | > WindowModule
- * | /modules/utils.js
+ * | /src/utils.js
  * --------------------------
  * ----> pageFocus
  * --------------------------
  * | > TruncationModule
- * | /modules/utils.js
+ * | /src/utils.js
  * --------------------------
  * ----> truncate
  * ----> truncateBalance
  * --------------------------
  * | > InterfaceModule
- * | /modules/interface.js
+ * | /src/interface.js
  * --------------------------
  * ----> toggleLoader
+ * ----> parallax
+ * ----> fade
  * --------------------------
  * | > CryptoModule
- * | /modules/crypto.js
+ * | /src/crypto.js
  * --------------------------
  * ----> initCrypto
- * ----> getETHPrice
- * ----> getBalance
+ * ----> connect
+ * ----> switchChain
+ * ----> getPricefeed
+ * ----> getTokenDetails
  * ----> getPriceV2
  * ----> getPriceV3
  * ----> getPoolV3
  * ----> getUserValue
+ * ----> clean
  * --------------------------
  * [Guide] <-----------------
- * | > Load the sypher in the header of your HTML file.
- * <script src="path/to/sypher.js"></script> // TODO: Update path
+ * | > Include ethers.js in the header of your HTML file.
+ * <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.0/ethers.umd.min.js"></script>
+ * | > Load the sypher namespace in the header of your HTML file.
+ * <script src="https://cdn.jsdelivr.net/gh/Tukyo/sypher-tools@latest/dist/build.min.js"></script>
  * | > Call functions from the sypher namespace using "sypher.functionName()"
  ***************************************/
 ////////////////////////////////////////
