@@ -122,6 +122,8 @@ const ERC20_ABI = [
     "function balanceOf(address account) view returns (uint256)",
     "function decimals() view returns (uint8)",
     "function name() view returns (string)",
+    "function symbol() view returns (string)",
+    "function totalSupply() view returns (uint256)",
     "function transfer(address to, uint256 amount) returns (bool)",
 ];
 const UNISWAP_V2_POOL_ABI = [
@@ -295,13 +297,13 @@ const CryptoModule = {
     /**
      * Initialize the Crypto Module by fetching the token balance, price, and user value.
      * 
-     * @example initCrypto("ethereum", "0x1234567890abcdef1234567890abcdef12345678", "0x1234567890abcdef1234567890abcdef12345678", "V2") => { tokenBalance, tokenPrice, userValue }
+     * @example initCrypto("ethereum", "0x1234567890abcdef1234567890abcdef12345678", "0x1234567890abcdef1234567890abcdef12345678", "V2") => { contractAddress, poolAddress, balance, decimals, name, symbol, tokenPrice, userValue }
      * 
      * @param {string} chain - The target chain to get the price from. Connected wallet must be on a supported chain.
      * @param {string} contractAddress - The CA for the token
      * @param {string} poolAddress - The LP address for the token
      * @param {string} version - The target Uniswap version (V2 or V3).
-     * @returns {Promise<object>} { tokenBalance, tokenPrice, userValue }
+     * @returns {Promise<object>} { contractAddress, poolAddress, balance, decimals, name, symbol, tokenPrice, userValue }
      * 
      * -------> Call this function to get started! <-------
      * 
@@ -314,7 +316,7 @@ const CryptoModule = {
 
         console.log("Getting details for:", { chain, contractAddress, poolAddress, version, pair });
 
-        const tokenBalance = await this.getBalance(contractAddress);
+        const { balance, decimals, name, symbol } = await this.getTokenDetails(contractAddress);
 
         let tokenPrice = null;
         if (version === "V2") {
@@ -324,11 +326,10 @@ const CryptoModule = {
             tokenPrice = await this.getPriceV3(chain, contractAddress, poolAddress, pair);
         }
 
-        const userValue = this.getUserValue(tokenBalance, tokenPrice);
+        const userValue = this.getUserValue(balance, tokenPrice);
+        const cleanedDetails = this.clean({ contractAddress, poolAddress, balance, decimals, name, symbol, tokenPrice, userValue });
 
-        console.log("Token Details: ", { tokenBalance, tokenPrice, userValue });
-
-        return { tokenBalance, tokenPrice, userValue };
+        return cleanedDetails;
     },
     /**
      * Connect the user's wallet to the website.
@@ -442,7 +443,7 @@ const CryptoModule = {
      * @returns {Promise<string>} The balance of the connected wallet in the specified ERC20 token
      * 
      */
-    getBalance: async function (contractAddress) {
+    getTokenDetails: async function (contractAddress) {
         if (!window.ethereum) { return null; }
         if (!contractAddress) { return null; }
         try {
@@ -453,9 +454,11 @@ const CryptoModule = {
             const contract = new ethers.Contract(contractAddress, ERC20_ABI, signer);
 
             const balance = await contract.balanceOf(address);
-            console.log(`Balance: ${balance}`);
+            const decimals = await contract.decimals();
+            const name = await contract.name();
+            const symbol = await contract.symbol();
 
-            return balance;
+            return { balance, decimals, name, symbol };
         } catch (error) {
             console.error("Error getting balance:", error);
             return null;
@@ -518,7 +521,7 @@ const CryptoModule = {
             const pairAddress = CHAINS[chain].pairAddresses[pair];
             console.log("Pair Address:", pairAddress);
 
-            let priceRatio;
+            let priceRatio = null;
             if (token1.toLowerCase() === pairAddress.toLowerCase()) {
                 priceRatio = reserve1Float / reserve0Float; // Price in pair = (reserve1 / 10^decimals1) / (reserve0 / 10^decimals0)
             } else if (token0.toLowerCase() === pairAddress.toLowerCase()) {
@@ -528,7 +531,7 @@ const CryptoModule = {
                 return null;
             }
 
-            const tokenPriceUSD = priceInWETH * chainlinkResult;
+            const tokenPriceUSD = priceRatio * chainlinkResult;
             console.log(`V2 Price for token in pool ${poolAddress}: ${tokenPriceUSD} USD`);
 
             return tokenPriceUSD;
@@ -669,7 +672,35 @@ const CryptoModule = {
             console.error("Error calculating user value:", error);
             return null;
         }
+    },
+    /**
+     * Clean up the token details for easier readability.
+     * 
+     * @example clean({ contractAddress, poolAddress, balance, decimals, name, symbol, tokenPrice, userValue }) => { contractAddress, poolAddress, balance, decimals, name, symbol, tokenPrice, userValue }
+     * 
+     * @param {object} tokenDetails - The raw token details object
+     * @returns {object} The cleaned token details object
+     * 
+     */
+    clean: function (tokenDetails) {
+        if (!window.ethereum) { return null; }
+        if (!tokenDetails) { return null; }
+        
+        const { contractAddress, poolAddress, balance, decimals, name, symbol, tokenPrice, userValue } = tokenDetails;
 
+        const cleanedDetails = {
+            contractAddress,
+            poolAddress,
+            balance: parseFloat(ethers.utils.formatUnits(balance, decimals)),
+            decimals,
+            name,
+            symbol,
+            tokenPrice: parseFloat(tokenPrice),
+            userValue: parseFloat(userValue).toFixed(decimals)
+        };
+
+        console.log("Token Details:", cleanedDetails);
+        return cleanedDetails;
     }
 };
 /***************************************
