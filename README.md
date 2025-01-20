@@ -3,16 +3,20 @@
 
 A comprehensive library of utility functions designed to enhance web development, with a specific focus on crypto frontends. Sypher-Tools provides modules for window management, text truncation, interface effects, and crypto operations, all in one lightweight package. **[~10kb]**
 
-## 💾 **Technologies Used**
+## 💾 **Technologies Used** <!-- omit in toc -->
 ![Javascript](https://shields.io/badge/JavaScript-F7DF1E?logo=JavaScript&logoColor=000&style=flat-square)
 
 ![License](https://img.shields.io/badge/license-MIT-green) ![Web3](https://img.shields.io/badge/web3-ethers.js-teal)
 
-## 📝 **Table of Contents**
+## ☎️ **Contact** <!-- omit in toc -->
+🌐 **Web:** [Tukyo](https://tukyowave.com/) • [Tukyo Games](https://tukyogames.com/) • [deSypher](https://desypher.net/)
 
-- [💾 **Technologies Used**](#-technologies-used)
-- [📝 **Table of Contents**](#-table-of-contents)
-- [☎️ **Contact**](#️-contact)
+📰 **Socials:** [X/Twitter](https://x.com/tukyowave/) • [Telegram](https/t.me/tukyogames) *(If you have any issues please reach out on telegram)*
+
+---
+
+## 📝 **Table of Contents** <!-- omit in toc -->
+
 - [🔎 **Overview**](#-overview)
 - [💿 **Installation**](#-installation)
 - [🛠️ **Usage**](#️-usage)
@@ -20,14 +24,8 @@ A comprehensive library of utility functions designed to enhance web development
   - [WindowModule](#windowmodule)
   - [TruncationModule](#truncationmodule)
   - [InterfaceModule](#interfacemodule)
+  - [Crypto Interface Module](#crypto-interface-module)
   - [CryptoModule](#cryptomodule)
----
-
-## ☎️ **Contact**
-🌐 **Web:** [Tukyo](https://tukyowave.com/) • [Tukyo Games](https://tukyogames.com/) • [deSypher](https://desypher.net/)
-
-📰 **Socials:** [X/Twitter](https://x.com/tukyowave/) • [Telegram](https/t.me/tukyogames) *(If you have any issues please reach out on telegram)*
-
 ---
 
 ## 🔎 **Overview**
@@ -108,7 +106,13 @@ element.innerHTML = truncatedValue; // => <p>2124.38k</p>
 **File**: `/src/utils.js`
 
 #### Methods: <!-- omit in toc -->
-- `pageFocus`: Manage page focus events and behaviors.
+`pageFocus`: Manage page focus events and behaviors.
+
+#### Usage: <!-- omit in toc -->
+```javascript
+document.addEventListener("visibilitychange", focus()); // => retuns a bool indicating page focus
+if (!pageFocused) { return; } // => Stop doing some code when the page isn't focused
+```
 
 ---
 
@@ -116,8 +120,9 @@ element.innerHTML = truncatedValue; // => <p>2124.38k</p>
 **File**: `/src/utils.js`
 
 #### Methods: <!-- omit in toc -->
-- `truncate`: Shorten text strings with an ellipsis.
-- `truncateBalance`: Format and truncate crypto balances for display.
+`truncate`: Shorten text strings with an ellipsis.
+
+`truncateBalance`: Format and truncate crypto balances for display.
 
 ---
 
@@ -125,9 +130,19 @@ element.innerHTML = truncatedValue; // => <p>2124.38k</p>
 **File**: `/src/interface.js`
 
 #### Methods: <!-- omit in toc -->
-- `toggleLoader`: Show or hide loading indicators.
-- `parallax`: Apply parallax scrolling effects.
-- `fade`: Perform fade-in or fade-out animations.
+`toggleLoader`: Show or hide loading indicators.
+
+`parallax`: Apply parallax scrolling effects.
+
+`fade`: Perform fade-in or fade-out animations.
+
+---
+
+### Crypto Interface Module
+**File** `/src/interface.js`
+
+#### Methods: <!-- omit in toc -->
+`createConnectButton`: Create a connect button in the page.
 
 ---
 
@@ -135,15 +150,24 @@ element.innerHTML = truncatedValue; // => <p>2124.38k</p>
 **File**: `/src/crypto.js`
 
 #### Methods: <!-- omit in toc -->
-- `initCrypto`: Initialize crypto-related settings and connections.
-- `connect`: Connect to a wallet.
-- `switchChain`: Switch between blockchain networks.
-- `getPricefeed`: Fetch price feeds for tokens.
-- `getTokenDetails`: Retrieve detailed token information.
-- `getPriceV2`: Fetch token prices using version 2 price logic.
-- `getPriceV3`: Fetch token prices using version 3 price logic.
-- `getPoolV3`: Get details of a liquidity pool.
-- `getUserValue`: Calculate user-specific values.
-- `clean`: Perform cleanup tasks for crypto data.
+`initCrypto`: Initialize crypto-related settings and connections.
+
+`connect`: Connect to a wallet.
+
+`switchChain`: Switch between blockchain networks.
+
+`getPricefeed`: Fetch price feeds for tokens.
+
+`getTokenDetails`: Retrieve detailed token information.
+
+`getPriceV2`: Fetch token prices using version 2 price logic.
+
+`getPriceV3`: Fetch token prices using version 3 price logic.
+
+`getPoolV3`: Get details of a liquidity pool.
+
+`getUserValue`: Calculate user-specific values.
+
+`clean`: Perform cleanup tasks for crypto data.
 
 ---

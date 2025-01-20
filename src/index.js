@@ -58,6 +58,7 @@
     Object.assign(sypher, TruncationModule);
     Object.assign(sypher, InterfaceModule);
     Object.assign(sypher, CryptoModule);
+    Object.assign(sypher, CryptoInterfaceModule);
 
     // Expose to global namespace
     global.sypher = sypher;

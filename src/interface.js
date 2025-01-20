@@ -5,10 +5,10 @@ const InterfaceModule = {
      * @example toggleLoader(elementVariable, true, `<div class="loader"></div>`) // Show loader
      * @example toggleLoader(elementVariable, false, "", "New Text") // No loader and replacement text
      * 
-     * @param {HTMLElement} element - The target HTML element where the loader or text will be shown.
+     * @param {HTMLElement} element - The target HTML element where the loader or text will be shown
      * @param {string} loaderHTML - The HTML content to use for the loader. Example: `<div class="loader"></div>`
-     * @param {boolean} [isEnabled=true] - Whether to show the loader (true) or the new text (false).
-     * @param {string} [newText=""] - The new text to display when the loader is disabled.
+     * @param {boolean} [isEnabled=true] - Whether to show the loader (true) or the new text (false)
+     * @param {string} [newText=""] - The new text to display when the loader is disabled
      * 
      * CSS Loaders Resource: [Link](https://css-loaders.com/)
      **/
@@ -29,7 +29,7 @@ const InterfaceModule = {
      * // JS
      * window.addEventListener('load', () => { sypher.parallax(); });
      * 
-     * @param {HTMLElement} element - The target HTML element where the parallax effect will be applied.
+     * @param {HTMLElement} element - The target HTML element where the parallax effect will be applied
      * 
      */
     parallax: function () {
@@ -56,8 +56,8 @@ const InterfaceModule = {
      * document.addEventListener('DOMContentLoaded', function () { sypher.fade('30px', '0.25s'); });
      * // ---> This will fade in the element over 0.25 seconds while moving it 30px upwards
      * 
-     * @param {string} [distance] - The distance to move the element when fading in. [Default: '20px']
-     * @param {string} [length] - The duration of the fade effect. [Default: '0.5s']
+     * @param {string} [distance] - The distance to move the element when fading in [Default: '20px']
+     * @param {string} [length] - The duration of the fade effect [Default: '0.5s']
      * 
      */
     fade: function (distance = '20px', length = '0.5s') {
@@ -85,4 +85,26 @@ const InterfaceModule = {
     
         elements.forEach(el => observer.observe(el));
     }
-}
+};
+const CryptoInterfaceModule = {
+    /**
+     * Creates a button to connect the wallet.
+     * 
+     * @example createConnectButton(element, () => sypher.connect("base"), "Connect Now!");
+     * 
+     * @param {HTMLElement} element - The target HTML element where the button will be created [Default: document.body]
+     * @param {function} onClick - The function to call when the button is clicked [Default: sypher.Connect("ethereum")]
+     * @param {string} [buttonText] - The text to display on the button [Default: "Connect Wallet"]
+     * 
+     */
+    createConnectButton: function (element = document.body, onClick = () => sypher.Connect("ethereum"), buttonText = "Connect Wallet") {
+        if (typeof onClick !== 'function') return;
+
+        const button = document.createElement('button');
+        button.classList.add('connect-button');
+        button.textContent = buttonText;
+        button.onclick = onClick;
+
+        element.appendChild(button);
+    }
+};
