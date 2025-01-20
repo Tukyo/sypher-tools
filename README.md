@@ -42,6 +42,9 @@ A comprehensive library of utility functions designed to enhance web development
 Entry Points:
 - `/dist/build.js`
 - `/dist/build.min.js`
+  
+CDN:
+https://cdn.jsdelivr.net/gh/Tukyo/sypher-tools@latest/
 
 ---
 
