@@ -439,8 +439,14 @@ const CryptoModule = {
             throw new TypeError(`CryptoModule.initCrypto: "pair" must be a non-empty string but received "${pair}"`);
         }
 
-        const chainID = CHAINS[chain].params[0].chainId;
-        if (!chainID) { throw new Error(`CryptoModule.initCrypto: Chain ${chain} is not supported...`); }
+        const chainData = CHAINS[chain];
+        if (!chainData) {
+            throw new Error(`CryptoModule.getPriceFeed: Chain "${chain}" is not supported.`);
+        }
+        const chainID = chainData.params[0]?.chainId;
+        if (!chainID) {
+            throw new Error(`CryptoModule.getPriceFeed: Missing chainId for chain "${chain}".`);
+        }
 
         try {
             const account = await this.connect(chain);
@@ -574,8 +580,15 @@ const CryptoModule = {
             throw new TypeError(`CryptoModule.getPriceFeed: "pair" must be a non-empty string but received "${pair}"`);
         }
 
-        const chainID = CHAINS[chain].params[0].chainId;
-        if (!chainID) { throw new Error(`CryptoModule.getPriceFeed: Chain ${chain} is not supported...`); }
+        const chainData = CHAINS[chain];
+        if (!chainData) {
+            throw new Error(`CryptoModule.getPriceFeed: Chain "${chain}" is not supported.`);
+        }
+        const chainID = chainData.params[0]?.chainId;
+        if (!chainID) {
+            throw new Error(`CryptoModule.getPriceFeed: Missing chainId for chain "${chain}".`);
+        }
+
         try {
             const chainlinkAddress = CHAINS[chain].priceFeeds[pair];
             if (!chainlinkAddress) { throw new Error(`Chain ${chain} is not supported`);}
@@ -655,8 +668,14 @@ const CryptoModule = {
         }
         if (!window.ethereum) { throw new Error("CryptoModule.getPriceV2: No Ethereum provider found...."); }
 
-        const chainID = CHAINS[chain].params[0].chainId;
-        if (!chainID) { throw new Error(`CryptoModule.getPriceV2: Chain ${chain} is not supported...`); }
+        const chainData = CHAINS[chain];
+        if (!chainData) {
+            throw new Error(`CryptoModule.getPriceFeed: Chain "${chain}" is not supported.`);
+        }
+        const chainID = chainData.params[0]?.chainId;
+        if (!chainID) {
+            throw new Error(`CryptoModule.getPriceFeed: Missing chainId for chain "${chain}".`);
+        }
 
         try {
             const chainlinkResult = await this.getPriceFeed(chain, pair);
@@ -746,8 +765,14 @@ const CryptoModule = {
 
         if (!window.ethereum) { throw new Error("CryptoModule.getPriceV3: No Ethereum provider found...."); }
 
-        const chainID = CHAINS[chain].params[0].chainId;
-        if (!chainID) { throw new Error(`CryptoModule.getPriceV3: Chain ${chain} is not supported...`); }
+        const chainData = CHAINS[chain];
+        if (!chainData) {
+            throw new Error(`CryptoModule.getPriceFeed: Chain "${chain}" is not supported.`);
+        }
+        const chainID = chainData.params[0]?.chainId;
+        if (!chainID) {
+            throw new Error(`CryptoModule.getPriceFeed: Missing chainId for chain "${chain}".`);
+        }
 
         try {
             // 1: Get all pool details
