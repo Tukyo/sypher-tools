@@ -44,10 +44,10 @@ const CHAINS = {
             blockExplorerUrls: ['https://etherscan.io']
         }],
         priceFeeds: {
-            eth: "0x71041dddad3595F9CEd3DcCFBe3D1F4b0a16Bb70"
+            eth: "0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419"
         },
         pairAddresses: {
-            eth: "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2"
+            eth: "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"
         }
     },
     arbitrum: {
@@ -325,7 +325,7 @@ const CryptoModule = {
     /**
      * Get the current price of Ethereum on a specified chain
      * 
-     * @example getPricefeed("optimism", "eth") => "1234.56"
+     * @example getPriceFeed("optimism", "eth") => "1234.56"
      * 
      * > This will fetch the price for a token on "optimism" chain with "ETH" as the paired asset
      * 
@@ -336,18 +336,18 @@ const CryptoModule = {
      * @returns {Promise<string>} The current price of Ethereum on the specified chain
      * 
      */
-    getPricefeed: async function (chain, pair = "eth") {
-        if (!window.ethereum) { throw new Error("CryptoModule.getPricefeed: No Ethereum provider found...."); }
+    getPriceFeed: async function (chain, pair = "eth") {
+        if (!window.ethereum) { throw new Error("CryptoModule.getPriceFeed: No Ethereum provider found...."); }
 
         if (typeof chain !== 'string' || !chain.trim()) {
-            throw new TypeError(`CryptoModule.getPricefeed: "chain" must be a non-empty string but received ${typeof chain} with value "${chain}"`);
+            throw new TypeError(`CryptoModule.getPriceFeed: "chain" must be a non-empty string but received ${typeof chain} with value "${chain}"`);
         }
         if (typeof pair !== 'string' || !pair.trim()) {
-            throw new TypeError(`CryptoModule.getPricefeed: "pair" must be a non-empty string but received "${pair}"`);
+            throw new TypeError(`CryptoModule.getPriceFeed: "pair" must be a non-empty string but received "${pair}"`);
         }
 
         const chainID = CHAINS[chain].params[0].chainId;
-        if (!chainID) { throw new Error(`CryptoModule.getPricefeed: Chain ${chain} is not supported...`); }
+        if (!chainID) { throw new Error(`CryptoModule.getPriceFeed: Chain ${chain} is not supported...`); }
         try {
             const chainlinkAddress = CHAINS[chain].priceFeeds[pair];
             if (!chainlinkAddress) { throw new Error(`Chain ${chain} is not supported`);}
@@ -363,7 +363,7 @@ const CryptoModule = {
 
             return price;
         } catch (error) {
-            throw new Error(`CryptoModule.getPricefeed: Error fetching price feed: ${error.message}`);
+            throw new Error(`CryptoModule.getPriceFeed: Error fetching price feed: ${error.message}`);
         }
     },
     /**
@@ -397,6 +397,7 @@ const CryptoModule = {
             const symbol = await contract.symbol();
             const totalSupply = await contract.totalSupply();
 
+            console.log("Token Details:", { balance, decimals, name, symbol, totalSupply });
             return { balance, decimals, name, symbol, totalSupply };
         } catch (error) {
             throw new Error(`CryptoModule.getTokenDetails: Error fetching token details: ${error.message}`);
@@ -411,7 +412,7 @@ const CryptoModule = {
      * @param {string} poolAddress - The target Uniswap V2 pool address
      * @returns {Promise<string>} The price of the token in the specified Uniswap V2 pool
      * 
-     * @see getPricefeed
+     * @see getPriceFeed
      * 
      */
     getPriceV2: async function (chain, poolAddress, pair) {
@@ -430,7 +431,7 @@ const CryptoModule = {
         if (!chainID) { throw new Error(`CryptoModule.getPriceV2: Chain ${chain} is not supported...`); }
 
         try {
-            const chainlinkResult = await this.getPricefeed(chain, pair);
+            const chainlinkResult = await this.getPriceFeed(chain, pair);
             if (!chainlinkResult) return null;
 
             const provider = new ethers.providers.Web3Provider(window.ethereum);
@@ -497,7 +498,7 @@ const CryptoModule = {
      * @param {string} poolAddress - The LP address for the token
      * @returns {Promise<string>} The price of the token in the specified Uniswap V3 pool
      * 
-     * @see getPricefeed
+     * @see getPriceFeed
      * @see getPoolV3
      * 
      */
@@ -554,7 +555,7 @@ const CryptoModule = {
             }
 
             // 4: Fetch the ETH price in USD
-            const chainlinkResult = await this.getPricefeed(chain, pair);
+            const chainlinkResult = await this.getPriceFeed(chain, pair);
             if (!chainlinkResult) return null;
 
             // 5: Convert token price from WETH to USD

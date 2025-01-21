@@ -234,7 +234,7 @@ await sypher.connect("base"); // Connects user to your site on the base chain
 await sypher.switchChain("optimism"); // Switches or requests the addition of the chain in the user's wallet
 ```
 
-**`getPricefeed`:** Fetch chainlink price feed.
+**`getPriceFeed`:** Fetch chainlink price feed.
 #### | Usage: <!-- omit in toc -->
 ```javascript
 await sypher.getPriceFeed("arbitrum", "eth"); // Gets the price feed for "ETH/USD" on the Arbitrum network

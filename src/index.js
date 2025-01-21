@@ -32,7 +32,7 @@
  * ----> initCrypto
  * ----> connect
  * ----> switchChain
- * ----> getPricefeed
+ * ----> getPriceFeed
  * ----> getTokenDetails
  * ----> getPriceV2
  * ----> getPriceV3
