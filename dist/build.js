@@ -505,7 +505,7 @@ const CryptoModule = {
 
         try {
             const currentChainID = await window.ethereum.request({ method: 'eth_chainId' });
-            if (currentChainID === chainID) { return; }
+            if (currentChainID === CHAINS[chain].params[0].chainId) { return; } // Already on the target chain
 
             console.log(`Switching to ${chain} chain...`);
             await window.ethereum.request({
