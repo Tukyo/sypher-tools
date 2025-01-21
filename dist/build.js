@@ -185,22 +185,32 @@ const CryptoInterfaceModule = {
     /**
      * Creates a button to connect the wallet.
      * 
-     * @example createConnectButton(element, () => sypher.connect("base"), "Connect Now!");
+     * @example createConnectButton(element, () => sypher.connect("base"), { text: "Connect Now!", modal: true });
      * 
      * @param {HTMLElement} element - The target HTML element where the button will be created [Default: document.body]
-     * @param {function} onClick - The function to call when the button is clicked [Default: sypher.Connect("ethereum")]
-     * @param {string} [buttonText] - The text to display on the button [Default: "Connect Wallet"]
+     * @param {function} onClick - The function to call when the button is clicked [Default: sypher.connect("ethereum")]
+     * @param {object} params - The parameters to customize the button [Default: { text: "Connect Wallet", modal: false }]
      * 
      */
-    createConnectButton: function (element = document.body, onClick = () => sypher.Connect("ethereum"), buttonText = "Connect Wallet") {
+    createConnectButton: function (
+        element = document.body,
+        onClick = () => sypher.connect("ethereum"),
+        params = { text: "Connect Wallet", modal: false }
+    ) {
         if (!element || typeof element !== 'object') {
             throw new TypeError(`CryptoInterfaceModule.createConnectButton: "element" must be a valid HTMLElement.`);
         }
         if (typeof onClick !== 'function') {
             throw new TypeError(`CryptoInterfaceModule.createConnectButton: "onClick" must be a valid function.`);
         }
-        if (typeof buttonText !== 'string') {
-            throw new TypeError(`CryptoInterfaceModule.createConnectButton: "buttonText" must be a valid string.`);
+        if (typeof params !== 'object' || params === null) {
+            throw new TypeError(`CryptoInterfaceModule.createConnectButton: "params" must be a valid object.`);
+        }
+
+        const { text = "Connect Wallet", modal = false } = params;
+
+        if (typeof text !== 'string') {
+            throw new TypeError(`CryptoInterfaceModule.createConnectButton: "params.text" must be a valid string.`);
         }
 
         const button = document.createElement('button');
@@ -208,7 +218,12 @@ const CryptoInterfaceModule = {
         button.textContent = buttonText;
         button.onclick = onClick;
 
+        if (modal) {
+            // TODO: Create modal flow for viewing wallet details when connected
+        }
+
         element.appendChild(button);
+        return button;
     }
 };
 const CHAINLINK_ABI = [

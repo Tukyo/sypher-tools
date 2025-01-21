@@ -1,7 +1,7 @@
 # SypherTools <!-- omit in toc -->
 ![Banner](https://raw.githubusercontent.com/Tukyo/sypherbot-public/refs/heads/main/assets/img/readme_banner.jpg)
 
-A comprehensive library of utility methods designed to enhance web development, with a specific focus on crypto frontends. Sypher-Tools provides modules for window management, text truncation, interface effects, and crypto operations, all in one lightweight package. **[~10kb]**
+A comprehensive library of utility methods designed to enhance web development, with a specific focus on crypto frontends. Sypher Tools provides modules for window management, text truncation, interface effects, and crypto operations, all in one lightweight package. **[~10kb]**
 
 ## 💾 **Technologies Used** <!-- omit in toc -->
 ![Javascript](https://shields.io/badge/JavaScript-F7DF1E?logo=JavaScript&logoColor=000&style=flat-square)
@@ -30,7 +30,7 @@ A comprehensive library of utility methods designed to enhance web development, 
 
 ## 🔎 **Overview**
 
-**Sypher-Tools** simplifies common tasks for web development, including:
+**Sypher Tools** simplifies common tasks for web development, including:
 
 - Window management
 - Text truncation
@@ -185,7 +185,10 @@ const connectButton = await sypher.createConnectButton(
           "V3"
       );
     },
-    "Connect Yo!" // What you want the connect button to say
+    {
+        text: "Connect Yo!", // What you want the button to say
+        modal: true, // Enable optional modal for expanded wallet connection features
+    }
 ); // => This will connect the user to the website, and return a cryptoObject of the passed token.
 ```
 ```javascript
@@ -220,7 +223,7 @@ You can call them individually, but it is **recommended** to just call sypher.in
 **`connect`:** Connect to a wallet.
 #### | Usage: <!-- omit in toc -->
 ```javascript
-await sypher.Connect("base"); // Connects user to your site on the base chain
+await sypher.connect("base"); // Connects user to your site on the base chain
 ```
 
 **`switchChain`:** Switch between blockchain networks.
