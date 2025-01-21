@@ -861,7 +861,7 @@ const CryptoModule = {
             throw new TypeError(`CryptoModule.clean: "tokenDetails" must be an object but received ${typeof tokenDetails} with value "${tokenDetails}"`);
         }
         
-        const { contractAddress, poolAddress, totalSupply, tokenPrice, userValue } = tokenDetails;
+        const { contractAddress, poolAddress, balance, decimals, name, symbol, totalSupply, tokenPrice, userValue } = tokenDetails;
 
         const cleanedDetails = {
             contractAddress,
