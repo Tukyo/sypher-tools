@@ -432,7 +432,7 @@ const CryptoModule = {
     /**
      * Get the price of a token in a Uniswap V2 pool.
      * 
-     * @example getPriceV2("base", "0x1234567890abcdef1234567890abcdef12345678", "eth") => "1234.56"
+     * @example getPriceV2("base", "0x1234567890abcdef1234567890abcdef12345678") => "1234.56"
      * 
      * @param {string} chain - The target chain to get the price from. Connected wallet must be on a supported chain
      * @param {string} poolAddress - The target Uniswap V2 pool address

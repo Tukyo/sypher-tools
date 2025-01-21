@@ -105,7 +105,7 @@ const CryptoInterfaceModule = {
     /**
      * Creates a button to connect the wallet.
      * 
-     * @example createConnectButton(element, () => sypher.connect("base"), { text: "Connect Now!", modal: true });
+     * @example createConnectButton(element, async () => await sypher.connect("base"), { text: "Connect Now!", modal: true });
      * 
      * @param {HTMLElement} element - The target HTML element where the button will be created [Default: document.body]
      * @param {function} onClick - The function to call when the button is clicked [Default: sypher.connect("ethereum")]

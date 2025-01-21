@@ -185,7 +185,7 @@ const CryptoInterfaceModule = {
     /**
      * Creates a button to connect the wallet.
      * 
-     * @example createConnectButton(element, () => sypher.connect("base"), { text: "Connect Now!", modal: true });
+     * @example createConnectButton(element, async () => await sypher.connect("base"), { text: "Connect Now!", modal: true });
      * 
      * @param {HTMLElement} element - The target HTML element where the button will be created [Default: document.body]
      * @param {function} onClick - The function to call when the button is clicked [Default: sypher.connect("ethereum")]
@@ -660,7 +660,7 @@ const CryptoModule = {
     /**
      * Get the price of a token in a Uniswap V2 pool.
      * 
-     * @example getPriceV2("base", "0x1234567890abcdef1234567890abcdef12345678", "eth") => "1234.56"
+     * @example getPriceV2("base", "0x1234567890abcdef1234567890abcdef12345678") => "1234.56"
      * 
      * @param {string} chain - The target chain to get the price from. Connected wallet must be on a supported chain
      * @param {string} poolAddress - The target Uniswap V2 pool address
