@@ -195,25 +195,48 @@ const CryptoModule = {
      * 
      */
     initCrypto: async function (chain, contractAddress, poolAddress, version, pair = "eth") {
-        const account = await this.connect(chain);
-        if (!account) { return null; }
-
-        console.log("Getting details for:", { chain, contractAddress, poolAddress, version, pair });
-
-        const { balance, decimals, name, symbol } = await this.getTokenDetails(chain, contractAddress);
-
-        let tokenPrice = null;
-        if (version === "V2") {
-            tokenPrice = await this.getPriceV2(chain, poolAddress, pair);
+        if (typeof chain !== 'string' || !chain.trim()) {
+            throw new TypeError(`CryptoModule.initCrypto: "chain" must be a non-empty string but received ${typeof chain} with value "${chain}"`);
         }
-        if (version === "V3") {
-            tokenPrice = await this.getPriceV3(chain, contractAddress, poolAddress, pair);
+        if (typeof contractAddress !== 'string' || !/^0x[a-fA-F0-9]{40}$/.test(contractAddress)) {
+            throw new TypeError(`CryptoModule.initCrypto: "contractAddress" must be a valid Ethereum address but received "${contractAddress}"`);
+        }
+        if (typeof poolAddress !== 'string' || !/^0x[a-fA-F0-9]{40}$/.test(poolAddress)) {
+            throw new TypeError(`CryptoModule.initCrypto: "poolAddress" must be a valid Ethereum address but received "${poolAddress}"`);
+        }
+        if (typeof version !== 'string' || !['V2', 'V3'].includes(version)) {
+            throw new RangeError(`CryptoModule.initCrypto: "version" must be "V2" or "V3" but received "${version}"`);
+        }
+        if (typeof pair !== 'string' || !pair.trim()) {
+            throw new TypeError(`CryptoModule.initCrypto: "pair" must be a non-empty string but received "${pair}"`);
         }
 
-        const userValue = this.getUserValue(balance, tokenPrice);
-        const cleanedDetails = this.clean({ contractAddress, poolAddress, balance, decimals, name, symbol, totalSupply, tokenPrice, userValue });
+        const chainID = CHAINS[chain].params[0].chainId;
+        if (!chainID) { throw new Error(`CryptoModule.initCrypto: Chain ${chain} is not supported...`); }
 
-        return cleanedDetails;
+        try {
+            const account = await this.connect(chain);
+            if (!account) { return null; }
+
+            console.log("Getting details for:", { chain, contractAddress, poolAddress, version, pair });
+            const { balance, decimals, name, symbol } = await this.getTokenDetails(chain, contractAddress);
+
+            let tokenPrice = null;
+            if (version === "V2") {
+                tokenPrice = await this.getPriceV2(chain, poolAddress, pair);
+            }
+            if (version === "V3") {
+                tokenPrice = await this.getPriceV3(chain, contractAddress, poolAddress, pair);
+            }
+
+            const userValue = this.getUserValue(balance, tokenPrice);
+            const cleanedDetails = this.clean({ contractAddress, poolAddress, balance, decimals, name, symbol, totalSupply, tokenPrice, userValue });
+
+            return cleanedDetails;
+        } catch (error) {
+            console.error(`CryptoModule.initCrypto: An error occurred during initialization: ${error.message}`);
+            return null;
+        }
     },
     /**
      * Connect the user's wallet to the website.
@@ -227,23 +250,28 @@ const CryptoModule = {
      * 
      */
     connect: async function (chain) {
-        if (!window.ethereum) { return; }
+        if (typeof chain !== 'string' || !chain.trim()) {
+            throw new TypeError(`CryptoModule.connect: "chain" must be a non-empty string but received ${typeof chain} with value "${chain}"`);
+        }
+        if (!window.ethereum) {throw new Error("CryptoModule.connect: No Ethereum provider found....");}
+
         try {
             const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+            if (!Array.isArray(accounts) || accounts.length === 0) { throw new Error("CryptoModule.connect: No accounts returned by the Ethereum provider."); }
             console.log("Accounts:", accounts);
     
             await this.switchChain(chain);
     
-            if (accounts[0]) {
-                console.log("Wallet connected...");
-                return accounts[0];
+            const primaryAccount = accounts[0];
+            if (primaryAccount) {
+                return primaryAccount;
             } else {
-                console.log("Wallet not connected...");
+                console.warn("CryptoModule.connect: Wallet not connected.");
                 return null;
             }
         } catch (error) {
-            console.error('Connection error:', error);
-            return null;
+            console.error(`CryptoModule.connect: Connection error occurred: ${error.message}`);
+            throw new Error(`CryptoModule.connect: Failed to connect to the Ethereum provider. Details: ${error.message}`);
         }
     },
     /**
@@ -256,28 +284,34 @@ const CryptoModule = {
      * @see CHAINS - for supported chains
      * 
      */
-    switchChain: async function (chain) { 
-        if (!window.ethereum) { return; }
-        const chainID = CHAINS[chain].params[0].chainId;
-        if (!chainID) { return; }
-
-        const currentChainID = await window.ethereum.request({ method: 'eth_chainId' });
-        if (currentChainID === chainID) { return; }
+    switchChain: async function (chain) {
+        if (typeof chain !== 'string' || !chain.trim()) {
+            throw new TypeError(`CryptoModule.switchChain: "chain" must be a non-empty string but received ${typeof chain} with value "${chain}"`);
+        }
+        if (!window.ethereum) { throw new Error("CryptoModule.switchChain: No Ethereum provider found...."); }
 
         try {
+            const currentChainID = await window.ethereum.request({ method: 'eth_chainId' });
+            if (currentChainID === chainID) { return; }
+
             console.log(`Switching to ${chain} chain...`);
             await window.ethereum.request({
                 method: 'wallet_switchEthereumChain',
                 params: CHAINS[chain].params
             });
         } catch (switchError) {
-            console.log('Switch error:', switchError);
+            console.warn(`CryptoModule.switchChain: Attempting to add chain: ${chain}`);
             if (switchError.code === 4902) {
-                console.log(`Adding ${chain} chain...`);
-                await window.ethereum.request({
-                    method: 'wallet_addEthereumChain',
-                    params: CHAINS[chain].params
-                });
+                try {
+                    await window.ethereum.request({
+                        method: 'wallet_addEthereumChain',
+                        params: chainData.params,
+                    });
+                } catch (addError) {
+                    throw new Error(`CryptoModule.switchChain: Unable to switch or add chain "${chain}". Details: ${addError.message}`);
+                }
+            } else {
+                throw new Error(`CryptoModule.switchChain: Failed to switch to chain "${chain}". Details: ${switchError.message}`);
             }
         }
     },
@@ -296,16 +330,23 @@ const CryptoModule = {
      * 
      */
     getPricefeed: async function (chain, pair = "eth") {
-        if (!window.ethereum) { return null; }
-        if (!(chain in CHAINS)) { return null; }
+        if (!window.ethereum) { throw new Error("CryptoModule.getPricefeed: No Ethereum provider found...."); }
+
+        if (typeof chain !== 'string' || !chain.trim()) {
+            throw new TypeError(`CryptoModule.getPricefeed: "chain" must be a non-empty string but received ${typeof chain} with value "${chain}"`);
+        }
+        if (typeof pair !== 'string' || !pair.trim()) {
+            throw new TypeError(`CryptoModule.getPricefeed: "pair" must be a non-empty string but received "${pair}"`);
+        }
+
+        const chainID = CHAINS[chain].params[0].chainId;
+        if (!chainID) { throw new Error(`CryptoModule.getPricefeed: Chain ${chain} is not supported...`); }
         try {
             const account = await this.connect(chain);
             if (!account) { return null; }
 
             const chainlinkAddress = CHAINS[chain].priceFeeds[pair];
-            if (!chainlinkAddress) {
-                throw new Error(`Chain ${chain} is not supported`);
-            }
+            if (!chainlinkAddress) { throw new Error(`Chain ${chain} is not supported`);}
 
             const provider = new ethers.providers.Web3Provider(window.ethereum);
             const signer = provider.getSigner();
@@ -318,8 +359,7 @@ const CryptoModule = {
 
             return price;
         } catch (error) {
-            console.error("Error getting ETH price:", error);
-            return null;
+            throw new Error(`CryptoModule.getPricefeed: Error fetching price feed: ${error.message}`);
         }
     },
     /**
@@ -332,8 +372,14 @@ const CryptoModule = {
      * 
      */
     getTokenDetails: async function (chain, contractAddress) {
-        if (!window.ethereum) { return null; }
-        if (!contractAddress) { return null; }
+        if (typeof chain !== 'string' || !chain.trim()) {
+            throw new TypeError(`CryptoModule.getTokenDetails: "chain" must be a non-empty string but received ${typeof chain} with value "${chain}"`);
+        }
+        if (typeof contractAddress !== 'string' || !/^0x[a-fA-F0-9]{40}$/.test(contractAddress)) {
+            throw new TypeError(`CryptoModule.getTokenDetails: "contractAddress" must be a valid Ethereum address but received "${contractAddress}"`);
+        }
+        if (!window.ethereum) { throw new Error("CryptoModule.getTokenDetails: No Ethereum provider found...."); }
+
         try {
             const account = await this.connect(chain);
             if (!account) { return null; }
@@ -352,8 +398,7 @@ const CryptoModule = {
 
             return { balance, decimals, name, symbol, totalSupply };
         } catch (error) {
-            console.error("Error getting balance:", error);
-            return null;
+            throw new Error(`CryptoModule.getTokenDetails: Error fetching token details: ${error.message}`);
         }
     },
     /**
@@ -369,9 +414,20 @@ const CryptoModule = {
      * 
      */
     getPriceV2: async function (chain, poolAddress, pair) {
-        if (!window.ethereum) { return null; }
-        if (!poolAddress) { return null; }
-        if (!(chain in CHAINS)) { return null; }
+        if (typeof chain !== 'string' || !chain.trim()) {
+            throw new TypeError(`CryptoModule.getPriceV2: "chain" must be a non-empty string but received ${typeof chain} with value "${chain}"`);
+        }
+        if (typeof poolAddress !== 'string' || !/^0x[a-fA-F0-9]{40}$/.test(poolAddress)) {
+            throw new TypeError(`CryptoModule.getPriceV2: "poolAddress" must be a valid Ethereum address but received "${poolAddress}"`);
+        }
+        if (typeof pair !== 'string' || !pair.trim()) {
+            throw new TypeError(`CryptoModule.getPriceV2: "pair" must be a non-empty string but received "${pair}"`);
+        }
+        if (!window.ethereum) { throw new Error("CryptoModule.getPriceV2: No Ethereum provider found...."); }
+
+        const chainID = CHAINS[chain].params[0].chainId;
+        if (!chainID) { throw new Error(`CryptoModule.getPriceV2: Chain ${chain} is not supported...`); }
+
         try {
             const account = await this.connect(chain);
             if (!account) { return null; }
@@ -422,8 +478,7 @@ const CryptoModule = {
             } else if (token0.toLowerCase() === pairAddress.toLowerCase()) {
                 priceRatio = reserve0Float / reserve1Float; // Price in pair = (reserve0 / 10^decimals0) / (reserve1 / 10^decimals1)
             } else {
-                console.log(`Skipping pool ${poolAddress} - Neither token is ${pair}`);
-                return null;
+                throw new Error(`CryptoModule.getPriceV2: Neither token is ${pair}`);
             }
 
             const tokenPriceUSD = priceRatio * chainlinkResult;
@@ -431,8 +486,7 @@ const CryptoModule = {
 
             return tokenPriceUSD;
         } catch (error) {
-            console.error('Error calculating V2 token price:', error);
-            return null;
+            throw new Error(`CryptoModule.getPriceV2: Error calculating V2 token price: ${error.message}`);
         }
     },
     /**
@@ -450,9 +504,24 @@ const CryptoModule = {
      * 
      */
     getPriceV3: async function (chain, contractAddress, poolAddress, pair) {
-        if (!window.ethereum) { return null; }
-        if (!poolAddress || !contractAddress) { return null; }
-        if (!(chain in CHAINS)) { return null; }
+        if (typeof chain !== 'string' || !chain.trim()) {
+            throw new TypeError(`CryptoModule.getPriceV3: "chain" must be a non-empty string but received ${typeof chain} with value "${chain}"`);
+        }
+        if (typeof contractAddress !== 'string' || !/^0x[a-fA-F0-9]{40}$/.test(contractAddress)) {
+            throw new TypeError(`CryptoModule.getPriceV3: "contractAddress" must be a valid Ethereum address but received "${contractAddress}"`);
+        }
+        if (typeof poolAddress !== 'string' || !/^0x[a-fA-F0-9]{40}$/.test(poolAddress)) {
+            throw new TypeError(`CryptoModule.getPriceV3: "poolAddress" must be a valid Ethereum address but received "${poolAddress}"`);
+        }
+        if (typeof pair !== 'string' || !pair.trim()) {
+            throw new TypeError(`CryptoModule.getPriceV3: "pair" must be a non-empty string but received "${pair}"`);
+        }
+
+        if (!window.ethereum) { throw new Error("CryptoModule.getPriceV3: No Ethereum provider found...."); }
+
+        const chainID = CHAINS[chain].params[0].chainId;
+        if (!chainID) { throw new Error(`CryptoModule.getPriceV3: Chain ${chain} is not supported...`); }
+
         try {
             const account = await this.connect(chain);
             if (!account) { return null; }
@@ -486,8 +555,7 @@ const CryptoModule = {
             } else if (token0.toLowerCase() === pairAddress.toLowerCase()) {
                 tokenRatio = 1 / ratioFloat;
             } else {
-                console.log(`Skipping pool ${poolAddress} - Neither token is ${pair}`);
-                return null;
+                throw new Error(`CryptoModule.getPriceV3: Neither token is ${pair}`);
             }
 
             // 4: Fetch the ETH price in USD
@@ -500,8 +568,7 @@ const CryptoModule = {
 
             return tokenPriceUSD;
         } catch (error) {
-            console.error("Error calculating V3 token price:", error);
-            return null;
+            throw new Error(`CryptoModule.getPriceV3: Error calculating V3 token price: ${error.message}`);
         }
     },
     /**
@@ -515,8 +582,18 @@ const CryptoModule = {
      * 
      */
     getPoolV3: async function (chain, contractAddress, poolAddress) {
-        if (!window.ethereum) { return null; }
-        if (!poolAddress || !contractAddress) { return null; }
+        if (typeof chain !== 'string' || !chain.trim()) {
+            throw new TypeError(`CryptoModule.getPoolV3: "chain" must be a non-empty string but received ${typeof chain} with value "${chain}"`);
+        }
+        if (typeof contractAddress !== 'string' || !/^0x[a-fA-F0-9]{40}$/.test(contractAddress)) {
+            throw new TypeError(`CryptoModule.getPoolV3: "contractAddress" must be a valid Ethereum address but received "${contractAddress}"`);
+        }
+        if (typeof poolAddress !== 'string' || !/^0x[a-fA-F0-9]{40}$/.test(poolAddress)) {
+            throw new TypeError(`CryptoModule.getPoolV3: "poolAddress" must be a valid Ethereum address but received "${poolAddress}"`);
+        }
+
+        if (!window.ethereum) { throw new Error("CryptoModule.getPoolV3: No Ethereum provider found...."); }
+
         try {
             const account = await this.connect(chain);
             if (!account) { return null; }
@@ -548,8 +625,7 @@ const CryptoModule = {
 
             return { sqrtPriceX96, token0, token1, decimals0, decimals1, liquidity };
         } catch (error) {
-            console.error("Error getting pool data:", error);
-            return null;
+            throw new Error(`CryptoModule.getPoolV3: Error fetching V3 pool details: ${error.message}`);
         }
     },
     /**
@@ -564,7 +640,13 @@ const CryptoModule = {
      * 
      */
     getUserValue: function (balance, price) {
-        if (!balance || !price) { return null; }
+        if (typeof balance !== 'string' || !balance.trim()) {
+            throw new TypeError(`CryptoModule.getUserValue: "balance" must be a non-empty string but received ${typeof balance} with value "${balance}"`);
+        }
+        if (typeof price !== 'string' || !price.trim()) {
+            throw new TypeError(`CryptoModule.getUserValue: "price" must be a non-empty string but received ${typeof price} with value "${price}"`);
+        }
+
         try {
             const value = parseFloat(balance) * parseFloat(price);
             console.log(`User Value: ${value}`);
@@ -584,8 +666,9 @@ const CryptoModule = {
      * 
      */
     clean: function (tokenDetails) {
-        if (!window.ethereum) { return null; }
-        if (!tokenDetails) { return null; }
+        if (!tokenDetails || typeof tokenDetails !== 'object') {
+            throw new TypeError(`CryptoModule.clean: "tokenDetails" must be an object but received ${typeof tokenDetails} with value "${tokenDetails}"`);
+        }
         
         const { contractAddress, poolAddress, totalSupply, tokenPrice, userValue } = tokenDetails;
 

@@ -13,7 +13,10 @@ const InterfaceModule = {
      * CSS Loaders Resource: [Link](https://css-loaders.com/)
      **/
     toggleLoader: function (element, isEnabled = true, loaderHTML, newText = "") {
-        if (!element) return;
+        if (!element || typeof loaderHTML !== 'string' || typeof newText !== 'string') {
+            throw new TypeError(`InterfaceModule.toggleLoader: "element" must be a valid HTMLElement, "loaderHTML" and "newText" must be valid strings.`);
+        }
+
         if (isEnabled) {
             element.innerHTML = loaderHTML;
         } else {
@@ -34,6 +37,11 @@ const InterfaceModule = {
      */
     parallax: function () {
         const parallaxElements = document.querySelectorAll('[data-speed]');
+
+        if (parallaxElements.length === 0) {
+            console.warn(`InterfaceModule.parallax: Parallax enabled, but no elements found with the [data-speed] attribute.`);
+            return;
+        }
 
         function applyParallax() {
             parallaxElements.forEach(element => {
@@ -61,14 +69,21 @@ const InterfaceModule = {
      * 
      */
     fade: function (distance = '20px', length = '0.5s') {
+        if (typeof distance !== 'string' || typeof length !== 'string') {
+            throw new TypeError(`InterfaceModule.fade: "distance" and "length" must be valid strings.`);
+        }
+
         const elements = document.querySelectorAll('[data-fade]');
-        if (elements.length === 0) { return; }
-    
+        if (elements.length === 0) {
+            console.warn(`InterfaceModule.fade: Fade enabled, but no elements found with the [data-fade] attribute.`);
+            return;
+        }
+
         elements.forEach(el => {
             el.style.opacity = 0;
             el.style.transform = `translateY(${distance})`;
             el.style.transition = `opacity ${length} ease-out, transform ${length} ease-out`;
-        });   
+        });
 
         const observer = new IntersectionObserver((entries) => {
             entries.forEach(entry => {
@@ -82,7 +97,7 @@ const InterfaceModule = {
                 }
             });
         }, { threshold: 0.1 });
-    
+
         elements.forEach(el => observer.observe(el));
     }
 };
@@ -98,7 +113,15 @@ const CryptoInterfaceModule = {
      * 
      */
     createConnectButton: function (element = document.body, onClick = () => sypher.Connect("ethereum"), buttonText = "Connect Wallet") {
-        if (typeof onClick !== 'function') return;
+        if (!element || typeof element !== 'object') {
+            throw new TypeError(`CryptoInterfaceModule.createConnectButton: "element" must be a valid HTMLElement.`);
+        }
+        if (typeof onClick !== 'function') {
+            throw new TypeError(`CryptoInterfaceModule.createConnectButton: "onClick" must be a valid function.`);
+        }
+        if (typeof buttonText !== 'string') {
+            throw new TypeError(`CryptoInterfaceModule.createConnectButton: "buttonText" must be a valid string.`);
+        }
 
         const button = document.createElement('button');
         button.classList.add('connect-button');

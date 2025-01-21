@@ -27,19 +27,13 @@ const TruncationModule = {
      */
     truncate: function(string, startLength = 6, endLength = 4) {
         if (typeof string !== 'string') {
-            throw new TypeError(
-                `TruncationModule.truncate: "string" must be a valid string but received ${typeof string}`
-            );
+            throw new TypeError(`TruncationModule.truncate: "string" must be a valid string but received ${typeof string}`);
         }
         if (!Number.isInteger(startLength) || startLength < 0) {
-            throw new RangeError(
-                `TruncationModule.truncate: "startLength" must be a non-negative integer but received ${startLength}`
-            );
+            throw new RangeError(`TruncationModule.truncate: "startLength" must be a non-negative integer but received ${startLength}`);
         }
         if (!Number.isInteger(endLength) || endLength < 0) {
-            throw new RangeError(
-                `TruncationModule.truncate: "endLength" must be a non-negative integer but received ${endLength}`
-            );
+            throw new RangeError(`TruncationModule.truncate: "endLength" must be a non-negative integer but received ${endLength}`);
         }
 
         if (string.length <= startLength + endLength + 3) { return string; }
@@ -59,19 +53,13 @@ const TruncationModule = {
      */
     truncateBalance: function(balance, decimals = 2, maxLength = 8) {
         if (typeof balance !== 'number' || isNaN(balance)) {
-            throw new TypeError(
-                `TruncationModule.truncateBalance: "balance" must be a valid number but received ${balance}`
-            );
+            throw new TypeError(`TruncationModule.truncateBalance: "balance" must be a valid number but received ${balance}`);
         }
         if (!Number.isInteger(decimals) || decimals < 0) {
-            throw new RangeError(
-                `TruncationModule.truncateBalance: "decimals" must be a non-negative integer but received ${decimals}`
-            );
+            throw new RangeError(`TruncationModule.truncateBalance: "decimals" must be a non-negative integer but received ${decimals}`);
         }
         if (!Number.isInteger(maxLength) || maxLength <= 0) {
-            throw new RangeError(
-                `TruncationModule.truncateBalance: "maxLength" must be a positive integer but received ${maxLength}`
-            );
+            throw new RangeError(`TruncationModule.truncateBalance: "maxLength" must be a positive integer but received ${maxLength}`);
         }
         
         const num = parseFloat(balance);

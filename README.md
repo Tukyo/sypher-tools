@@ -64,7 +64,7 @@ Access all methods via the global `sypher` namespace:
 
 ```javascript
 // Example: Initialization
-const cryptoObject = sypher.initCrypto(
+const cryptoObject = await sypher.initCrypto(
     "base",
     "0x21b9D428EB20FA075A29d51813E57BAb85406620",
     "0xB0fbaa5c7D28B33Ac18D9861D4909396c1B8029b",
@@ -80,6 +80,7 @@ returns =>
     "decimals": 18,
     "name": "Sypher",
     "symbol": "SYPHER",
+    "totalSupply": "1000000.000000000000000000",
     "tokenPrice": 0.1094491127855805,
     "userValue": "2124.384804021992200000"
 }
@@ -128,7 +129,7 @@ if (!isFocused) { return; } // => Stop doing some code when the page isn't focus
 element.textContent = sypher.truncate('0xA66DF2f59C6e37E66a063EE3A82eA63C0D521d14', 3, 5); // => Output: 0xA...21d14
 ```
 
-**`truncateBalance`:** Format and truncate crypto balances for display.
+**`truncateBalance`:** Format and truncate balances for display.
 #### | Usage: <!-- omit in toc -->
 ```javascript
 const balance = 19409.794652093988;
@@ -144,7 +145,8 @@ element.textContent = sypher.truncateBalance(balance); // Output => 19409.79k
 **`toggleLoader`:** Show or hide loading indicators.
 #### | Usage: <!-- omit in toc -->
 ```javascript
-sypher.toggleLoader(elementVariable, true, `<div class="loader"></div>`) // => Show loader
+const loaderHTML = `<div class="loader"></div>`;
+sypher.toggleLoader(elementVariable, true, loaderHTML) // => Show loader
 sypher.toggleLoader(elementVariable, false, "", "New Text") // => No loader and replacement text
 ```
 **CSS Loaders Resource:** [Link](https://css-loaders.com/)
@@ -231,13 +233,13 @@ await sypher.Connect("base"); // Connects user to your site on the base chain
 await sypher.switchChain("optimism"); // Switches or requests the addition of the chain in the user's wallet
 ```
 
-**`getPricefeed`:** Fetch price feeds for tokens.
+**`getPricefeed`:** Fetch chainlink price feed.
 #### | Usage: <!-- omit in toc -->
 ```javascript
 await sypher.getPriceFeed("arbitrum", "eth"); // Gets the price feed for "ETH/USD" on the Arbitrum network
 ```
 
-**`getTokenDetails`:** Retrieve detailed token information.
+**`getTokenDetails`:** Retrieve token details using onchain calls.
 #### | Usage: <!-- omit in toc -->
 ```javascript
 const sypherCA = "0x21b9D428EB20FA075A29d51813E57BAb85406620";
@@ -245,7 +247,7 @@ await sypher.getTokenDetails("base", sypherCA);
 // => Returns { balance, decimals, name, symbol, totalSupply } for 0x21b...6620
 ```
 
-**`getPriceV2`:** Fetch token prices using version 2 price logic.
+**`getPriceV2`:** Fetch token prices using Uniswap V2 price logic.
 #### | Usage: <!-- omit in toc -->
 ```javascript
 await sypher.getPriceV2(
@@ -255,7 +257,7 @@ await sypher.getPriceV2(
 ); // => Returns the token price for a Uniswap V2 pool in USD (Virtuals)
 ```
 
-**`getPriceV3`:** Fetch token prices using version 3 price logic.
+**`getPriceV3`:** Fetch token prices using Uniswap V3 price logic.
 #### | Usage: <!-- omit in toc -->
 ```javascript
 await sypher.getPriceV3(
@@ -267,7 +269,7 @@ await sypher.getPriceV3(
 ```
 > *This method uses {getPoolV3} to get the necessary pool details for the token*
 
-**`getPoolV3`:** Get details of a liquidity pool.
+**`getPoolV3`:** Get details of a Uniswap V3 liquidity pool.
 #### | Usage: <!-- omit in toc -->
 ```javascript
 await sypher.getPoolV3(
@@ -277,7 +279,7 @@ await sypher.getPoolV3(
 ); // => Returns { sqrtPriceX96, token0, token1, decimals0, decimals1, liquidity } for a Uniswap V3 pool
 ```
 
-**`getUserValue`:** Calculate user-specific values.
+**`getUserValue`:** Calculate user-specific values for your project's token.
 #### | Usage: <!-- omit in toc -->
 ```javascript
 const userBalance = "1234.56";
@@ -287,11 +289,12 @@ const userValue = await sypher.getUserValue(userBalance, tokenPrice);
 ```
 > *Only call this method if you already know the price of the token in USD and the user's balance*
 
-**`clean`:** Perform cleanup tasks for crypto data.
+**`clean`:** Clean the {cryptoObject} output for ease of development use.
 #### | Usage: <!-- omit in toc -->
 ```javascript
 const cryptoObject = {yourCryptoObject};
 const cleanedCryptoObject = await sypher.clean(cryptoObject); 
+// => Returns a cleaned object with formatted values.
 ```
 > *This method is called upon returning the initial crypto object. You should not need to call this method under normal circumstances*
 
