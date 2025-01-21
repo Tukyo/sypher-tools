@@ -306,9 +306,6 @@ const CryptoModule = {
         }
 
         try {
-            const account = await this.connect(chain);
-            if (!account) { return null; }
-
             const chainId = chainData.params[0].chainId;
 
             const currentChainID = await window.ethereum.request({ method: 'eth_chainId' });
