@@ -432,7 +432,7 @@ const CryptoModule = {
             if (!account) { return null; }
 
             console.log("Getting details for:", { chain, contractAddress, poolAddress, version, pair });
-            const { balance, decimals, name, symbol } = await this.getTokenDetails(chain, contractAddress);
+            const { balance, decimals, name, symbol, totalSupply } = await this.getTokenDetails(chain, contractAddress);
 
             let tokenPrice = null;
             if (version === "V2") {
