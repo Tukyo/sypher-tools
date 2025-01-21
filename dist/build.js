@@ -215,7 +215,7 @@ const CryptoInterfaceModule = {
 
         const button = document.createElement('button');
         button.classList.add('connect-button');
-        button.textContent = buttonText;
+        button.textContent = text;
         button.onclick = onClick;
 
         if (modal) {
