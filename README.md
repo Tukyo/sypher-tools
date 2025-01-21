@@ -218,8 +218,6 @@ const cryptoObject = await sypher.initCrypto(
 You can call them individually, but it is **recommended** to just call sypher.initCrypto();
 
 **`connect`:** Connect to a wallet.
-
-> *This method is called in every function to ensure connectvity*
 #### | Usage: <!-- omit in toc -->
 ```javascript
 await sypher.Connect("base"); // Connects user to your site on the base chain

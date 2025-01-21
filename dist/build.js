@@ -555,9 +555,6 @@ const CryptoModule = {
         const chainID = CHAINS[chain].params[0].chainId;
         if (!chainID) { throw new Error(`CryptoModule.getPricefeed: Chain ${chain} is not supported...`); }
         try {
-            const account = await this.connect(chain);
-            if (!account) { return null; }
-
             const chainlinkAddress = CHAINS[chain].priceFeeds[pair];
             if (!chainlinkAddress) { throw new Error(`Chain ${chain} is not supported`);}
 
@@ -594,9 +591,6 @@ const CryptoModule = {
         if (!window.ethereum) { throw new Error("CryptoModule.getTokenDetails: No Ethereum provider found...."); }
 
         try {
-            const account = await this.connect(chain);
-            if (!account) { return null; }
-
             const provider = new ethers.providers.Web3Provider(window.ethereum);
             const signer = provider.getSigner();
             const address = await signer.getAddress();
@@ -642,9 +636,6 @@ const CryptoModule = {
         if (!chainID) { throw new Error(`CryptoModule.getPriceV2: Chain ${chain} is not supported...`); }
 
         try {
-            const account = await this.connect(chain);
-            if (!account) { return null; }
-
             const chainlinkResult = await this.getPricefeed(chain, pair);
             if (!chainlinkResult) return null;
 
@@ -736,9 +727,6 @@ const CryptoModule = {
         if (!chainID) { throw new Error(`CryptoModule.getPriceV3: Chain ${chain} is not supported...`); }
 
         try {
-            const account = await this.connect(chain);
-            if (!account) { return null; }
-
             // 1: Get all pool details
             const { sqrtPriceX96, token0, token1, decimals0, decimals1 } = await this.getPoolV3(chain, contractAddress, poolAddress);
             const pairAddress = CHAINS[chain].pairAddresses[pair];
@@ -808,9 +796,6 @@ const CryptoModule = {
         if (!window.ethereum) { throw new Error("CryptoModule.getPoolV3: No Ethereum provider found...."); }
 
         try {
-            const account = await this.connect(chain);
-            if (!account) { return null; }
-
             const provider = new ethers.providers.Web3Provider(window.ethereum);
             const signer = provider.getSigner();
 
@@ -853,13 +838,6 @@ const CryptoModule = {
      * 
      */
     getUserValue: function (balance, price) {
-        if (typeof balance !== 'string' || !balance.trim()) {
-            throw new TypeError(`CryptoModule.getUserValue: "balance" must be a non-empty string but received ${typeof balance} with value "${balance}"`);
-        }
-        if (typeof price !== 'string' || !price.trim()) {
-            throw new TypeError(`CryptoModule.getUserValue: "price" must be a non-empty string but received ${typeof price} with value "${price}"`);
-        }
-
         try {
             const value = parseFloat(balance) * parseFloat(price);
             console.log(`User Value: ${value}`);
