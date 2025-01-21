@@ -519,13 +519,15 @@ const CryptoModule = {
         if (!window.ethereum) { throw new Error("CryptoModule.switchChain: No Ethereum provider found...."); }
 
         try {
+            const chainId = chainData.params[0].chainId;
+
             const currentChainID = await window.ethereum.request({ method: 'eth_chainId' });
-            if (currentChainID === CHAINS[chain].params[0].chainId) { return; } // Already on the target chain
+            if (currentChainID === chainId) { return; } // Already on the target chain
 
             console.log(`Switching to ${chain} chain...`);
             await window.ethereum.request({
                 method: 'wallet_switchEthereumChain',
-                params: CHAINS[chain].params
+                params: [{ chainId }],
             });
         } catch (switchError) {
             console.warn(`CryptoModule.switchChain: Attempting to add chain: ${chain}`);
