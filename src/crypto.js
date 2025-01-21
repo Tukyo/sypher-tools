@@ -290,6 +290,11 @@ const CryptoModule = {
         }
         if (!window.ethereum) { throw new Error("CryptoModule.switchChain: No Ethereum provider found...."); }
 
+        const chainData = CHAINS[chain];
+        if (!chainData || !chainData.params) {
+            throw new Error(`CryptoModule.switchChain: Chain "${chain}" is not supported.`);
+        }
+
         try {
             const chainId = chainData.params[0].chainId;
 
