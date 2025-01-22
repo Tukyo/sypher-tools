@@ -13,8 +13,18 @@ const InterfaceModule = {
      * CSS Loaders Resource: [Link](https://css-loaders.com/)
      **/
     toggleLoader: function (element, isEnabled = true, loaderHTML, newText = "") {
-        if (!element || typeof loaderHTML !== 'string' || typeof newText !== 'string') {
-            throw new TypeError(`InterfaceModule.toggleLoader: "element" must be a valid HTMLElement, "loaderHTML" and "newText" must be valid strings.`);
+        try {
+            sypher.validateInput(
+                { element, isEnabled, loaderHTML, newText },
+                {
+                    element: { type: "object", required: true },
+                    isEnabled: { type: "bool", required: false },
+                    loaderHTML: { type: "string", required: true },
+                    newText: { type: "string", required: false }
+                }, "InterfaceModule.toggleLoader"
+            );
+        } catch (error) {
+            throw new Error(`InterfaceModule.toggleLoader: ${error.message}`);
         }
 
         if (isEnabled) {
@@ -37,7 +47,6 @@ const InterfaceModule = {
      */
     parallax: function () {
         const parallaxElements = document.querySelectorAll('[data-speed]');
-
         if (parallaxElements.length === 0) {
             console.warn(`InterfaceModule.parallax: Parallax enabled, but no elements found with the [data-speed] attribute.`);
             return;
@@ -69,8 +78,16 @@ const InterfaceModule = {
      * 
      */
     fade: function (distance = '20px', length = '0.5s') {
-        if (typeof distance !== 'string' || typeof length !== 'string') {
-            throw new TypeError(`InterfaceModule.fade: "distance" and "length" must be valid strings.`);
+        try {
+            sypher.validateInput(
+                { distance, length },
+                {
+                    distance: { type: "string", required: false },
+                    length: { type: "string", required: false }
+                }, "InterfaceModule.fade"
+            );
+        } catch (error) {
+            throw new Error(`InterfaceModule.fade: ${error.message}`);
         }
 
         const elements = document.querySelectorAll('[data-fade]');
@@ -105,40 +122,47 @@ const CryptoInterfaceModule = {
     /**
      * Creates a button to connect the wallet.
      * 
-     * @example createConnectButton(element, async () => await sypher.connect("base"), { text: "Connect Now!", modal: true });
+     * @example createButton(element, async () => await sypher.connect("base"), { text: "Connect Now!", modal: true });
      * 
      * @param {HTMLElement} element - The target HTML element where the button will be created [Default: document.body]
      * @param {function} onClick - The function to call when the button is clicked [Default: sypher.connect("ethereum")]
      * @param {object} params - The parameters to customize the button [Default: { text: "Connect Wallet", modal: false }]
      * 
      */
-    createConnectButton: function (
+    createButton: function (
         element = document.body,
         onClick = () => sypher.connect("ethereum"),
-        params = { text: "Connect Wallet", modal: false }
+        params = { text: "Connect Wallet", className: "connect-button", modal: false }
     ) {
-        if (!element || typeof element !== 'object') {
-            throw new TypeError(`CryptoInterfaceModule.createConnectButton: "element" must be a valid HTMLElement.`);
-        }
-        if (typeof onClick !== 'function') {
-            throw new TypeError(`CryptoInterfaceModule.createConnectButton: "onClick" must be a valid function.`);
-        }
-        if (typeof params !== 'object' || params === null) {
-            throw new TypeError(`CryptoInterfaceModule.createConnectButton: "params" must be a valid object.`);
+        try {
+            sypher.validateInput(
+                { element, onClick, params },
+                {
+                    element: { type: "object", required: false },
+                    onClick: { type: "function", required: false },
+                    params: { type: "object", required: false }
+                }, "CryptoInterfaceModule.createButton"
+            );
+        } catch (error) {
+            throw new Error(`CryptoInterfaceModule.createButton: ${error.message}`);
         }
 
-        const { text = "Connect Wallet", modal = false } = params;
+        const { text = "Connect Wallet", className = "connect-button", modal = false } = params;
 
         if (typeof text !== 'string') {
-            throw new TypeError(`CryptoInterfaceModule.createConnectButton: "params.text" must be a valid string.`);
+            throw new TypeError(`CryptoInterfaceModule.createButton: "params.text" must be a valid string.`);
+        }
+        if (typeof className !== 'string') {
+            throw new TypeError(`CryptoInterfaceModule.createButton: "params.className" must be a valid string.`);
         }
 
         const button = document.createElement('button');
-        button.classList.add('connect-button');
+        button.classList.add(className);
         button.textContent = text;
         button.onclick = onClick;
 
         if (modal) {
+            console.log("Modal Enabled...");
             // TODO: Create modal flow for viewing wallet details when connected
         }
 

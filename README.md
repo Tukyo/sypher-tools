@@ -21,8 +21,9 @@ A comprehensive library of utility methods designed to enhance web development, 
 - [💿 **Installation**](#-installation)
 - [🛠️ **Usage**](#️-usage)
 - [📂 **Modules**](#-modules)
-  - [WindowModule](#windowmodule)
+  - [HelperModule](#helpermodule)
   - [TruncationModule](#truncationmodule)
+  - [WindowModule](#windowmodule)
   - [InterfaceModule](#interfacemodule)
   - [Crypto Interface Module](#crypto-interface-module)
   - [CryptoModule](#cryptomodule)
@@ -105,17 +106,32 @@ element.innerHTML = truncatedValue; // => <p>2124.38k</p>
 
 ## 📂 **Modules**
 
-### WindowModule
+### HelperModule
 **File**: `/src/utils.js`
 
-#### Methods: <!-- omit in toc -->
-**`pageFocus`:** Manage page focus events and behaviors.
+### Methods: <!-- omit in toc -->
+**`validateInput`:** Validates input for processing in methods.
 
 #### | Usage: <!-- omit in toc -->
 ```javascript
-let isFocused = null;
-document.addEventListener("visibilitychange", isFocused = sypher.pageFocus()); // => retuns a bool indicating page focus
-if (!isFocused) { return; } // => Stop doing some code when the page isn't focused
+const addressRegex = /^0x[a-fA-F0-9]{40}$/;
+try {
+sypher.validateInput(
+      { chain, contractAddress, poolAddress }, // Validation params
+      { // Validation Rules
+          chain: { type: "string", required: true },
+          contractAddress: { type: "string", required: true, regex: addressRegex },
+          poolAddress: { type: "string", required: true, regex: addressRegex }
+      }, "CryptoModule.getPoolV3" // Context
+  );
+} catch (error) { throw new Error(error); }
+```
+
+**`validateChain`:** Validates chain data from supported chains.
+
+#### | Usage: <!-- omit in toc -->
+```javascript
+
 ```
 
 ---
@@ -136,6 +152,21 @@ element.textContent = sypher.truncate('0xA66DF2f59C6e37E66a063EE3A82eA63C0D521d1
 ```javascript
 const balance = 19409.794652093988;
 element.textContent = sypher.truncateBalance(balance); // Output => 19409.79k
+```
+
+---
+
+### WindowModule
+**File**: `/src/utils.js`
+
+#### Methods: <!-- omit in toc -->
+**`pageFocus`:** Manage page focus events and behaviors.
+
+#### | Usage: <!-- omit in toc -->
+```javascript
+let isFocused = null;
+document.addEventListener("visibilitychange", isFocused = sypher.pageFocus()); // => retuns a bool indicating page focus
+if (!isFocused) { return; } // => Stop doing some code when the page isn't focused
 ```
 
 ---
@@ -173,11 +204,11 @@ Now, the div element with the *[data-speed]* attribute will be effected by the p
 **File** `/src/interface.js`
 
 #### Methods: <!-- omit in toc -->
-**`createConnectButton`:** Create a connect button in the page.
+**`createButton`:** Create a button in the page.
 #### | Usage: <!-- omit in toc -->
 ```javascript
 let cryptoObject = null;
-const connectButton = await sypher.createConnectButton(
+const connectButton = await sypher.createButton(
     element, // Choose the element you want to attach the button to
     async () => {
       cryptoObject = await sypher.initCrypto(
@@ -195,7 +226,7 @@ const connectButton = await sypher.createConnectButton(
 ```
 ```javascript
 // This simplified version will attach a connect button to the root of the page that will connect the wallet onClick
-const connectButton = await sypher.createConnectButton();
+const connectButton = await sypher.createButton();
 ```
 
 ---

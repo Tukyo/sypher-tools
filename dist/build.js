@@ -1,17 +1,107 @@
-const WindowModule = {
+const HelperModule = {
     /**
-     * Get the current window dimensions.
+     * Validate the inputs based on the rules provided.
      * 
-     * @example document.addEventListener("visibilitychange", pageFocus);
+     * @example validateInput({ name: "John Doe" }, { name: { required: true, type: "string" } });
      * 
-     * @returns {boolean} Whether the page is focused.
+     * @param {object} inputs - The inputs to validate
+     * @param {object} rules - The rules to validate the inputs against
+     * @param {string} context - The context of the validation
+     * @returns {boolean} The validation status
      * 
      */
-    pageFocus: function() {
-        const pageFocused = document.visibilityState === "visible";
-        if (pageFocused) console.log(`Page Focused...`); else console.log(`Page Unfocused...`);
-        return pageFocused;
-    }
+    validateInput: function (inputs, rules, context = "validateInput") {
+        // 1: Validate the inputs for this method
+        if (typeof inputs !== 'object') {
+            throw new TypeError(`${context}: "inputs" must be a valid object.`);
+        }
+        if (typeof rules !== 'object') {
+            throw new TypeError(`${context}: "rules" must be a valid object.`);
+        }
+        if (typeof context !== 'string') {
+            throw new TypeError(`${context}: "context" must be a valid string.`);
+        }
+
+        // 2: Validate each input based on the rules
+        Object.entries(rules).forEach(([key, rule]) => {
+            const value = inputs[key];
+
+            if (rule.required && (value === undefined || value === null)) { // No value provided for required field
+                throw new Error(`${context}: "${key}" is required.`);
+            }
+            if (!rule.required && (value === undefined || value === null)) return; // Skip optional fields
+
+            if (rule.type && typeof value !== rule.type) { // Type validation
+                throw new TypeError(`${context}: Validation failed: "${key}" must be of type "${rule.type}", but received type "${typeof value}".`);
+            }
+
+            if (rule.type === "bool" && typeof value !== "boolean") { // Bool validation
+                throw new TypeError(`${context}: Validation failed: "${key}" must be of type "boolean", but received type "${typeof value}".`);
+            }
+
+            if (rule.regex && !rule.regex.test(value)) { // Regex validation
+                throw new Error(`${context}: Validation failed: "${key}" must match the pattern "${rule.regex}".`);
+            }
+
+            if (rule.values && !rule.values.includes(value)) { // Values validation
+                throw new Error(`${context}: Validation failed: "${key}" must be one of [${rule.values}].`);
+            }
+
+            if (rule.enum && !rule.enum.includes(value)) { // Enum validation
+                throw new Error(`${context}: Validation failed: "${key}" must be one of [${rule.enum}].`);
+            }
+
+            if (rule.range && (value < rule.range.min || value > rule.range.max)) { // Range validation
+                throw new RangeError(`${context}: Validation failed: "${key}" must be within the range [${rule.range.min}, ${rule.range.max}].`);
+            }
+
+            if (rule.length) { // Length validation
+                const length = value.length;
+                if (typeof length !== "number") {
+                    throw new TypeError(`${context}: "${key}" must have a valid length property.`);
+                }
+
+                if (typeof rule.length === "number" && length !== rule.length) { // Exact length
+                    throw new Error(`${context}: "${key}" must have a length of ${rule.length}, but got ${length}.`);
+                }
+
+                if (typeof rule.length === "object") { // Min and max length
+                    if (rule.length.min !== undefined && length < rule.length.min) {
+                        throw new Error(`${context}: "${key}" must have a minimum length of ${rule.length.min}, but got ${length}.`);
+                    }
+                    if (rule.length.max !== undefined && length > rule.length.max) {
+                        throw new Error(`${context}: "${key}" must have a maximum length of ${rule.length.max}, but got ${length}.`);
+                    }
+                }
+            }
+        });
+
+        // 3: Return the validation status
+        return true;
+    },
+    /**
+     * Validate the specified chain and return its data and chainId.
+     * 
+     * @param {string} chain - The chain to validate
+     * @returns {{ chainData: object, chainId: string }} The chain data and chainId for the specified chain
+     * 
+     * @throws {Error} If the chain is unsupported or has missing data
+     */
+    validateChain: function (chain) {
+        try { sypher.validateInput({ chain }, { chain: { type: "string", required: true } }, "CryptoModule.validateChain"); }
+        catch (error) { throw new Error(`CryptoModule.validateChain: ${error.message}`); }
+
+        const chainData = CHAINS[chain];
+        if (!chainData) {
+            throw new Error(`CryptoModule.validateChain: Chain "${chain}" is not supported.`);
+        }
+        const chainId = chainData.params[0]?.chainId;
+        if (!chainId) {
+            throw new Error(`CryptoModule.validateChain: Missing chainId for chain "${chain}".`);
+        }
+
+        return { chainData, chainId };
+    },
 }
 const TruncationModule = {
     /**
@@ -25,15 +115,18 @@ const TruncationModule = {
      * @returns {string} The truncated {string}.
      * 
      */
-    truncate: function(string, startLength = 6, endLength = 4) {
-        if (typeof string !== 'string') {
-            throw new TypeError(`TruncationModule.truncate: "string" must be a valid string but received ${typeof string}`);
-        }
-        if (!Number.isInteger(startLength) || startLength < 0) {
-            throw new RangeError(`TruncationModule.truncate: "startLength" must be a non-negative integer but received ${startLength}`);
-        }
-        if (!Number.isInteger(endLength) || endLength < 0) {
-            throw new RangeError(`TruncationModule.truncate: "endLength" must be a non-negative integer but received ${endLength}`);
+    truncate: function (string, startLength = 6, endLength = 4) {
+        try {
+            sypher.validateInput(
+                { string, startLength, endLength },
+                {
+                    string: { type: "string", required: true },
+                    startLength: { type: "number", required: false },
+                    endLength: { type: "number", required: false }
+                }, "TruncationModule.truncate"
+            );
+        } catch (error) {
+            throw new Error(`TruncationModule.truncate: ${error.message}`);
         }
 
         if (string.length <= startLength + endLength + 3) { return string; }
@@ -51,17 +144,20 @@ const TruncationModule = {
      * @returns {string} The truncated balance {string}.
      * 
      */
-    truncateBalance: function(balance, decimals = 2, maxLength = 8) {
-        if (typeof balance !== 'number' || isNaN(balance)) {
-            throw new TypeError(`TruncationModule.truncateBalance: "balance" must be a valid number but received ${balance}`);
+    truncateBalance: function (balance, decimals = 2, maxLength = 8) {
+        try {
+            sypher.validateInput(
+                { balance, decimals, maxLength },
+                {
+                    balance: { type: "number", required: true },
+                    decimals: { type: "number", required: false },
+                    maxLength: { type: "number", required: false }
+                }, "TruncationModule.truncateBalance"
+            );
+        } catch (error) {
+            throw new Error(`TruncationModule.truncateBalance: ${error.message}`);
         }
-        if (!Number.isInteger(decimals) || decimals < 0) {
-            throw new RangeError(`TruncationModule.truncateBalance: "decimals" must be a non-negative integer but received ${decimals}`);
-        }
-        if (!Number.isInteger(maxLength) || maxLength <= 0) {
-            throw new RangeError(`TruncationModule.truncateBalance: "maxLength" must be a positive integer but received ${maxLength}`);
-        }
-        
+
         const num = parseFloat(balance);
 
         if (num >= 1e15) return `${(num / 1e15).toFixed(decimals)}Q`;
@@ -76,6 +172,21 @@ const TruncationModule = {
         const remainingLength = maxLength - intPart.length - 1;
         const truncatedDecimal = decPart.slice(0, Math.max(remainingLength, 0));
         return truncatedDecimal ? `${intPart}.${truncatedDecimal}` : intPart;
+    }
+}
+const WindowModule = {
+    /**
+     * Get the current window dimensions.
+     * 
+     * @example document.addEventListener("visibilitychange", pageFocus);
+     * 
+     * @returns {boolean} Whether the page is focused.
+     * 
+     */
+    pageFocus: function () {
+        const pageFocused = document.visibilityState === "visible";
+        if (pageFocused) console.log(`Page Focused...`); else console.log(`Page Unfocused...`);
+        return pageFocused;
     }
 }
 const InterfaceModule = {
@@ -93,8 +204,18 @@ const InterfaceModule = {
      * CSS Loaders Resource: [Link](https://css-loaders.com/)
      **/
     toggleLoader: function (element, isEnabled = true, loaderHTML, newText = "") {
-        if (!element || typeof loaderHTML !== 'string' || typeof newText !== 'string') {
-            throw new TypeError(`InterfaceModule.toggleLoader: "element" must be a valid HTMLElement, "loaderHTML" and "newText" must be valid strings.`);
+        try {
+            sypher.validateInput(
+                { element, isEnabled, loaderHTML, newText },
+                {
+                    element: { type: "object", required: true },
+                    isEnabled: { type: "bool", required: false },
+                    loaderHTML: { type: "string", required: true },
+                    newText: { type: "string", required: false }
+                }, "InterfaceModule.toggleLoader"
+            );
+        } catch (error) {
+            throw new Error(`InterfaceModule.toggleLoader: ${error.message}`);
         }
 
         if (isEnabled) {
@@ -117,7 +238,6 @@ const InterfaceModule = {
      */
     parallax: function () {
         const parallaxElements = document.querySelectorAll('[data-speed]');
-
         if (parallaxElements.length === 0) {
             console.warn(`InterfaceModule.parallax: Parallax enabled, but no elements found with the [data-speed] attribute.`);
             return;
@@ -149,8 +269,16 @@ const InterfaceModule = {
      * 
      */
     fade: function (distance = '20px', length = '0.5s') {
-        if (typeof distance !== 'string' || typeof length !== 'string') {
-            throw new TypeError(`InterfaceModule.fade: "distance" and "length" must be valid strings.`);
+        try {
+            sypher.validateInput(
+                { distance, length },
+                {
+                    distance: { type: "string", required: false },
+                    length: { type: "string", required: false }
+                }, "InterfaceModule.fade"
+            );
+        } catch (error) {
+            throw new Error(`InterfaceModule.fade: ${error.message}`);
         }
 
         const elements = document.querySelectorAll('[data-fade]');
@@ -185,40 +313,47 @@ const CryptoInterfaceModule = {
     /**
      * Creates a button to connect the wallet.
      * 
-     * @example createConnectButton(element, async () => await sypher.connect("base"), { text: "Connect Now!", modal: true });
+     * @example createButton(element, async () => await sypher.connect("base"), { text: "Connect Now!", modal: true });
      * 
      * @param {HTMLElement} element - The target HTML element where the button will be created [Default: document.body]
      * @param {function} onClick - The function to call when the button is clicked [Default: sypher.connect("ethereum")]
      * @param {object} params - The parameters to customize the button [Default: { text: "Connect Wallet", modal: false }]
      * 
      */
-    createConnectButton: function (
+    createButton: function (
         element = document.body,
         onClick = () => sypher.connect("ethereum"),
-        params = { text: "Connect Wallet", modal: false }
+        params = { text: "Connect Wallet", className: "connect-button", modal: false }
     ) {
-        if (!element || typeof element !== 'object') {
-            throw new TypeError(`CryptoInterfaceModule.createConnectButton: "element" must be a valid HTMLElement.`);
-        }
-        if (typeof onClick !== 'function') {
-            throw new TypeError(`CryptoInterfaceModule.createConnectButton: "onClick" must be a valid function.`);
-        }
-        if (typeof params !== 'object' || params === null) {
-            throw new TypeError(`CryptoInterfaceModule.createConnectButton: "params" must be a valid object.`);
+        try {
+            sypher.validateInput(
+                { element, onClick, params },
+                {
+                    element: { type: "object", required: false },
+                    onClick: { type: "function", required: false },
+                    params: { type: "object", required: false }
+                }, "CryptoInterfaceModule.createButton"
+            );
+        } catch (error) {
+            throw new Error(`CryptoInterfaceModule.createButton: ${error.message}`);
         }
 
-        const { text = "Connect Wallet", modal = false } = params;
+        const { text = "Connect Wallet", className = "connect-button", modal = false } = params;
 
         if (typeof text !== 'string') {
-            throw new TypeError(`CryptoInterfaceModule.createConnectButton: "params.text" must be a valid string.`);
+            throw new TypeError(`CryptoInterfaceModule.createButton: "params.text" must be a valid string.`);
+        }
+        if (typeof className !== 'string') {
+            throw new TypeError(`CryptoInterfaceModule.createButton: "params.className" must be a valid string.`);
         }
 
         const button = document.createElement('button');
-        button.classList.add('connect-button');
+        button.classList.add(className);
         button.textContent = text;
         button.onclick = onClick;
 
         if (modal) {
+            console.log("Modal Enabled...");
             // TODO: Create modal flow for viewing wallet details when connected
         }
 
@@ -363,7 +498,7 @@ const CHAINS = {
     },
     avalanche: {
         params: [{
-            chainID: "0xa86a",
+            chainId: "0xa86a",
             chainName: "Avalanche",
             nativeCurrency: {
                 name: "Avalanche",
@@ -378,7 +513,7 @@ const CHAINS = {
             eth: "0x976B3D034E162d8bD72D6b9C989d545b839003b0",
             avax: "0x0A77230d17318075983913bC2145DB16C7366156"
         },
-        pairAddresses: { 
+        pairAddresses: {
             eth: "",
             avax: ""
         }
@@ -406,6 +541,8 @@ const CHAINS = {
         }
     }
 };
+const addressRegex = /^0x[a-fA-F0-9]{40}$/;
+const lpVersions = ["V2", "V3"];
 const CryptoModule = {
     /**
      * Initialize the Crypto Module by fetching the token balance, price, and user value.
@@ -423,30 +560,23 @@ const CryptoModule = {
      * 
      */
     initCrypto: async function (chain, contractAddress, poolAddress, version, pair = "eth") {
-        if (typeof chain !== 'string' || !chain.trim()) {
-            throw new TypeError(`CryptoModule.initCrypto: "chain" must be a non-empty string but received ${typeof chain} with value "${chain}"`);
-        }
-        if (typeof contractAddress !== 'string' || !/^0x[a-fA-F0-9]{40}$/.test(contractAddress)) {
-            throw new TypeError(`CryptoModule.initCrypto: "contractAddress" must be a valid Ethereum address but received "${contractAddress}"`);
-        }
-        if (typeof poolAddress !== 'string' || !/^0x[a-fA-F0-9]{40}$/.test(poolAddress)) {
-            throw new TypeError(`CryptoModule.initCrypto: "poolAddress" must be a valid Ethereum address but received "${poolAddress}"`);
-        }
-        if (typeof version !== 'string' || !['V2', 'V3'].includes(version)) {
-            throw new RangeError(`CryptoModule.initCrypto: "version" must be "V2" or "V3" but received "${version}"`);
-        }
-        if (typeof pair !== 'string' || !pair.trim()) {
-            throw new TypeError(`CryptoModule.initCrypto: "pair" must be a non-empty string but received "${pair}"`);
+        try {
+            sypher.validateInput(
+                { chain, contractAddress, poolAddress, version, pair },
+                {
+                    chain: { type: "string", required: true },
+                    contractAddress: { type: "string", required: true, regex: addressRegex },
+                    poolAddress: { type: "string", required: true, regex: addressRegex },
+                    version: { type: "string", required: true, enum: lpVersions },
+                    pair: { type: "string", required: false }
+                }, "CryptoModule.initCrypto"
+            );
+        } catch (error) {
+            throw new Error(`CryptoModule.initCrypto: Invalid input: ${error.message}`);
         }
 
-        const chainData = CHAINS[chain];
-        if (!chainData) {
-            throw new Error(`CryptoModule.getPriceFeed: Chain "${chain}" is not supported.`);
-        }
-        const chainID = chainData.params[0]?.chainId;
-        if (!chainID) {
-            throw new Error(`CryptoModule.getPriceFeed: Missing chainId for chain "${chain}".`);
-        }
+        const { chainData, chainId } = this.validateChain(chain);
+        if (!chainData || !chainId) { return null; }
 
         try {
             const account = await this.connect(chain);
@@ -484,29 +614,31 @@ const CryptoModule = {
      * 
      */
     connect: async function (chain) {
-        if (typeof chain !== 'string' || !chain.trim()) {
-            throw new TypeError(`CryptoModule.connect: "chain" must be a non-empty string but received ${typeof chain} with value "${chain}"`);
+        try {
+            sypher.validateInput({ chain }, { chain: { type: "string", required: true } }, "CryptoModule.connect");
+        } catch (error) {
+            throw new Error(`CryptoModule.connect: Invalid input: ${error.message}`);
         }
-        if (!window.ethereum) {throw new Error("CryptoModule.connect: No Ethereum provider found....");}
+        if (!window.ethereum) { throw new Error("CryptoModule.connect: No Ethereum provider found...."); }
+
+        if (this.connected) { return this.connected; }
 
         try {
             const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
             if (!Array.isArray(accounts) || accounts.length === 0) { throw new Error("CryptoModule.connect: No accounts returned by the Ethereum provider."); }
-            
-            if (!this.connect.logged) {
-                console.log("Accounts:", accounts);
-                this.connect.logged = true;
-            }
-    
-            await this.switchChain(chain);
-    
+
             const primaryAccount = accounts[0];
-            if (primaryAccount) {
-                return primaryAccount;
-            } else {
+            if (!primaryAccount) {
                 console.warn("CryptoModule.connect: Wallet not connected.");
                 return null;
             }
+
+            await this.switchChain(chain);
+
+            this.connected = primaryAccount;
+            console.log("Connected account:", primaryAccount);
+
+            return primaryAccount;
         } catch (error) {
             console.error(`CryptoModule.connect: Connection error occurred: ${error.message}`);
             throw new Error(`CryptoModule.connect: Failed to connect to the Ethereum provider. Details: ${error.message}`);
@@ -523,27 +655,29 @@ const CryptoModule = {
      * 
      */
     switchChain: async function (chain) {
-        if (typeof chain !== 'string' || !chain.trim()) {
-            throw new TypeError(`CryptoModule.switchChain: "chain" must be a non-empty string but received ${typeof chain} with value "${chain}"`);
+        try {
+            sypher.validateInput({ chain }, { chain: { type: "string", required: true } }, "CryptoModule.switchChain");
+        } catch (error) {
+            throw new Error(`CryptoModule.switchChain: Invalid input: ${error.message}`);
         }
         if (!window.ethereum) { throw new Error("CryptoModule.switchChain: No Ethereum provider found...."); }
 
         const chainData = CHAINS[chain];
-        if (!chainData || !chainData.params) {
-            throw new Error(`CryptoModule.switchChain: Chain "${chain}" is not supported.`);
-        }
+        if (!chainData || !chainData.params) { throw new Error(`CryptoModule.switchChain: Chain "${chain}" is not supported.`); }
+
+        const targetChainId = chainData.params[0].chainId;
+        if (this.currentChain === targetChainId) { return; }
 
         try {
-            const chainId = chainData.params[0].chainId;
-
             const currentChainID = await window.ethereum.request({ method: 'eth_chainId' });
-            if (currentChainID === chainId) { return; } // Already on the target chain
+            if (currentChainID === targetChainId) { this.currentChain = targetChainId; return; }
 
             console.log(`Switching to ${chain} chain...`);
             await window.ethereum.request({
                 method: 'wallet_switchEthereumChain',
-                params: [{ chainId }],
+                params: [{ targetChainId }],
             });
+            this.currentChain = targetChainId;
         } catch (switchError) {
             console.warn(`CryptoModule.switchChain: Attempting to add chain: ${chain}`);
             if (switchError.code === 4902) {
@@ -552,6 +686,7 @@ const CryptoModule = {
                         method: 'wallet_addEthereumChain',
                         params: chainData.params,
                     });
+                    this.currentChain = targetChainId;
                 } catch (addError) {
                     throw new Error(`CryptoModule.switchChain: Unable to switch or add chain "${chain}". Details: ${addError.message}`);
                 }
@@ -575,30 +710,28 @@ const CryptoModule = {
      * 
      */
     getPriceFeed: async function (chain, pair = "eth") {
+        try {
+            sypher.validateInput(
+                { chain, pair },
+                {
+                    chain: { type: "string", required: true },
+                    pair: { type: "string", required: false }
+                }, "CryptoModule.getPriceFeed"
+            );
+        } catch (error) {
+            throw new Error(`CryptoModule.getPriceFeed: Invalid input: ${error.message}`);
+        }
         if (!window.ethereum) { throw new Error("CryptoModule.getPriceFeed: No Ethereum provider found...."); }
 
-        if (typeof chain !== 'string' || !chain.trim()) {
-            throw new TypeError(`CryptoModule.getPriceFeed: "chain" must be a non-empty string but received ${typeof chain} with value "${chain}"`);
-        }
-        if (typeof pair !== 'string' || !pair.trim()) {
-            throw new TypeError(`CryptoModule.getPriceFeed: "pair" must be a non-empty string but received "${pair}"`);
-        }
-
-        const chainData = CHAINS[chain];
-        if (!chainData) {
-            throw new Error(`CryptoModule.getPriceFeed: Chain "${chain}" is not supported.`);
-        }
-        const chainID = chainData.params[0]?.chainId;
-        if (!chainID) {
-            throw new Error(`CryptoModule.getPriceFeed: Missing chainId for chain "${chain}".`);
-        }
+        const { chainData, chainId } = this.validateChain(chain);
+        if (!chainData || !chainId) { return null; }
 
         try {
             const account = await this.connect(chain);
             if (!account) { return null; }
 
             const chainlinkAddress = CHAINS[chain].priceFeeds[pair];
-            if (!chainlinkAddress) { throw new Error(`Chain ${chain} is not supported`);}
+            if (!chainlinkAddress) { throw new Error(`Chain ${chain} is not supported`); }
 
             const provider = new ethers.providers.Web3Provider(window.ethereum);
             const signer = provider.getSigner();
@@ -624,11 +757,16 @@ const CryptoModule = {
      * 
      */
     getTokenDetails: async function (chain, contractAddress) {
-        if (typeof chain !== 'string' || !chain.trim()) {
-            throw new TypeError(`CryptoModule.getTokenDetails: "chain" must be a non-empty string but received ${typeof chain} with value "${chain}"`);
-        }
-        if (typeof contractAddress !== 'string' || !/^0x[a-fA-F0-9]{40}$/.test(contractAddress)) {
-            throw new TypeError(`CryptoModule.getTokenDetails: "contractAddress" must be a valid Ethereum address but received "${contractAddress}"`);
+        try {
+            sypher.validateInput(
+                { chain, contractAddress },
+                {
+                    chain: { type: "string", required: true },
+                    contractAddress: { type: "string", required: true, regex: addressRegex }
+                }, "CryptoModule.getTokenDetails"
+            );
+        } catch (error) {
+            throw new Error(`CryptoModule.getTokenDetails: Invalid input: ${error.message}`);
         }
         if (!window.ethereum) { throw new Error("CryptoModule.getTokenDetails: No Ethereum provider found...."); }
 
@@ -667,25 +805,22 @@ const CryptoModule = {
      * 
      */
     getPriceV2: async function (chain, poolAddress, pair) {
-        if (typeof chain !== 'string' || !chain.trim()) {
-            throw new TypeError(`CryptoModule.getPriceV2: "chain" must be a non-empty string but received ${typeof chain} with value "${chain}"`);
-        }
-        if (typeof poolAddress !== 'string' || !/^0x[a-fA-F0-9]{40}$/.test(poolAddress)) {
-            throw new TypeError(`CryptoModule.getPriceV2: "poolAddress" must be a valid Ethereum address but received "${poolAddress}"`);
-        }
-        if (typeof pair !== 'string' || !pair.trim()) {
-            throw new TypeError(`CryptoModule.getPriceV2: "pair" must be a non-empty string but received "${pair}"`);
+        try {
+            sypher.validateInput(
+                { chain, poolAddress, pair },
+                {
+                    chain: { type: "string", required: true },
+                    poolAddress: { type: "string", required: true, regex: addressRegex },
+                    pair: { type: "string", required: true }
+                }, "CryptoModule.getPriceV2"
+            );
+        } catch (error) {
+            throw new Error(`CryptoModule.getPriceV2: Invalid input: ${error.message}`);
         }
         if (!window.ethereum) { throw new Error("CryptoModule.getPriceV2: No Ethereum provider found...."); }
 
-        const chainData = CHAINS[chain];
-        if (!chainData) {
-            throw new Error(`CryptoModule.getPriceFeed: Chain "${chain}" is not supported.`);
-        }
-        const chainID = chainData.params[0]?.chainId;
-        if (!chainID) {
-            throw new Error(`CryptoModule.getPriceFeed: Missing chainId for chain "${chain}".`);
-        }
+        const { chainData, chainId } = this.validateChain(chain);
+        if (!chainData || !chainId) { return null; }
 
         try {
             const account = await this.connect(chain);
@@ -763,29 +898,23 @@ const CryptoModule = {
      * 
      */
     getPriceV3: async function (chain, contractAddress, poolAddress, pair) {
-        if (typeof chain !== 'string' || !chain.trim()) {
-            throw new TypeError(`CryptoModule.getPriceV3: "chain" must be a non-empty string but received ${typeof chain} with value "${chain}"`);
+        try {
+            sypher.validateInput(
+                { chain, contractAddress, poolAddress, pair },
+                {
+                    chain: { type: "string", required: true },
+                    contractAddress: { type: "string", required: true, regex: addressRegex },
+                    poolAddress: { type: "string", required: true, regex: addressRegex },
+                    pair: { type: "string", required: true }
+                }, "CryptoModule.getPriceV3"
+            );
+        } catch (error) {
+            throw new Error(`CryptoModule.getPriceV3: Invalid input: ${error.message}`);
         }
-        if (typeof contractAddress !== 'string' || !/^0x[a-fA-F0-9]{40}$/.test(contractAddress)) {
-            throw new TypeError(`CryptoModule.getPriceV3: "contractAddress" must be a valid Ethereum address but received "${contractAddress}"`);
-        }
-        if (typeof poolAddress !== 'string' || !/^0x[a-fA-F0-9]{40}$/.test(poolAddress)) {
-            throw new TypeError(`CryptoModule.getPriceV3: "poolAddress" must be a valid Ethereum address but received "${poolAddress}"`);
-        }
-        if (typeof pair !== 'string' || !pair.trim()) {
-            throw new TypeError(`CryptoModule.getPriceV3: "pair" must be a non-empty string but received "${pair}"`);
-        }
-
         if (!window.ethereum) { throw new Error("CryptoModule.getPriceV3: No Ethereum provider found...."); }
 
-        const chainData = CHAINS[chain];
-        if (!chainData) {
-            throw new Error(`CryptoModule.getPriceFeed: Chain "${chain}" is not supported.`);
-        }
-        const chainID = chainData.params[0]?.chainId;
-        if (!chainID) {
-            throw new Error(`CryptoModule.getPriceFeed: Missing chainId for chain "${chain}".`);
-        }
+        const { chainData, chainId } = this.validateChain(chain);
+        if (!chainData || !chainId) { return null; }
 
         try {
             const account = await this.connect(chain);
@@ -847,17 +976,22 @@ const CryptoModule = {
      * 
      */
     getPoolV3: async function (chain, contractAddress, poolAddress) {
-        if (typeof chain !== 'string' || !chain.trim()) {
-            throw new TypeError(`CryptoModule.getPoolV3: "chain" must be a non-empty string but received ${typeof chain} with value "${chain}"`);
+        try {
+            sypher.validateInput(
+                { chain, contractAddress, poolAddress },
+                {
+                    chain: { type: "string", required: true },
+                    contractAddress: { type: "string", required: true, regex: addressRegex },
+                    poolAddress: { type: "string", required: true, regex: addressRegex }
+                }, "CryptoModule.getPoolV3"
+            );
+        } catch (error) {
+            throw new Error(`CryptoModule.getPoolV3: Invalid input: ${error.message}`);
         }
-        if (typeof contractAddress !== 'string' || !/^0x[a-fA-F0-9]{40}$/.test(contractAddress)) {
-            throw new TypeError(`CryptoModule.getPoolV3: "contractAddress" must be a valid Ethereum address but received "${contractAddress}"`);
-        }
-        if (typeof poolAddress !== 'string' || !/^0x[a-fA-F0-9]{40}$/.test(poolAddress)) {
-            throw new TypeError(`CryptoModule.getPoolV3: "poolAddress" must be a valid Ethereum address but received "${poolAddress}"`);
-        }
-
         if (!window.ethereum) { throw new Error("CryptoModule.getPoolV3: No Ethereum provider found...."); }
+
+        const { chainData, chainId } = this.validateChain(chain);
+        if (!chainData || !chainId) { return null; }
 
         try {
             const account = await this.connect(chain);
@@ -906,6 +1040,19 @@ const CryptoModule = {
      */
     getUserValue: function (balance, price) {
         try {
+            sypher.validateInput(
+                { balance, price },
+                {
+                    balance: { type: "string", required: true },
+                    price: { type: "string", required: true }
+                }, "CryptoModule.getUserValue"
+            );
+        } catch (error) {
+            console.error(`CryptoModule.getUserValue: Invalid input: ${error.message}`);
+            return null;
+        }
+        
+        try {
             const value = parseFloat(balance) * parseFloat(price);
             console.log(`User Value: ${value}`);
             return value;
@@ -924,10 +1071,15 @@ const CryptoModule = {
      * 
      */
     clean: function (tokenDetails) {
-        if (!tokenDetails || typeof tokenDetails !== 'object') {
-            throw new TypeError(`CryptoModule.clean: "tokenDetails" must be an object but received ${typeof tokenDetails} with value "${tokenDetails}"`);
+        try {
+            sypher.validateInput(
+                { tokenDetails },
+                { tokenDetails: { type: "object", required: true } }, "CryptoModule.clean"
+            );
+        } catch (error) {
+            throw new Error(`CryptoModule.clean: Invalid input: ${error.message}`);
         }
-        
+
         const { contractAddress, poolAddress, balance, decimals, name, symbol, totalSupply, tokenPrice, userValue } = tokenDetails;
 
         const cleanedDetails = {
@@ -1002,6 +1154,7 @@ const CryptoModule = {
     const sypher = {};
 
     // Attach each module to sypherTools
+    Object.assign(sypher, HelperModule);
     Object.assign(sypher, WindowModule);
     Object.assign(sypher, TruncationModule);
     Object.assign(sypher, InterfaceModule);

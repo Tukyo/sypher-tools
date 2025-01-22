@@ -1,17 +1,107 @@
-const WindowModule = {
+const HelperModule = {
     /**
-     * Get the current window dimensions.
+     * Validate the inputs based on the rules provided.
      * 
-     * @example document.addEventListener("visibilitychange", pageFocus);
+     * @example validateInput({ name: "John Doe" }, { name: { required: true, type: "string" } });
      * 
-     * @returns {boolean} Whether the page is focused.
+     * @param {object} inputs - The inputs to validate
+     * @param {object} rules - The rules to validate the inputs against
+     * @param {string} context - The context of the validation
+     * @returns {boolean} The validation status
      * 
      */
-    pageFocus: function() {
-        const pageFocused = document.visibilityState === "visible";
-        if (pageFocused) console.log(`Page Focused...`); else console.log(`Page Unfocused...`);
-        return pageFocused;
-    }
+    validateInput: function (inputs, rules, context = "validateInput") {
+        // 1: Validate the inputs for this method
+        if (typeof inputs !== 'object') {
+            throw new TypeError(`${context}: "inputs" must be a valid object.`);
+        }
+        if (typeof rules !== 'object') {
+            throw new TypeError(`${context}: "rules" must be a valid object.`);
+        }
+        if (typeof context !== 'string') {
+            throw new TypeError(`${context}: "context" must be a valid string.`);
+        }
+
+        // 2: Validate each input based on the rules
+        Object.entries(rules).forEach(([key, rule]) => {
+            const value = inputs[key];
+
+            if (rule.required && (value === undefined || value === null)) { // No value provided for required field
+                throw new Error(`${context}: "${key}" is required.`);
+            }
+            if (!rule.required && (value === undefined || value === null)) return; // Skip optional fields
+
+            if (rule.type && typeof value !== rule.type) { // Type validation
+                throw new TypeError(`${context}: Validation failed: "${key}" must be of type "${rule.type}", but received type "${typeof value}".`);
+            }
+
+            if (rule.type === "bool" && typeof value !== "boolean") { // Bool validation
+                throw new TypeError(`${context}: Validation failed: "${key}" must be of type "boolean", but received type "${typeof value}".`);
+            }
+
+            if (rule.regex && !rule.regex.test(value)) { // Regex validation
+                throw new Error(`${context}: Validation failed: "${key}" must match the pattern "${rule.regex}".`);
+            }
+
+            if (rule.values && !rule.values.includes(value)) { // Values validation
+                throw new Error(`${context}: Validation failed: "${key}" must be one of [${rule.values}].`);
+            }
+
+            if (rule.enum && !rule.enum.includes(value)) { // Enum validation
+                throw new Error(`${context}: Validation failed: "${key}" must be one of [${rule.enum}].`);
+            }
+
+            if (rule.range && (value < rule.range.min || value > rule.range.max)) { // Range validation
+                throw new RangeError(`${context}: Validation failed: "${key}" must be within the range [${rule.range.min}, ${rule.range.max}].`);
+            }
+
+            if (rule.length) { // Length validation
+                const length = value.length;
+                if (typeof length !== "number") {
+                    throw new TypeError(`${context}: "${key}" must have a valid length property.`);
+                }
+
+                if (typeof rule.length === "number" && length !== rule.length) { // Exact length
+                    throw new Error(`${context}: "${key}" must have a length of ${rule.length}, but got ${length}.`);
+                }
+
+                if (typeof rule.length === "object") { // Min and max length
+                    if (rule.length.min !== undefined && length < rule.length.min) {
+                        throw new Error(`${context}: "${key}" must have a minimum length of ${rule.length.min}, but got ${length}.`);
+                    }
+                    if (rule.length.max !== undefined && length > rule.length.max) {
+                        throw new Error(`${context}: "${key}" must have a maximum length of ${rule.length.max}, but got ${length}.`);
+                    }
+                }
+            }
+        });
+
+        // 3: Return the validation status
+        return true;
+    },
+    /**
+     * Validate the specified chain and return its data and chainId.
+     * 
+     * @param {string} chain - The chain to validate
+     * @returns {{ chainData: object, chainId: string }} The chain data and chainId for the specified chain
+     * 
+     * @throws {Error} If the chain is unsupported or has missing data
+     */
+    validateChain: function (chain) {
+        try { sypher.validateInput({ chain }, { chain: { type: "string", required: true } }, "CryptoModule.validateChain"); }
+        catch (error) { throw new Error(`CryptoModule.validateChain: ${error.message}`); }
+
+        const chainData = CHAINS[chain];
+        if (!chainData) {
+            throw new Error(`CryptoModule.validateChain: Chain "${chain}" is not supported.`);
+        }
+        const chainId = chainData.params[0]?.chainId;
+        if (!chainId) {
+            throw new Error(`CryptoModule.validateChain: Missing chainId for chain "${chain}".`);
+        }
+
+        return { chainData, chainId };
+    },
 }
 const TruncationModule = {
     /**
@@ -25,15 +115,18 @@ const TruncationModule = {
      * @returns {string} The truncated {string}.
      * 
      */
-    truncate: function(string, startLength = 6, endLength = 4) {
-        if (typeof string !== 'string') {
-            throw new TypeError(`TruncationModule.truncate: "string" must be a valid string but received ${typeof string}`);
-        }
-        if (!Number.isInteger(startLength) || startLength < 0) {
-            throw new RangeError(`TruncationModule.truncate: "startLength" must be a non-negative integer but received ${startLength}`);
-        }
-        if (!Number.isInteger(endLength) || endLength < 0) {
-            throw new RangeError(`TruncationModule.truncate: "endLength" must be a non-negative integer but received ${endLength}`);
+    truncate: function (string, startLength = 6, endLength = 4) {
+        try {
+            sypher.validateInput(
+                { string, startLength, endLength },
+                {
+                    string: { type: "string", required: true },
+                    startLength: { type: "number", required: false },
+                    endLength: { type: "number", required: false }
+                }, "TruncationModule.truncate"
+            );
+        } catch (error) {
+            throw new Error(`TruncationModule.truncate: ${error.message}`);
         }
 
         if (string.length <= startLength + endLength + 3) { return string; }
@@ -51,17 +144,20 @@ const TruncationModule = {
      * @returns {string} The truncated balance {string}.
      * 
      */
-    truncateBalance: function(balance, decimals = 2, maxLength = 8) {
-        if (typeof balance !== 'number' || isNaN(balance)) {
-            throw new TypeError(`TruncationModule.truncateBalance: "balance" must be a valid number but received ${balance}`);
+    truncateBalance: function (balance, decimals = 2, maxLength = 8) {
+        try {
+            sypher.validateInput(
+                { balance, decimals, maxLength },
+                {
+                    balance: { type: "number", required: true },
+                    decimals: { type: "number", required: false },
+                    maxLength: { type: "number", required: false }
+                }, "TruncationModule.truncateBalance"
+            );
+        } catch (error) {
+            throw new Error(`TruncationModule.truncateBalance: ${error.message}`);
         }
-        if (!Number.isInteger(decimals) || decimals < 0) {
-            throw new RangeError(`TruncationModule.truncateBalance: "decimals" must be a non-negative integer but received ${decimals}`);
-        }
-        if (!Number.isInteger(maxLength) || maxLength <= 0) {
-            throw new RangeError(`TruncationModule.truncateBalance: "maxLength" must be a positive integer but received ${maxLength}`);
-        }
-        
+
         const num = parseFloat(balance);
 
         if (num >= 1e15) return `${(num / 1e15).toFixed(decimals)}Q`;
@@ -76,5 +172,20 @@ const TruncationModule = {
         const remainingLength = maxLength - intPart.length - 1;
         const truncatedDecimal = decPart.slice(0, Math.max(remainingLength, 0));
         return truncatedDecimal ? `${intPart}.${truncatedDecimal}` : intPart;
+    }
+}
+const WindowModule = {
+    /**
+     * Get the current window dimensions.
+     * 
+     * @example document.addEventListener("visibilitychange", pageFocus);
+     * 
+     * @returns {boolean} Whether the page is focused.
+     * 
+     */
+    pageFocus: function () {
+        const pageFocused = document.visibilityState === "visible";
+        if (pageFocused) console.log(`Page Focused...`); else console.log(`Page Unfocused...`);
+        return pageFocused;
     }
 }

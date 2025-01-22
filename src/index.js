@@ -54,6 +54,7 @@
     const sypher = {};
 
     // Attach each module to sypherTools
+    Object.assign(sypher, HelperModule);
     Object.assign(sypher, WindowModule);
     Object.assign(sypher, TruncationModule);
     Object.assign(sypher, InterfaceModule);

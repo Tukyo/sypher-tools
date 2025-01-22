@@ -135,7 +135,7 @@ const CHAINS = {
     },
     avalanche: {
         params: [{
-            chainID: "0xa86a",
+            chainId: "0xa86a",
             chainName: "Avalanche",
             nativeCurrency: {
                 name: "Avalanche",
@@ -150,7 +150,7 @@ const CHAINS = {
             eth: "0x976B3D034E162d8bD72D6b9C989d545b839003b0",
             avax: "0x0A77230d17318075983913bC2145DB16C7366156"
         },
-        pairAddresses: { 
+        pairAddresses: {
             eth: "",
             avax: ""
         }
@@ -178,6 +178,8 @@ const CHAINS = {
         }
     }
 };
+const addressRegex = /^0x[a-fA-F0-9]{40}$/;
+const lpVersions = ["V2", "V3"];
 const CryptoModule = {
     /**
      * Initialize the Crypto Module by fetching the token balance, price, and user value.
@@ -195,30 +197,23 @@ const CryptoModule = {
      * 
      */
     initCrypto: async function (chain, contractAddress, poolAddress, version, pair = "eth") {
-        if (typeof chain !== 'string' || !chain.trim()) {
-            throw new TypeError(`CryptoModule.initCrypto: "chain" must be a non-empty string but received ${typeof chain} with value "${chain}"`);
-        }
-        if (typeof contractAddress !== 'string' || !/^0x[a-fA-F0-9]{40}$/.test(contractAddress)) {
-            throw new TypeError(`CryptoModule.initCrypto: "contractAddress" must be a valid Ethereum address but received "${contractAddress}"`);
-        }
-        if (typeof poolAddress !== 'string' || !/^0x[a-fA-F0-9]{40}$/.test(poolAddress)) {
-            throw new TypeError(`CryptoModule.initCrypto: "poolAddress" must be a valid Ethereum address but received "${poolAddress}"`);
-        }
-        if (typeof version !== 'string' || !['V2', 'V3'].includes(version)) {
-            throw new RangeError(`CryptoModule.initCrypto: "version" must be "V2" or "V3" but received "${version}"`);
-        }
-        if (typeof pair !== 'string' || !pair.trim()) {
-            throw new TypeError(`CryptoModule.initCrypto: "pair" must be a non-empty string but received "${pair}"`);
+        try {
+            sypher.validateInput(
+                { chain, contractAddress, poolAddress, version, pair },
+                {
+                    chain: { type: "string", required: true },
+                    contractAddress: { type: "string", required: true, regex: addressRegex },
+                    poolAddress: { type: "string", required: true, regex: addressRegex },
+                    version: { type: "string", required: true, enum: lpVersions },
+                    pair: { type: "string", required: false }
+                }, "CryptoModule.initCrypto"
+            );
+        } catch (error) {
+            throw new Error(`CryptoModule.initCrypto: Invalid input: ${error.message}`);
         }
 
-        const chainData = CHAINS[chain];
-        if (!chainData) {
-            throw new Error(`CryptoModule.getPriceFeed: Chain "${chain}" is not supported.`);
-        }
-        const chainID = chainData.params[0]?.chainId;
-        if (!chainID) {
-            throw new Error(`CryptoModule.getPriceFeed: Missing chainId for chain "${chain}".`);
-        }
+        const { chainData, chainId } = this.validateChain(chain);
+        if (!chainData || !chainId) { return null; }
 
         try {
             const account = await this.connect(chain);
@@ -256,29 +251,31 @@ const CryptoModule = {
      * 
      */
     connect: async function (chain) {
-        if (typeof chain !== 'string' || !chain.trim()) {
-            throw new TypeError(`CryptoModule.connect: "chain" must be a non-empty string but received ${typeof chain} with value "${chain}"`);
+        try {
+            sypher.validateInput({ chain }, { chain: { type: "string", required: true } }, "CryptoModule.connect");
+        } catch (error) {
+            throw new Error(`CryptoModule.connect: Invalid input: ${error.message}`);
         }
-        if (!window.ethereum) {throw new Error("CryptoModule.connect: No Ethereum provider found....");}
+        if (!window.ethereum) { throw new Error("CryptoModule.connect: No Ethereum provider found...."); }
+
+        if (this.connected) { return this.connected; }
 
         try {
             const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
             if (!Array.isArray(accounts) || accounts.length === 0) { throw new Error("CryptoModule.connect: No accounts returned by the Ethereum provider."); }
-            
-            if (!this.connect.logged) {
-                console.log("Accounts:", accounts);
-                this.connect.logged = true;
-            }
-    
-            await this.switchChain(chain);
-    
+
             const primaryAccount = accounts[0];
-            if (primaryAccount) {
-                return primaryAccount;
-            } else {
+            if (!primaryAccount) {
                 console.warn("CryptoModule.connect: Wallet not connected.");
                 return null;
             }
+
+            await this.switchChain(chain);
+
+            this.connected = primaryAccount;
+            console.log("Connected account:", primaryAccount);
+
+            return primaryAccount;
         } catch (error) {
             console.error(`CryptoModule.connect: Connection error occurred: ${error.message}`);
             throw new Error(`CryptoModule.connect: Failed to connect to the Ethereum provider. Details: ${error.message}`);
@@ -295,27 +292,29 @@ const CryptoModule = {
      * 
      */
     switchChain: async function (chain) {
-        if (typeof chain !== 'string' || !chain.trim()) {
-            throw new TypeError(`CryptoModule.switchChain: "chain" must be a non-empty string but received ${typeof chain} with value "${chain}"`);
+        try {
+            sypher.validateInput({ chain }, { chain: { type: "string", required: true } }, "CryptoModule.switchChain");
+        } catch (error) {
+            throw new Error(`CryptoModule.switchChain: Invalid input: ${error.message}`);
         }
         if (!window.ethereum) { throw new Error("CryptoModule.switchChain: No Ethereum provider found...."); }
 
         const chainData = CHAINS[chain];
-        if (!chainData || !chainData.params) {
-            throw new Error(`CryptoModule.switchChain: Chain "${chain}" is not supported.`);
-        }
+        if (!chainData || !chainData.params) { throw new Error(`CryptoModule.switchChain: Chain "${chain}" is not supported.`); }
+
+        const targetChainId = chainData.params[0].chainId;
+        if (this.currentChain === targetChainId) { return; }
 
         try {
-            const chainId = chainData.params[0].chainId;
-
             const currentChainID = await window.ethereum.request({ method: 'eth_chainId' });
-            if (currentChainID === chainId) { return; } // Already on the target chain
+            if (currentChainID === targetChainId) { this.currentChain = targetChainId; return; }
 
             console.log(`Switching to ${chain} chain...`);
             await window.ethereum.request({
                 method: 'wallet_switchEthereumChain',
-                params: [{ chainId }],
+                params: [{ targetChainId }],
             });
+            this.currentChain = targetChainId;
         } catch (switchError) {
             console.warn(`CryptoModule.switchChain: Attempting to add chain: ${chain}`);
             if (switchError.code === 4902) {
@@ -324,6 +323,7 @@ const CryptoModule = {
                         method: 'wallet_addEthereumChain',
                         params: chainData.params,
                     });
+                    this.currentChain = targetChainId;
                 } catch (addError) {
                     throw new Error(`CryptoModule.switchChain: Unable to switch or add chain "${chain}". Details: ${addError.message}`);
                 }
@@ -347,30 +347,28 @@ const CryptoModule = {
      * 
      */
     getPriceFeed: async function (chain, pair = "eth") {
+        try {
+            sypher.validateInput(
+                { chain, pair },
+                {
+                    chain: { type: "string", required: true },
+                    pair: { type: "string", required: false }
+                }, "CryptoModule.getPriceFeed"
+            );
+        } catch (error) {
+            throw new Error(`CryptoModule.getPriceFeed: Invalid input: ${error.message}`);
+        }
         if (!window.ethereum) { throw new Error("CryptoModule.getPriceFeed: No Ethereum provider found...."); }
 
-        if (typeof chain !== 'string' || !chain.trim()) {
-            throw new TypeError(`CryptoModule.getPriceFeed: "chain" must be a non-empty string but received ${typeof chain} with value "${chain}"`);
-        }
-        if (typeof pair !== 'string' || !pair.trim()) {
-            throw new TypeError(`CryptoModule.getPriceFeed: "pair" must be a non-empty string but received "${pair}"`);
-        }
-
-        const chainData = CHAINS[chain];
-        if (!chainData) {
-            throw new Error(`CryptoModule.getPriceFeed: Chain "${chain}" is not supported.`);
-        }
-        const chainID = chainData.params[0]?.chainId;
-        if (!chainID) {
-            throw new Error(`CryptoModule.getPriceFeed: Missing chainId for chain "${chain}".`);
-        }
+        const { chainData, chainId } = this.validateChain(chain);
+        if (!chainData || !chainId) { return null; }
 
         try {
             const account = await this.connect(chain);
             if (!account) { return null; }
 
             const chainlinkAddress = CHAINS[chain].priceFeeds[pair];
-            if (!chainlinkAddress) { throw new Error(`Chain ${chain} is not supported`);}
+            if (!chainlinkAddress) { throw new Error(`Chain ${chain} is not supported`); }
 
             const provider = new ethers.providers.Web3Provider(window.ethereum);
             const signer = provider.getSigner();
@@ -396,11 +394,16 @@ const CryptoModule = {
      * 
      */
     getTokenDetails: async function (chain, contractAddress) {
-        if (typeof chain !== 'string' || !chain.trim()) {
-            throw new TypeError(`CryptoModule.getTokenDetails: "chain" must be a non-empty string but received ${typeof chain} with value "${chain}"`);
-        }
-        if (typeof contractAddress !== 'string' || !/^0x[a-fA-F0-9]{40}$/.test(contractAddress)) {
-            throw new TypeError(`CryptoModule.getTokenDetails: "contractAddress" must be a valid Ethereum address but received "${contractAddress}"`);
+        try {
+            sypher.validateInput(
+                { chain, contractAddress },
+                {
+                    chain: { type: "string", required: true },
+                    contractAddress: { type: "string", required: true, regex: addressRegex }
+                }, "CryptoModule.getTokenDetails"
+            );
+        } catch (error) {
+            throw new Error(`CryptoModule.getTokenDetails: Invalid input: ${error.message}`);
         }
         if (!window.ethereum) { throw new Error("CryptoModule.getTokenDetails: No Ethereum provider found...."); }
 
@@ -439,25 +442,22 @@ const CryptoModule = {
      * 
      */
     getPriceV2: async function (chain, poolAddress, pair) {
-        if (typeof chain !== 'string' || !chain.trim()) {
-            throw new TypeError(`CryptoModule.getPriceV2: "chain" must be a non-empty string but received ${typeof chain} with value "${chain}"`);
-        }
-        if (typeof poolAddress !== 'string' || !/^0x[a-fA-F0-9]{40}$/.test(poolAddress)) {
-            throw new TypeError(`CryptoModule.getPriceV2: "poolAddress" must be a valid Ethereum address but received "${poolAddress}"`);
-        }
-        if (typeof pair !== 'string' || !pair.trim()) {
-            throw new TypeError(`CryptoModule.getPriceV2: "pair" must be a non-empty string but received "${pair}"`);
+        try {
+            sypher.validateInput(
+                { chain, poolAddress, pair },
+                {
+                    chain: { type: "string", required: true },
+                    poolAddress: { type: "string", required: true, regex: addressRegex },
+                    pair: { type: "string", required: true }
+                }, "CryptoModule.getPriceV2"
+            );
+        } catch (error) {
+            throw new Error(`CryptoModule.getPriceV2: Invalid input: ${error.message}`);
         }
         if (!window.ethereum) { throw new Error("CryptoModule.getPriceV2: No Ethereum provider found...."); }
 
-        const chainData = CHAINS[chain];
-        if (!chainData) {
-            throw new Error(`CryptoModule.getPriceFeed: Chain "${chain}" is not supported.`);
-        }
-        const chainID = chainData.params[0]?.chainId;
-        if (!chainID) {
-            throw new Error(`CryptoModule.getPriceFeed: Missing chainId for chain "${chain}".`);
-        }
+        const { chainData, chainId } = this.validateChain(chain);
+        if (!chainData || !chainId) { return null; }
 
         try {
             const account = await this.connect(chain);
@@ -535,29 +535,23 @@ const CryptoModule = {
      * 
      */
     getPriceV3: async function (chain, contractAddress, poolAddress, pair) {
-        if (typeof chain !== 'string' || !chain.trim()) {
-            throw new TypeError(`CryptoModule.getPriceV3: "chain" must be a non-empty string but received ${typeof chain} with value "${chain}"`);
+        try {
+            sypher.validateInput(
+                { chain, contractAddress, poolAddress, pair },
+                {
+                    chain: { type: "string", required: true },
+                    contractAddress: { type: "string", required: true, regex: addressRegex },
+                    poolAddress: { type: "string", required: true, regex: addressRegex },
+                    pair: { type: "string", required: true }
+                }, "CryptoModule.getPriceV3"
+            );
+        } catch (error) {
+            throw new Error(`CryptoModule.getPriceV3: Invalid input: ${error.message}`);
         }
-        if (typeof contractAddress !== 'string' || !/^0x[a-fA-F0-9]{40}$/.test(contractAddress)) {
-            throw new TypeError(`CryptoModule.getPriceV3: "contractAddress" must be a valid Ethereum address but received "${contractAddress}"`);
-        }
-        if (typeof poolAddress !== 'string' || !/^0x[a-fA-F0-9]{40}$/.test(poolAddress)) {
-            throw new TypeError(`CryptoModule.getPriceV3: "poolAddress" must be a valid Ethereum address but received "${poolAddress}"`);
-        }
-        if (typeof pair !== 'string' || !pair.trim()) {
-            throw new TypeError(`CryptoModule.getPriceV3: "pair" must be a non-empty string but received "${pair}"`);
-        }
-
         if (!window.ethereum) { throw new Error("CryptoModule.getPriceV3: No Ethereum provider found...."); }
 
-        const chainData = CHAINS[chain];
-        if (!chainData) {
-            throw new Error(`CryptoModule.getPriceFeed: Chain "${chain}" is not supported.`);
-        }
-        const chainID = chainData.params[0]?.chainId;
-        if (!chainID) {
-            throw new Error(`CryptoModule.getPriceFeed: Missing chainId for chain "${chain}".`);
-        }
+        const { chainData, chainId } = this.validateChain(chain);
+        if (!chainData || !chainId) { return null; }
 
         try {
             const account = await this.connect(chain);
@@ -619,17 +613,22 @@ const CryptoModule = {
      * 
      */
     getPoolV3: async function (chain, contractAddress, poolAddress) {
-        if (typeof chain !== 'string' || !chain.trim()) {
-            throw new TypeError(`CryptoModule.getPoolV3: "chain" must be a non-empty string but received ${typeof chain} with value "${chain}"`);
+        try {
+            sypher.validateInput(
+                { chain, contractAddress, poolAddress },
+                {
+                    chain: { type: "string", required: true },
+                    contractAddress: { type: "string", required: true, regex: addressRegex },
+                    poolAddress: { type: "string", required: true, regex: addressRegex }
+                }, "CryptoModule.getPoolV3"
+            );
+        } catch (error) {
+            throw new Error(`CryptoModule.getPoolV3: Invalid input: ${error.message}`);
         }
-        if (typeof contractAddress !== 'string' || !/^0x[a-fA-F0-9]{40}$/.test(contractAddress)) {
-            throw new TypeError(`CryptoModule.getPoolV3: "contractAddress" must be a valid Ethereum address but received "${contractAddress}"`);
-        }
-        if (typeof poolAddress !== 'string' || !/^0x[a-fA-F0-9]{40}$/.test(poolAddress)) {
-            throw new TypeError(`CryptoModule.getPoolV3: "poolAddress" must be a valid Ethereum address but received "${poolAddress}"`);
-        }
-
         if (!window.ethereum) { throw new Error("CryptoModule.getPoolV3: No Ethereum provider found...."); }
+
+        const { chainData, chainId } = this.validateChain(chain);
+        if (!chainData || !chainId) { return null; }
 
         try {
             const account = await this.connect(chain);
@@ -678,6 +677,19 @@ const CryptoModule = {
      */
     getUserValue: function (balance, price) {
         try {
+            sypher.validateInput(
+                { balance, price },
+                {
+                    balance: { type: "string", required: true },
+                    price: { type: "string", required: true }
+                }, "CryptoModule.getUserValue"
+            );
+        } catch (error) {
+            console.error(`CryptoModule.getUserValue: Invalid input: ${error.message}`);
+            return null;
+        }
+        
+        try {
             const value = parseFloat(balance) * parseFloat(price);
             console.log(`User Value: ${value}`);
             return value;
@@ -696,10 +708,15 @@ const CryptoModule = {
      * 
      */
     clean: function (tokenDetails) {
-        if (!tokenDetails || typeof tokenDetails !== 'object') {
-            throw new TypeError(`CryptoModule.clean: "tokenDetails" must be an object but received ${typeof tokenDetails} with value "${tokenDetails}"`);
+        try {
+            sypher.validateInput(
+                { tokenDetails },
+                { tokenDetails: { type: "object", required: true } }, "CryptoModule.clean"
+            );
+        } catch (error) {
+            throw new Error(`CryptoModule.clean: Invalid input: ${error.message}`);
         }
-        
+
         const { contractAddress, poolAddress, balance, decimals, name, symbol, totalSupply, tokenPrice, userValue } = tokenDetails;
 
         const cleanedDetails = {
