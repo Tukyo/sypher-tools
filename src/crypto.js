@@ -53,13 +53,13 @@ const CHAINS = {
     arbitrum: {
         params: [{
             chainId: "0xa4b1",
-            chainName: "Arbitrum",
+            chainName: "Arbitrum One",
             nativeCurrency: {
-                name: "Arbitrum",
+                name: "Ethereum",
                 symbol: "ETH",
                 decimals: 18
             },
-            rpcUrls: ['https://arbitrum.llamarpc.com'],
+            rpcUrls: ['https://arb1.arbitrum.io/rpc'],
             blockExplorerUrls: ['https://arbiscan.io']
         }],
         priceFeeds: {
@@ -74,9 +74,9 @@ const CHAINS = {
     optimism: {
         params: [{
             chainId: "0xa",
-            chainName: "Optimism",
+            chainName: "OP Mainnet",
             nativeCurrency: {
-                name: "Optimism",
+                name: "Ethereum",
                 symbol: "ETH",
                 decimals: 18
             },
@@ -97,7 +97,7 @@ const CHAINS = {
             chainId: "0x2105",
             chainName: "Base",
             nativeCurrency: {
-                name: "Base",
+                name: "Ethereum",
                 symbol: "ETH",
                 decimals: 18
             },
@@ -186,10 +186,10 @@ const CryptoModule = {
      * 
      * @example initCrypto("ethereum", "0x1234567890abcdef1234567890abcdef12345678", "0x1234567890abcdef1234567890abcdef12345678", "V2") => { contractAddress, poolAddress, balance, decimals, name, symbol, totalSupply, tokenPrice, userValue }
      * 
-     * @param {string} chain - The target chain to get the price from. Connected wallet must be on a supported chain.
+     * @param {string} chain - The target chain to get the price from. Connected wallet must be on a supported chain
      * @param {string} contractAddress - The CA for the token
      * @param {string} poolAddress - The LP address for the token
-     * @param {string} version - The target Uniswap version (V2 or V3).
+     * @param {string} version - The target Uniswap version (V2 or V3)
      * @param {string} pair - The paired asset to get the price in (default: "eth")
      * @returns {Promise<object>} { contractAddress, poolAddress, balance, decimals, name, symbol, totalSupply, tokenPrice, userValue }
      * 
@@ -197,8 +197,7 @@ const CryptoModule = {
      * 
      */
     initCrypto: async function (chain, contractAddress, poolAddress, version, pair = "eth") {
-        try {
-            sypher.validateInput(
+        const validInput = sypher.validateInput(
                 { chain, contractAddress, poolAddress, version, pair },
                 {
                     chain: { type: "string", required: true },
@@ -208,9 +207,7 @@ const CryptoModule = {
                     pair: { type: "string", required: false }
                 }, "CryptoModule.initCrypto"
             );
-        } catch (error) {
-            throw new Error(`CryptoModule.initCrypto: Invalid input: ${error.message}`);
-        }
+        if (!validInput) { return null; }
 
         const { chainData, chainId } = this.validateChain(chain);
         if (!chainData || !chainId) { return null; }
@@ -235,8 +232,7 @@ const CryptoModule = {
 
             return cleanedDetails;
         } catch (error) {
-            console.error(`CryptoModule.initCrypto: An error occurred during initialization: ${error.message}`);
-            return null;
+            throw new Error(`CryptoModule.initCrypto: An error occurred during initialization: ${error.message}`);
         }
     },
     /**
@@ -251,13 +247,9 @@ const CryptoModule = {
      * 
      */
     connect: async function (chain) {
-        try {
-            sypher.validateInput({ chain }, { chain: { type: "string", required: true } }, "CryptoModule.connect");
-        } catch (error) {
-            throw new Error(`CryptoModule.connect: Invalid input: ${error.message}`);
-        }
+        const validInput = sypher.validateInput({ chain }, { chain: { type: "string", required: true } }, "CryptoModule.connect");
+        if (!validInput) { return null; }
         if (!window.ethereum) { throw new Error("CryptoModule.connect: No Ethereum provider found...."); }
-
         if (this.connected) { return this.connected; }
 
         try {
@@ -277,7 +269,6 @@ const CryptoModule = {
 
             return primaryAccount;
         } catch (error) {
-            console.error(`CryptoModule.connect: Connection error occurred: ${error.message}`);
             throw new Error(`CryptoModule.connect: Failed to connect to the Ethereum provider. Details: ${error.message}`);
         }
     },
@@ -292,11 +283,8 @@ const CryptoModule = {
      * 
      */
     switchChain: async function (chain) {
-        try {
-            sypher.validateInput({ chain }, { chain: { type: "string", required: true } }, "CryptoModule.switchChain");
-        } catch (error) {
-            throw new Error(`CryptoModule.switchChain: Invalid input: ${error.message}`);
-        }
+        const validInput = sypher.validateInput({ chain }, { chain: { type: "string", required: true } }, "CryptoModule.switchChain");
+        if (!validInput) { return; }
         if (!window.ethereum) { throw new Error("CryptoModule.switchChain: No Ethereum provider found...."); }
 
         const chainData = CHAINS[chain];
@@ -347,17 +335,14 @@ const CryptoModule = {
      * 
      */
     getPriceFeed: async function (chain, pair = "eth") {
-        try {
-            sypher.validateInput(
+        const validInput = sypher.validateInput(
                 { chain, pair },
                 {
                     chain: { type: "string", required: true },
                     pair: { type: "string", required: false }
                 }, "CryptoModule.getPriceFeed"
             );
-        } catch (error) {
-            throw new Error(`CryptoModule.getPriceFeed: Invalid input: ${error.message}`);
-        }
+        if (!validInput) { return null; }
         if (!window.ethereum) { throw new Error("CryptoModule.getPriceFeed: No Ethereum provider found...."); }
 
         const { chainData, chainId } = this.validateChain(chain);
@@ -394,17 +379,14 @@ const CryptoModule = {
      * 
      */
     getTokenDetails: async function (chain, contractAddress) {
-        try {
-            sypher.validateInput(
+        const validInput = sypher.validateInput(
                 { chain, contractAddress },
                 {
                     chain: { type: "string", required: true },
                     contractAddress: { type: "string", required: true, regex: addressRegex }
                 }, "CryptoModule.getTokenDetails"
             );
-        } catch (error) {
-            throw new Error(`CryptoModule.getTokenDetails: Invalid input: ${error.message}`);
-        }
+        if (!validInput) { return null; }
         if (!window.ethereum) { throw new Error("CryptoModule.getTokenDetails: No Ethereum provider found...."); }
 
         try {
@@ -442,8 +424,7 @@ const CryptoModule = {
      * 
      */
     getPriceV2: async function (chain, poolAddress, pair) {
-        try {
-            sypher.validateInput(
+        const validInput = sypher.validateInput(
                 { chain, poolAddress, pair },
                 {
                     chain: { type: "string", required: true },
@@ -451,9 +432,7 @@ const CryptoModule = {
                     pair: { type: "string", required: true }
                 }, "CryptoModule.getPriceV2"
             );
-        } catch (error) {
-            throw new Error(`CryptoModule.getPriceV2: Invalid input: ${error.message}`);
-        }
+        if (!validInput) { return null; }
         if (!window.ethereum) { throw new Error("CryptoModule.getPriceV2: No Ethereum provider found...."); }
 
         const { chainData, chainId } = this.validateChain(chain);
@@ -535,8 +514,7 @@ const CryptoModule = {
      * 
      */
     getPriceV3: async function (chain, contractAddress, poolAddress, pair) {
-        try {
-            sypher.validateInput(
+        const validInput = sypher.validateInput(
                 { chain, contractAddress, poolAddress, pair },
                 {
                     chain: { type: "string", required: true },
@@ -545,9 +523,7 @@ const CryptoModule = {
                     pair: { type: "string", required: true }
                 }, "CryptoModule.getPriceV3"
             );
-        } catch (error) {
-            throw new Error(`CryptoModule.getPriceV3: Invalid input: ${error.message}`);
-        }
+        if (!validInput) { return null; }
         if (!window.ethereum) { throw new Error("CryptoModule.getPriceV3: No Ethereum provider found...."); }
 
         const { chainData, chainId } = this.validateChain(chain);
@@ -613,8 +589,7 @@ const CryptoModule = {
      * 
      */
     getPoolV3: async function (chain, contractAddress, poolAddress) {
-        try {
-            sypher.validateInput(
+        const validInput = sypher.validateInput(
                 { chain, contractAddress, poolAddress },
                 {
                     chain: { type: "string", required: true },
@@ -622,9 +597,7 @@ const CryptoModule = {
                     poolAddress: { type: "string", required: true, regex: addressRegex }
                 }, "CryptoModule.getPoolV3"
             );
-        } catch (error) {
-            throw new Error(`CryptoModule.getPoolV3: Invalid input: ${error.message}`);
-        }
+        if (!validInput) { return null; }
         if (!window.ethereum) { throw new Error("CryptoModule.getPoolV3: No Ethereum provider found...."); }
 
         const { chainData, chainId } = this.validateChain(chain);
@@ -676,26 +649,21 @@ const CryptoModule = {
      * 
      */
     getUserValue: function (balance, price) {
-        try {
-            sypher.validateInput(
+        const validInput = sypher.validateInput(
                 { balance, price },
                 {
                     balance: { type: "object", required: true },
                     price: { type: "string", required: true }
                 }, "CryptoModule.getUserValue"
             );
-        } catch (error) {
-            console.error(`CryptoModule.getUserValue: Invalid input: ${error.message}`);
-            return null;
-        }
+        if (!validInput) { return null; }
         
         try {
             const value = parseFloat(balance) * parseFloat(price);
             console.log(`User Value: ${value}`);
             return value;
         } catch (error) {
-            console.error("Error calculating user value:", error);
-            return null;
+            throw new Error(`CryptoModule.getUserValue: Error calculating user value: ${error.message}`);
         }
     },
     /**
@@ -708,14 +676,11 @@ const CryptoModule = {
      * 
      */
     clean: function (tokenDetails) {
-        try {
-            sypher.validateInput(
+        const validInput = sypher.validateInput(
                 { tokenDetails },
                 { tokenDetails: { type: "object", required: true } }, "CryptoModule.clean"
             );
-        } catch (error) {
-            throw new Error(`CryptoModule.clean: Invalid input: ${error.message}`);
-        }
+        if (!validInput) { return null; }
 
         const { contractAddress, poolAddress, balance, decimals, name, symbol, totalSupply, tokenPrice, userValue } = tokenDetails;
 

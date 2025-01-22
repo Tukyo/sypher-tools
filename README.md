@@ -1,7 +1,7 @@
 # SypherTools <!-- omit in toc -->
 ![Banner](https://raw.githubusercontent.com/Tukyo/sypherbot-public/refs/heads/main/assets/img/readme_banner.jpg)
 
-A comprehensive library of utility methods designed to enhance web development, with a specific focus on crypto frontends. Sypher Tools provides modules for window management, text truncation, interface effects, and crypto operations, all in one lightweight package. **[~10kb]**
+A comprehensive library of utility methods designed to enhance web development, with a specific focus on crypto frontends. Sypher Tools provides modules for window management, text truncation, interface effects, and crypto operations, all in one lightweight package. **[~20kb]**
 
 ## 💾 **Technologies Used** <!-- omit in toc -->
 ![Javascript](https://shields.io/badge/JavaScript-F7DF1E?logo=JavaScript&logoColor=000&style=flat-square)
@@ -21,12 +21,11 @@ A comprehensive library of utility methods designed to enhance web development, 
 - [💿 **Installation**](#-installation)
 - [🛠️ **Usage**](#️-usage)
 - [📂 **Modules**](#-modules)
-  - [HelperModule](#helpermodule)
   - [TruncationModule](#truncationmodule)
   - [WindowModule](#windowmodule)
   - [InterfaceModule](#interfacemodule)
-  - [Crypto Interface Module](#crypto-interface-module)
   - [CryptoModule](#cryptomodule)
+  - [HelperModule](#helpermodule)
 ---
 
 ## 🔎 **Overview**
@@ -36,6 +35,7 @@ A comprehensive library of utility methods designed to enhance web development, 
 - Window management
 - Text truncation
 - Smooth interface animations
+- Type validation
 - Crypto-related operations like fetching token details, price feeds, and user values
 
 Entry Points:
@@ -106,48 +106,18 @@ element.innerHTML = truncatedValue; // => <p>2124.38k</p>
 
 ## 📂 **Modules**
 
-### HelperModule
-**File**: `/src/utils.js`
-
-### Methods: <!-- omit in toc -->
-**`validateInput`:** Validates input for processing in methods.
-
-#### | Usage: <!-- omit in toc -->
-```javascript
-const addressRegex = /^0x[a-fA-F0-9]{40}$/;
-try {
-sypher.validateInput(
-      { chain, contractAddress, poolAddress }, // Validation params
-      { // Validation Rules
-          chain: { type: "string", required: true },
-          contractAddress: { type: "string", required: true, regex: addressRegex },
-          poolAddress: { type: "string", required: true, regex: addressRegex }
-      }, "CryptoModule.getPoolV3" // Context
-  );
-} catch (error) { throw new Error(error); }
-```
-
-**`validateChain`:** Validates chain data from supported chains.
-
-#### | Usage: <!-- omit in toc -->
-```javascript
-
-```
-
----
-
 ### TruncationModule
 **File**: `/src/utils.js`
 
 #### Methods: <!-- omit in toc -->
-**`truncate`:** Shorten text strings with an ellipsis.
+1: **`truncate`:** Shorten text strings with an ellipsis.
 
 #### | Usage: <!-- omit in toc -->
 ```javascript
 element.textContent = sypher.truncate('0xA66DF2f59C6e37E66a063EE3A82eA63C0D521d14', 3, 5); // => Output: 0xA...21d14
 ```
 
-**`truncateBalance`:** Format and truncate balances for display.
+2: **`truncateBalance`:** Format and truncate balances for display.
 #### | Usage: <!-- omit in toc -->
 ```javascript
 const balance = 19409.794652093988;
@@ -160,7 +130,7 @@ element.textContent = sypher.truncateBalance(balance); // Output => 19409.79k
 **File**: `/src/utils.js`
 
 #### Methods: <!-- omit in toc -->
-**`pageFocus`:** Manage page focus events and behaviors.
+1: **`pageFocus`:** Manage page focus events and behaviors.
 
 #### | Usage: <!-- omit in toc -->
 ```javascript
@@ -174,37 +144,7 @@ if (!isFocused) { return; } // => Stop doing some code when the page isn't focus
 ### InterfaceModule
 **File**: `/src/interface.js`
 
-#### Methods: <!-- omit in toc -->
-**`toggleLoader`:** Show or hide loading indicators.
-#### | Usage: <!-- omit in toc -->
-```javascript
-const loaderHTML = `<div class="loader"></div>`;
-sypher.toggleLoader(elementVariable, true, loaderHTML) // => Show loader
-sypher.toggleLoader(elementVariable, false, "", "New Text") // => No loader and replacement text
-```
-**CSS Loaders Resource:** [Link](https://css-loaders.com/)
-
-**`parallax`:** Apply parallax scrolling effects.
-#### | Usage: <!-- omit in toc -->
-```html
-<!--HTML-->
-<div data-speed="0.5"></div>
-```
-```javascript
-// js
-window.addEventListener('load', () => { sypher.parallax(); });
-```
-Now, the div element with the *[data-speed]* attribute will be effected by the parallax!
-
-**`fade`:** Perform fade-in or fade-out animations.
-
----
-
-### Crypto Interface Module
-**File** `/src/interface.js`
-
-#### Methods: <!-- omit in toc -->
-**`createButton`:** Create a button in the page.
+1: **`createButton`:** Create a button in the page.
 #### | Usage: <!-- omit in toc -->
 ```javascript
 let cryptoObject = null;
@@ -225,9 +165,33 @@ const connectButton = await sypher.createButton(
 ); // => This will connect the user to the website, and return a cryptoObject of the passed token.
 ```
 ```javascript
-// This simplified version will attach a connect button to the root of the page that will connect the wallet onClick
+// This simplified version will attach a button to the root of the page that will connect the wallet to ethereum onClick
 const connectButton = await sypher.createButton();
 ```
+
+#### Methods: <!-- omit in toc -->
+2: **`toggleLoader`:** Show or hide loading indicators.
+#### | Usage: <!-- omit in toc -->
+```javascript
+const loaderHTML = `<div class="loader"></div>`;
+sypher.toggleLoader(elementVariable, true, loaderHTML) // => Show loader
+sypher.toggleLoader(elementVariable, false, "", "New Text") // => No loader and replacement text
+```
+**CSS Loaders Resource:** [Link](https://css-loaders.com/)
+
+3: **`parallax`:** Apply parallax scrolling effects.
+#### | Usage: <!-- omit in toc -->
+```html
+<!--HTML-->
+<div data-speed="0.5"></div>
+```
+```javascript
+// js
+window.addEventListener('load', () => { sypher.parallax(); });
+```
+Now, the div element with the *[data-speed]* attribute will be effected by the parallax!
+
+4: **`fade`:** Perform fade-in or fade-out animations.
 
 ---
 
@@ -237,7 +201,7 @@ const connectButton = await sypher.createButton();
 **| > All methods below require the user to have a wallet provider** 
 
 #### Methods: <!-- omit in toc -->
-**`initCrypto`:** Initialize crypto-related settings and connections.
+1: **`initCrypto`:** Initialize crypto-related settings and connections.
 #### | Usage: <!-- omit in toc -->
 ```javascript
 // Please see references above for how to initialize a crypto object in your site!
@@ -253,13 +217,13 @@ const cryptoObject = await sypher.initCrypto(
 
 You can call them individually, but it is **recommended** to just call sypher.initCrypto();
 
-**`connect`:** Connect to a wallet.
+2: **`connect`:** Connect to a wallet.
 #### | Usage: <!-- omit in toc -->
 ```javascript
 await sypher.connect("base"); // Connects user to your site on the base chain
 ```
 
-**`switchChain`:** Switch between blockchain networks.
+3: **`switchChain`:** Switch between blockchain networks.
 
 > *This method is called in connect(); to retain the selected chain in the wallet*
 #### | Usage: <!-- omit in toc -->
@@ -267,13 +231,13 @@ await sypher.connect("base"); // Connects user to your site on the base chain
 await sypher.switchChain("optimism"); // Switches or requests the addition of the chain in the user's wallet
 ```
 
-**`getPriceFeed`:** Fetch chainlink price feed.
+4: **`getPriceFeed`:** Fetch chainlink price feed.
 #### | Usage: <!-- omit in toc -->
 ```javascript
 await sypher.getPriceFeed("arbitrum", "eth"); // Gets the price feed for "ETH/USD" on the Arbitrum network
 ```
 
-**`getTokenDetails`:** Retrieve token details using onchain calls.
+5: **`getTokenDetails`:** Retrieve token details using onchain calls.
 #### | Usage: <!-- omit in toc -->
 ```javascript
 const sypherCA = "0x21b9D428EB20FA075A29d51813E57BAb85406620";
@@ -281,7 +245,7 @@ await sypher.getTokenDetails("base", sypherCA);
 // => Returns { balance, decimals, name, symbol, totalSupply } for 0x21b...6620
 ```
 
-**`getPriceV2`:** Fetch token prices using Uniswap V2 price logic.
+6: **`getPriceV2`:** Fetch token prices using Uniswap V2 price logic.
 #### | Usage: <!-- omit in toc -->
 ```javascript
 await sypher.getPriceV2(
@@ -291,7 +255,7 @@ await sypher.getPriceV2(
 ); // => Returns the token price for a Uniswap V2 pool in USD (Virtuals)
 ```
 
-**`getPriceV3`:** Fetch token prices using Uniswap V3 price logic.
+7: **`getPriceV3`:** Fetch token prices using Uniswap V3 price logic.
 #### | Usage: <!-- omit in toc -->
 ```javascript
 await sypher.getPriceV3(
@@ -303,7 +267,7 @@ await sypher.getPriceV3(
 ```
 > *This method uses {getPoolV3} to get the necessary pool details for the token*
 
-**`getPoolV3`:** Get details of a Uniswap V3 liquidity pool.
+8: **`getPoolV3`:** Get details of a Uniswap V3 liquidity pool.
 #### | Usage: <!-- omit in toc -->
 ```javascript
 await sypher.getPoolV3(
@@ -313,7 +277,7 @@ await sypher.getPoolV3(
 ); // => Returns { sqrtPriceX96, token0, token1, decimals0, decimals1, liquidity } for a Uniswap V3 pool
 ```
 
-**`getUserValue`:** Calculate user-specific values for your project's token.
+9: **`getUserValue`:** Calculate user-specific values for your project's token.
 #### | Usage: <!-- omit in toc -->
 ```javascript
 const userBalance = "1234.56";
@@ -323,7 +287,7 @@ const userValue = await sypher.getUserValue(userBalance, tokenPrice);
 ```
 > *Only call this method if you already know the price of the token in USD and the user's balance*
 
-**`clean`:** Clean the {cryptoObject} output for ease of development use.
+10: **`clean`:** Clean the {cryptoObject} output for ease of development use.
 #### | Usage: <!-- omit in toc -->
 ```javascript
 const cryptoObject = {yourCryptoObject};
@@ -331,5 +295,38 @@ const cleanedCryptoObject = await sypher.clean(cryptoObject);
 // => Returns a cleaned object with formatted values.
 ```
 > *This method is called upon returning the initial crypto object. You should not need to call this method under normal circumstances*
+
+---
+
+### HelperModule
+**File**: `/src/utils.js`
+
+#### This module is primarly used by this library internally for processing but can be used if needed. <!-- omit in toc -->
+
+### Methods: <!-- omit in toc -->
+1: **`validateInput`:** Validates input for processing in methods.
+
+#### | Usage: <!-- omit in toc -->
+```javascript
+const addressRegex = /^0x[a-fA-F0-9]{40}$/;
+const validInput = sypher.validateInput(
+      { chain, contractAddress, poolAddress }, // Validation params
+      { // Validation Rules
+          chain: { type: "string", required: true },
+          contractAddress: { type: "string", required: true, regex: addressRegex },
+          poolAddress: { type: "string", required: true, regex: addressRegex }
+      }, "CryptoModule.getPoolV3" // Context
+  );
+if (!validInput) { return; } // Just return because all logging and context is passed to the validation
+```
+***
+
+2: **`validateChain`:** Validates chain data from supported chains.
+
+#### | Usage: <!-- omit in toc -->
+```javascript
+const { chainData, chainId } = this.validateChain(chain); // Chain = "base" : string
+if (!chainData || !chainId) { return null; }
+```
 
 ---

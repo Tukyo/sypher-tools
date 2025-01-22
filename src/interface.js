@@ -1,5 +1,51 @@
 const InterfaceModule = {
     /**
+     * Creates a button to connect the wallet.
+     * 
+     * @example createButton(element, async () => await sypher.connect("base"), { text: "Connect Now!", modal: true });
+     * 
+     * @param {HTMLElement} element - The target HTML element where the button will be created [Default: document.body]
+     * @param {function} onClick - The function to call when the button is clicked [Default: sypher.connect("ethereum")]
+     * @param {object} params - The parameters to customize the button [Default: { text: "Connect Wallet", modal: false }]
+     * 
+     */
+    createButton: function (
+        element = document.body,
+        onClick = () => sypher.connect("ethereum"),
+        params = { text: "Connect Wallet", className: "connect-button", modal: false }
+    ) {
+        const defaultParams = { text: "Connect Wallet", className: "connect-button", modal: false };
+        const mergedParams = { ...defaultParams, ...params };
+    
+        const validInput = sypher.validateInput(
+            { element, onClick, ...mergedParams },
+            {
+                element: { type: "object", required: false },
+                onClick: { type: "function", required: false },
+                text: { type: "string", required: true },
+                className: { type: "string", required: true },
+                modal: { type: "boolean", required: true }
+            }, "InterfaceModule.createButton"
+        );
+    
+        if (!validInput) { return; }
+    
+        const { text, className, modal } = mergedParams;
+    
+        const button = document.createElement('button');
+        button.classList.add(className);
+        button.textContent = text;
+        button.onclick = onClick;
+    
+        if (modal) {
+            console.log("Modal Enabled...");
+            // TODO: Create modal flow for viewing wallet details when connected
+        }
+    
+        element.appendChild(button);
+        return button;
+    },    
+    /**
      * Toggles the loader on a given element by updating its inner HTML.
      * 
      * @example toggleLoader(elementVariable, true, `<div class="loader"></div>`) // Show loader
@@ -13,8 +59,7 @@ const InterfaceModule = {
      * CSS Loaders Resource: [Link](https://css-loaders.com/)
      **/
     toggleLoader: function (element, isEnabled = true, loaderHTML, newText = "") {
-        try {
-            sypher.validateInput(
+        const validInput = sypher.validateInput(
                 { element, isEnabled, loaderHTML, newText },
                 {
                     element: { type: "object", required: true },
@@ -23,9 +68,7 @@ const InterfaceModule = {
                     newText: { type: "string", required: false }
                 }, "InterfaceModule.toggleLoader"
             );
-        } catch (error) {
-            throw new Error(`InterfaceModule.toggleLoader: ${error.message}`);
-        }
+        if (!validInput) { return; }
 
         if (isEnabled) {
             element.innerHTML = loaderHTML;
@@ -78,17 +121,14 @@ const InterfaceModule = {
      * 
      */
     fade: function (distance = '20px', length = '0.5s') {
-        try {
-            sypher.validateInput(
+        const validInput = sypher.validateInput(
                 { distance, length },
                 {
                     distance: { type: "string", required: false },
                     length: { type: "string", required: false }
                 }, "InterfaceModule.fade"
             );
-        } catch (error) {
-            throw new Error(`InterfaceModule.fade: ${error.message}`);
-        }
+        if (!validInput) { return; }
 
         const elements = document.querySelectorAll('[data-fade]');
         if (elements.length === 0) {
@@ -116,57 +156,5 @@ const InterfaceModule = {
         }, { threshold: 0.1 });
 
         elements.forEach(el => observer.observe(el));
-    }
-};
-const CryptoInterfaceModule = {
-    /**
-     * Creates a button to connect the wallet.
-     * 
-     * @example createButton(element, async () => await sypher.connect("base"), { text: "Connect Now!", modal: true });
-     * 
-     * @param {HTMLElement} element - The target HTML element where the button will be created [Default: document.body]
-     * @param {function} onClick - The function to call when the button is clicked [Default: sypher.connect("ethereum")]
-     * @param {object} params - The parameters to customize the button [Default: { text: "Connect Wallet", modal: false }]
-     * 
-     */
-    createButton: function (
-        element = document.body,
-        onClick = () => sypher.connect("ethereum"),
-        params = { text: "Connect Wallet", className: "connect-button", modal: false }
-    ) {
-        try {
-            sypher.validateInput(
-                { element, onClick, params },
-                {
-                    element: { type: "object", required: false },
-                    onClick: { type: "function", required: false },
-                    params: { type: "object", required: false }
-                }, "CryptoInterfaceModule.createButton"
-            );
-        } catch (error) {
-            throw new Error(`CryptoInterfaceModule.createButton: ${error.message}`);
-        }
-
-        const { text = "Connect Wallet", className = "connect-button", modal = false } = params;
-
-        if (typeof text !== 'string') {
-            throw new TypeError(`CryptoInterfaceModule.createButton: "params.text" must be a valid string.`);
-        }
-        if (typeof className !== 'string') {
-            throw new TypeError(`CryptoInterfaceModule.createButton: "params.className" must be a valid string.`);
-        }
-
-        const button = document.createElement('button');
-        button.classList.add(className);
-        button.textContent = text;
-        button.onclick = onClick;
-
-        if (modal) {
-            console.log("Modal Enabled...");
-            // TODO: Create modal flow for viewing wallet details when connected
-        }
-
-        element.appendChild(button);
-        return button;
     }
 };

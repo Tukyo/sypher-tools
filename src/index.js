@@ -22,6 +22,7 @@
  * | > InterfaceModule
  * | /src/interface.js
  * --------------------------
+ * ----> createButton
  * ----> toggleLoader
  * ----> parallax
  * ----> fade
@@ -40,6 +41,12 @@
  * ----> getUserValue
  * ----> clean
  * --------------------------
+ * | > HelperModule
+ * | /src/utils.js
+ * --------------------------
+ * ----> validateInput
+ * ----> validateChain
+ * --------------------------
  * [Guide] <-----------------
  * | > Include ethers.js in the header of your HTML file.
  * <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.0/ethers.umd.min.js"></script>
@@ -53,15 +60,12 @@
 (function(global) {
     const sypher = {};
 
-    // Attach each module to sypherTools
     Object.assign(sypher, HelperModule);
     Object.assign(sypher, WindowModule);
     Object.assign(sypher, TruncationModule);
     Object.assign(sypher, InterfaceModule);
     Object.assign(sypher, CryptoModule);
-    Object.assign(sypher, CryptoInterfaceModule);
 
-    // Expose to global namespace
     global.sypher = sypher;
 
     console.log("Sypher Modules Initialized!");

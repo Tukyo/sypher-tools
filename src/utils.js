@@ -88,8 +88,8 @@ const HelperModule = {
      * @throws {Error} If the chain is unsupported or has missing data
      */
     validateChain: function (chain) {
-        try { sypher.validateInput({ chain }, { chain: { type: "string", required: true } }, "CryptoModule.validateChain"); }
-        catch (error) { throw new Error(`CryptoModule.validateChain: ${error.message}`); }
+        const validInput = this.validateInput({ chain }, { chain: { required: true, type: "string" } }, "CryptoModule.validateChain");
+        if (!validInput) { return; }
 
         const chainData = CHAINS[chain];
         if (!chainData) {
@@ -116,8 +116,7 @@ const TruncationModule = {
      * 
      */
     truncate: function (string, startLength = 6, endLength = 4) {
-        try {
-            sypher.validateInput(
+        const validInput = sypher.validateInput(
                 { string, startLength, endLength },
                 {
                     string: { type: "string", required: true },
@@ -125,9 +124,7 @@ const TruncationModule = {
                     endLength: { type: "number", required: false }
                 }, "TruncationModule.truncate"
             );
-        } catch (error) {
-            throw new Error(`TruncationModule.truncate: ${error.message}`);
-        }
+        if (!validInput) { return; }
 
         if (string.length <= startLength + endLength + 3) { return string; }
         return `${string.slice(0, startLength)}...${string.slice(-endLength)}`;
@@ -145,8 +142,7 @@ const TruncationModule = {
      * 
      */
     truncateBalance: function (balance, decimals = 2, maxLength = 8) {
-        try {
-            sypher.validateInput(
+        const validInput = sypher.validateInput(
                 { balance, decimals, maxLength },
                 {
                     balance: { type: "number", required: true },
@@ -154,9 +150,7 @@ const TruncationModule = {
                     maxLength: { type: "number", required: false }
                 }, "TruncationModule.truncateBalance"
             );
-        } catch (error) {
-            throw new Error(`TruncationModule.truncateBalance: ${error.message}`);
-        }
+        if (!validInput) { return; }
 
         const num = parseFloat(balance);
 

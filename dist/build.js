@@ -88,8 +88,8 @@ const HelperModule = {
      * @throws {Error} If the chain is unsupported or has missing data
      */
     validateChain: function (chain) {
-        try { sypher.validateInput({ chain }, { chain: { type: "string", required: true } }, "CryptoModule.validateChain"); }
-        catch (error) { throw new Error(`CryptoModule.validateChain: ${error.message}`); }
+        const validInput = this.validateInput({ chain }, { chain: { required: true, type: "string" } }, "CryptoModule.validateChain");
+        if (!validInput) { return; }
 
         const chainData = CHAINS[chain];
         if (!chainData) {
@@ -116,8 +116,7 @@ const TruncationModule = {
      * 
      */
     truncate: function (string, startLength = 6, endLength = 4) {
-        try {
-            sypher.validateInput(
+        const validInput = sypher.validateInput(
                 { string, startLength, endLength },
                 {
                     string: { type: "string", required: true },
@@ -125,9 +124,7 @@ const TruncationModule = {
                     endLength: { type: "number", required: false }
                 }, "TruncationModule.truncate"
             );
-        } catch (error) {
-            throw new Error(`TruncationModule.truncate: ${error.message}`);
-        }
+        if (!validInput) { return; }
 
         if (string.length <= startLength + endLength + 3) { return string; }
         return `${string.slice(0, startLength)}...${string.slice(-endLength)}`;
@@ -145,8 +142,7 @@ const TruncationModule = {
      * 
      */
     truncateBalance: function (balance, decimals = 2, maxLength = 8) {
-        try {
-            sypher.validateInput(
+        const validInput = sypher.validateInput(
                 { balance, decimals, maxLength },
                 {
                     balance: { type: "number", required: true },
@@ -154,9 +150,7 @@ const TruncationModule = {
                     maxLength: { type: "number", required: false }
                 }, "TruncationModule.truncateBalance"
             );
-        } catch (error) {
-            throw new Error(`TruncationModule.truncateBalance: ${error.message}`);
-        }
+        if (!validInput) { return; }
 
         const num = parseFloat(balance);
 
@@ -191,6 +185,52 @@ const WindowModule = {
 }
 const InterfaceModule = {
     /**
+     * Creates a button to connect the wallet.
+     * 
+     * @example createButton(element, async () => await sypher.connect("base"), { text: "Connect Now!", modal: true });
+     * 
+     * @param {HTMLElement} element - The target HTML element where the button will be created [Default: document.body]
+     * @param {function} onClick - The function to call when the button is clicked [Default: sypher.connect("ethereum")]
+     * @param {object} params - The parameters to customize the button [Default: { text: "Connect Wallet", modal: false }]
+     * 
+     */
+    createButton: function (
+        element = document.body,
+        onClick = () => sypher.connect("ethereum"),
+        params = { text: "Connect Wallet", className: "connect-button", modal: false }
+    ) {
+        const defaultParams = { text: "Connect Wallet", className: "connect-button", modal: false };
+        const mergedParams = { ...defaultParams, ...params };
+    
+        const validInput = sypher.validateInput(
+            { element, onClick, ...mergedParams },
+            {
+                element: { type: "object", required: false },
+                onClick: { type: "function", required: false },
+                text: { type: "string", required: true },
+                className: { type: "string", required: true },
+                modal: { type: "boolean", required: true }
+            }, "InterfaceModule.createButton"
+        );
+    
+        if (!validInput) { return; }
+    
+        const { text, className, modal } = mergedParams;
+    
+        const button = document.createElement('button');
+        button.classList.add(className);
+        button.textContent = text;
+        button.onclick = onClick;
+    
+        if (modal) {
+            console.log("Modal Enabled...");
+            // TODO: Create modal flow for viewing wallet details when connected
+        }
+    
+        element.appendChild(button);
+        return button;
+    },    
+    /**
      * Toggles the loader on a given element by updating its inner HTML.
      * 
      * @example toggleLoader(elementVariable, true, `<div class="loader"></div>`) // Show loader
@@ -204,8 +244,7 @@ const InterfaceModule = {
      * CSS Loaders Resource: [Link](https://css-loaders.com/)
      **/
     toggleLoader: function (element, isEnabled = true, loaderHTML, newText = "") {
-        try {
-            sypher.validateInput(
+        const validInput = sypher.validateInput(
                 { element, isEnabled, loaderHTML, newText },
                 {
                     element: { type: "object", required: true },
@@ -214,9 +253,7 @@ const InterfaceModule = {
                     newText: { type: "string", required: false }
                 }, "InterfaceModule.toggleLoader"
             );
-        } catch (error) {
-            throw new Error(`InterfaceModule.toggleLoader: ${error.message}`);
-        }
+        if (!validInput) { return; }
 
         if (isEnabled) {
             element.innerHTML = loaderHTML;
@@ -269,17 +306,14 @@ const InterfaceModule = {
      * 
      */
     fade: function (distance = '20px', length = '0.5s') {
-        try {
-            sypher.validateInput(
+        const validInput = sypher.validateInput(
                 { distance, length },
                 {
                     distance: { type: "string", required: false },
                     length: { type: "string", required: false }
                 }, "InterfaceModule.fade"
             );
-        } catch (error) {
-            throw new Error(`InterfaceModule.fade: ${error.message}`);
-        }
+        if (!validInput) { return; }
 
         const elements = document.querySelectorAll('[data-fade]');
         if (elements.length === 0) {
@@ -307,58 +341,6 @@ const InterfaceModule = {
         }, { threshold: 0.1 });
 
         elements.forEach(el => observer.observe(el));
-    }
-};
-const CryptoInterfaceModule = {
-    /**
-     * Creates a button to connect the wallet.
-     * 
-     * @example createButton(element, async () => await sypher.connect("base"), { text: "Connect Now!", modal: true });
-     * 
-     * @param {HTMLElement} element - The target HTML element where the button will be created [Default: document.body]
-     * @param {function} onClick - The function to call when the button is clicked [Default: sypher.connect("ethereum")]
-     * @param {object} params - The parameters to customize the button [Default: { text: "Connect Wallet", modal: false }]
-     * 
-     */
-    createButton: function (
-        element = document.body,
-        onClick = () => sypher.connect("ethereum"),
-        params = { text: "Connect Wallet", className: "connect-button", modal: false }
-    ) {
-        try {
-            sypher.validateInput(
-                { element, onClick, params },
-                {
-                    element: { type: "object", required: false },
-                    onClick: { type: "function", required: false },
-                    params: { type: "object", required: false }
-                }, "CryptoInterfaceModule.createButton"
-            );
-        } catch (error) {
-            throw new Error(`CryptoInterfaceModule.createButton: ${error.message}`);
-        }
-
-        const { text = "Connect Wallet", className = "connect-button", modal = false } = params;
-
-        if (typeof text !== 'string') {
-            throw new TypeError(`CryptoInterfaceModule.createButton: "params.text" must be a valid string.`);
-        }
-        if (typeof className !== 'string') {
-            throw new TypeError(`CryptoInterfaceModule.createButton: "params.className" must be a valid string.`);
-        }
-
-        const button = document.createElement('button');
-        button.classList.add(className);
-        button.textContent = text;
-        button.onclick = onClick;
-
-        if (modal) {
-            console.log("Modal Enabled...");
-            // TODO: Create modal flow for viewing wallet details when connected
-        }
-
-        element.appendChild(button);
-        return button;
     }
 };
 const CHAINLINK_ABI = [
@@ -416,13 +398,13 @@ const CHAINS = {
     arbitrum: {
         params: [{
             chainId: "0xa4b1",
-            chainName: "Arbitrum",
+            chainName: "Arbitrum One",
             nativeCurrency: {
-                name: "Arbitrum",
+                name: "Ethereum",
                 symbol: "ETH",
                 decimals: 18
             },
-            rpcUrls: ['https://arbitrum.llamarpc.com'],
+            rpcUrls: ['https://arb1.arbitrum.io/rpc'],
             blockExplorerUrls: ['https://arbiscan.io']
         }],
         priceFeeds: {
@@ -437,9 +419,9 @@ const CHAINS = {
     optimism: {
         params: [{
             chainId: "0xa",
-            chainName: "Optimism",
+            chainName: "OP Mainnet",
             nativeCurrency: {
-                name: "Optimism",
+                name: "Ethereum",
                 symbol: "ETH",
                 decimals: 18
             },
@@ -460,7 +442,7 @@ const CHAINS = {
             chainId: "0x2105",
             chainName: "Base",
             nativeCurrency: {
-                name: "Base",
+                name: "Ethereum",
                 symbol: "ETH",
                 decimals: 18
             },
@@ -549,10 +531,10 @@ const CryptoModule = {
      * 
      * @example initCrypto("ethereum", "0x1234567890abcdef1234567890abcdef12345678", "0x1234567890abcdef1234567890abcdef12345678", "V2") => { contractAddress, poolAddress, balance, decimals, name, symbol, totalSupply, tokenPrice, userValue }
      * 
-     * @param {string} chain - The target chain to get the price from. Connected wallet must be on a supported chain.
+     * @param {string} chain - The target chain to get the price from. Connected wallet must be on a supported chain
      * @param {string} contractAddress - The CA for the token
      * @param {string} poolAddress - The LP address for the token
-     * @param {string} version - The target Uniswap version (V2 or V3).
+     * @param {string} version - The target Uniswap version (V2 or V3)
      * @param {string} pair - The paired asset to get the price in (default: "eth")
      * @returns {Promise<object>} { contractAddress, poolAddress, balance, decimals, name, symbol, totalSupply, tokenPrice, userValue }
      * 
@@ -560,8 +542,7 @@ const CryptoModule = {
      * 
      */
     initCrypto: async function (chain, contractAddress, poolAddress, version, pair = "eth") {
-        try {
-            sypher.validateInput(
+        const validInput = sypher.validateInput(
                 { chain, contractAddress, poolAddress, version, pair },
                 {
                     chain: { type: "string", required: true },
@@ -571,9 +552,7 @@ const CryptoModule = {
                     pair: { type: "string", required: false }
                 }, "CryptoModule.initCrypto"
             );
-        } catch (error) {
-            throw new Error(`CryptoModule.initCrypto: Invalid input: ${error.message}`);
-        }
+        if (!validInput) { return null; }
 
         const { chainData, chainId } = this.validateChain(chain);
         if (!chainData || !chainId) { return null; }
@@ -598,8 +577,7 @@ const CryptoModule = {
 
             return cleanedDetails;
         } catch (error) {
-            console.error(`CryptoModule.initCrypto: An error occurred during initialization: ${error.message}`);
-            return null;
+            throw new Error(`CryptoModule.initCrypto: An error occurred during initialization: ${error.message}`);
         }
     },
     /**
@@ -614,13 +592,9 @@ const CryptoModule = {
      * 
      */
     connect: async function (chain) {
-        try {
-            sypher.validateInput({ chain }, { chain: { type: "string", required: true } }, "CryptoModule.connect");
-        } catch (error) {
-            throw new Error(`CryptoModule.connect: Invalid input: ${error.message}`);
-        }
+        const validInput = sypher.validateInput({ chain }, { chain: { type: "string", required: true } }, "CryptoModule.connect");
+        if (!validInput) { return null; }
         if (!window.ethereum) { throw new Error("CryptoModule.connect: No Ethereum provider found...."); }
-
         if (this.connected) { return this.connected; }
 
         try {
@@ -640,7 +614,6 @@ const CryptoModule = {
 
             return primaryAccount;
         } catch (error) {
-            console.error(`CryptoModule.connect: Connection error occurred: ${error.message}`);
             throw new Error(`CryptoModule.connect: Failed to connect to the Ethereum provider. Details: ${error.message}`);
         }
     },
@@ -655,11 +628,8 @@ const CryptoModule = {
      * 
      */
     switchChain: async function (chain) {
-        try {
-            sypher.validateInput({ chain }, { chain: { type: "string", required: true } }, "CryptoModule.switchChain");
-        } catch (error) {
-            throw new Error(`CryptoModule.switchChain: Invalid input: ${error.message}`);
-        }
+        const validInput = sypher.validateInput({ chain }, { chain: { type: "string", required: true } }, "CryptoModule.switchChain");
+        if (!validInput) { return; }
         if (!window.ethereum) { throw new Error("CryptoModule.switchChain: No Ethereum provider found...."); }
 
         const chainData = CHAINS[chain];
@@ -710,17 +680,14 @@ const CryptoModule = {
      * 
      */
     getPriceFeed: async function (chain, pair = "eth") {
-        try {
-            sypher.validateInput(
+        const validInput = sypher.validateInput(
                 { chain, pair },
                 {
                     chain: { type: "string", required: true },
                     pair: { type: "string", required: false }
                 }, "CryptoModule.getPriceFeed"
             );
-        } catch (error) {
-            throw new Error(`CryptoModule.getPriceFeed: Invalid input: ${error.message}`);
-        }
+        if (!validInput) { return null; }
         if (!window.ethereum) { throw new Error("CryptoModule.getPriceFeed: No Ethereum provider found...."); }
 
         const { chainData, chainId } = this.validateChain(chain);
@@ -757,17 +724,14 @@ const CryptoModule = {
      * 
      */
     getTokenDetails: async function (chain, contractAddress) {
-        try {
-            sypher.validateInput(
+        const validInput = sypher.validateInput(
                 { chain, contractAddress },
                 {
                     chain: { type: "string", required: true },
                     contractAddress: { type: "string", required: true, regex: addressRegex }
                 }, "CryptoModule.getTokenDetails"
             );
-        } catch (error) {
-            throw new Error(`CryptoModule.getTokenDetails: Invalid input: ${error.message}`);
-        }
+        if (!validInput) { return null; }
         if (!window.ethereum) { throw new Error("CryptoModule.getTokenDetails: No Ethereum provider found...."); }
 
         try {
@@ -805,8 +769,7 @@ const CryptoModule = {
      * 
      */
     getPriceV2: async function (chain, poolAddress, pair) {
-        try {
-            sypher.validateInput(
+        const validInput = sypher.validateInput(
                 { chain, poolAddress, pair },
                 {
                     chain: { type: "string", required: true },
@@ -814,9 +777,7 @@ const CryptoModule = {
                     pair: { type: "string", required: true }
                 }, "CryptoModule.getPriceV2"
             );
-        } catch (error) {
-            throw new Error(`CryptoModule.getPriceV2: Invalid input: ${error.message}`);
-        }
+        if (!validInput) { return null; }
         if (!window.ethereum) { throw new Error("CryptoModule.getPriceV2: No Ethereum provider found...."); }
 
         const { chainData, chainId } = this.validateChain(chain);
@@ -898,8 +859,7 @@ const CryptoModule = {
      * 
      */
     getPriceV3: async function (chain, contractAddress, poolAddress, pair) {
-        try {
-            sypher.validateInput(
+        const validInput = sypher.validateInput(
                 { chain, contractAddress, poolAddress, pair },
                 {
                     chain: { type: "string", required: true },
@@ -908,9 +868,7 @@ const CryptoModule = {
                     pair: { type: "string", required: true }
                 }, "CryptoModule.getPriceV3"
             );
-        } catch (error) {
-            throw new Error(`CryptoModule.getPriceV3: Invalid input: ${error.message}`);
-        }
+        if (!validInput) { return null; }
         if (!window.ethereum) { throw new Error("CryptoModule.getPriceV3: No Ethereum provider found...."); }
 
         const { chainData, chainId } = this.validateChain(chain);
@@ -976,8 +934,7 @@ const CryptoModule = {
      * 
      */
     getPoolV3: async function (chain, contractAddress, poolAddress) {
-        try {
-            sypher.validateInput(
+        const validInput = sypher.validateInput(
                 { chain, contractAddress, poolAddress },
                 {
                     chain: { type: "string", required: true },
@@ -985,9 +942,7 @@ const CryptoModule = {
                     poolAddress: { type: "string", required: true, regex: addressRegex }
                 }, "CryptoModule.getPoolV3"
             );
-        } catch (error) {
-            throw new Error(`CryptoModule.getPoolV3: Invalid input: ${error.message}`);
-        }
+        if (!validInput) { return null; }
         if (!window.ethereum) { throw new Error("CryptoModule.getPoolV3: No Ethereum provider found...."); }
 
         const { chainData, chainId } = this.validateChain(chain);
@@ -1039,26 +994,21 @@ const CryptoModule = {
      * 
      */
     getUserValue: function (balance, price) {
-        try {
-            sypher.validateInput(
+        const validInput = sypher.validateInput(
                 { balance, price },
                 {
                     balance: { type: "object", required: true },
                     price: { type: "string", required: true }
                 }, "CryptoModule.getUserValue"
             );
-        } catch (error) {
-            console.error(`CryptoModule.getUserValue: Invalid input: ${error.message}`);
-            return null;
-        }
+        if (!validInput) { return null; }
         
         try {
             const value = parseFloat(balance) * parseFloat(price);
             console.log(`User Value: ${value}`);
             return value;
         } catch (error) {
-            console.error("Error calculating user value:", error);
-            return null;
+            throw new Error(`CryptoModule.getUserValue: Error calculating user value: ${error.message}`);
         }
     },
     /**
@@ -1071,14 +1021,11 @@ const CryptoModule = {
      * 
      */
     clean: function (tokenDetails) {
-        try {
-            sypher.validateInput(
+        const validInput = sypher.validateInput(
                 { tokenDetails },
                 { tokenDetails: { type: "object", required: true } }, "CryptoModule.clean"
             );
-        } catch (error) {
-            throw new Error(`CryptoModule.clean: Invalid input: ${error.message}`);
-        }
+        if (!validInput) { return null; }
 
         const { contractAddress, poolAddress, balance, decimals, name, symbol, totalSupply, tokenPrice, userValue } = tokenDetails;
 
@@ -1122,6 +1069,7 @@ const CryptoModule = {
  * | > InterfaceModule
  * | /src/interface.js
  * --------------------------
+ * ----> createButton
  * ----> toggleLoader
  * ----> parallax
  * ----> fade
@@ -1140,6 +1088,12 @@ const CryptoModule = {
  * ----> getUserValue
  * ----> clean
  * --------------------------
+ * | > HelperModule
+ * | /src/utils.js
+ * --------------------------
+ * ----> validateInput
+ * ----> validateChain
+ * --------------------------
  * [Guide] <-----------------
  * | > Include ethers.js in the header of your HTML file.
  * <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.0/ethers.umd.min.js"></script>
@@ -1153,15 +1107,12 @@ const CryptoModule = {
 (function(global) {
     const sypher = {};
 
-    // Attach each module to sypherTools
     Object.assign(sypher, HelperModule);
     Object.assign(sypher, WindowModule);
     Object.assign(sypher, TruncationModule);
     Object.assign(sypher, InterfaceModule);
     Object.assign(sypher, CryptoModule);
-    Object.assign(sypher, CryptoInterfaceModule);
 
-    // Expose to global namespace
     global.sypher = sypher;
 
     console.log("Sypher Modules Initialized!");
