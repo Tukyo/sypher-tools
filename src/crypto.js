@@ -312,7 +312,7 @@ const CryptoModule = {
             console.log(`Switching to ${chain} chain...`);
             await window.ethereum.request({
                 method: 'wallet_switchEthereumChain',
-                params: [{ targetChainId }],
+                params: [{ chainId: targetChainId }]
             });
             this.currentChain = targetChainId;
         } catch (switchError) {
@@ -432,7 +432,7 @@ const CryptoModule = {
     /**
      * Get the price of a token in a Uniswap V2 pool.
      * 
-     * @example getPriceV2("base", "0x1234567890abcdef1234567890abcdef12345678") => "1234.56"
+     * @example getPriceV2("base", "0x21594b992F68495dD28d605834b58889d0a727c7") => "1234.56"
      * 
      * @param {string} chain - The target chain to get the price from. Connected wallet must be on a supported chain
      * @param {string} poolAddress - The target Uniswap V2 pool address
@@ -523,7 +523,7 @@ const CryptoModule = {
     /**
      * Get the price of a token in a Uniswap V3 pool.
      * 
-     * @example getPriceV3("ethereum", "0x1234567890abcdef1234567890abcdef12345678", "0x1234567890abcdef1234567890abcdef12345678", "eth") => "1234.56"
+     * @example getPriceV3("base", "0x21b9D428EB20FA075A29d51813E57BAb85406620", "0xB0fbaa5c7D28B33Ac18D9861D4909396c1B8029b", "eth") => "1234.56"
      * 
      * @param {string} chain - The target chain to get the price from - Connected wallet must be on a supported chain
      * @param {string} contractAddress - The CA for the token
@@ -605,7 +605,7 @@ const CryptoModule = {
     /**
      * Get the pool details of a Uniswap V3 pool.
      * 
-     * @example getPoolV3("base", "0x1234567890abcdef1234567890abcdef12345678", "0x1234567890abcdef1234567890abcdef12345678") => { sqrtPriceX96, token0, token1, decimals0, decimals1, liquidity }
+     * @example getPoolV3("base", "0x21b9D428EB20FA075A29d51813E57BAb85406620", "0xB0fbaa5c7D28B33Ac18D9861D4909396c1B8029b") => { sqrtPriceX96, token0, token1, decimals0, decimals1, liquidity }
      * 
      * @param {string} contractAddress - The CA for the token
      * @param {string} poolAddress - The LP address for the token
@@ -680,7 +680,7 @@ const CryptoModule = {
             sypher.validateInput(
                 { balance, price },
                 {
-                    balance: { type: "string", required: true },
+                    balance: { type: "object", required: true },
                     price: { type: "string", required: true }
                 }, "CryptoModule.getUserValue"
             );
