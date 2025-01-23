@@ -35,7 +35,7 @@ const InterfaceModule = {
         const button = document.createElement('button');
         button.classList.add(className);
         button.textContent = text;
-        button.onclick = onClick;
+        button.onclick = onClick; 
     
         if (modal) {
             console.log("Modal Enabled...");
