@@ -325,7 +325,7 @@ if (!validInput) { return; } // Just return because all logging and context is p
 
 #### | Usage: <!-- omit in toc -->
 ```javascript
-const { chainData, chainId } = this.validateChain(chain); // Chain = "base" : string
+const { chainData, chainId } = sypher.validateChain(chain); // Chain = "base" : string
 if (!chainData || !chainId) { return null; }
 ```
 

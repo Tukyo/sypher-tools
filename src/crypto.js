@@ -33,15 +33,7 @@ const UNISWAP_V3_POOL_ABI = [
 const CHAINS = {
     ethereum: {
         params: [{
-            chainId: "0x1",
-            chainName: "Ethereum",
-            nativeCurrency: {
-                name: "Ethereum",
-                symbol: "ETH",
-                decimals: 18
-            },
-            rpcUrls: ['https://eth.llamarpc.com'],
-            blockExplorerUrls: ['https://etherscan.io']
+            chainId: "0x1"
         }],
         priceFeeds: {
             eth: "0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419"
@@ -52,15 +44,7 @@ const CHAINS = {
     },
     arbitrum: {
         params: [{
-            chainId: "0xa4b1",
-            chainName: "Arbitrum One",
-            nativeCurrency: {
-                name: "Ethereum",
-                symbol: "ETH",
-                decimals: 18
-            },
-            rpcUrls: ['https://arb1.arbitrum.io/rpc'],
-            blockExplorerUrls: ['https://arbiscan.io']
+            chainId: "0xa4b1"
         }],
         priceFeeds: {
             eth: "0x639Fe6ab55C921f74e7fac1ee960C0B6293ba612",
@@ -73,15 +57,7 @@ const CHAINS = {
     },
     optimism: {
         params: [{
-            chainId: "0xa",
-            chainName: "OP Mainnet",
-            nativeCurrency: {
-                name: "Ethereum",
-                symbol: "ETH",
-                decimals: 18
-            },
-            rpcUrls: ['https://optimism.llamarpc.com'],
-            blockExplorerUrls: ['https://optimistic.etherscan.io']
+            chainId: "0xa"
         }],
         priceFeeds: {
             eth: "0xb7B9A39CC63f856b90B364911CC324dC46aC1770",
@@ -94,15 +70,7 @@ const CHAINS = {
     },
     base: {
         params: [{
-            chainId: "0x2105",
-            chainName: "Base",
-            nativeCurrency: {
-                name: "Ethereum",
-                symbol: "ETH",
-                decimals: 18
-            },
-            rpcUrls: ['https://mainnet.base.org'],
-            blockExplorerUrls: ['https://basescan.org']
+            chainId: "0x2105"
         }],
         priceFeeds: {
             eth: "0x71041dddad3595F9CEd3DcCFBe3D1F4b0a16Bb70"
@@ -113,16 +81,7 @@ const CHAINS = {
     },
     polygon: {
         params: [{
-            chainId: "0x89",
-            chainName: "Polygon",
-            nativeCurrency: {
-                name: "Polygon",
-                symbol: "POL",
-                decimals: 18
-            },
-            rpcUrls: ['https://polygon.llamarpc.com'],
-            blockExplorerUrls: ['https://polygonscan.com']
-
+            chainId: "0x89"
         }],
         priceFeeds: {
             eth: "0xF9680D99D6C9589e2a93a78A04A279e509205945",
@@ -135,16 +94,7 @@ const CHAINS = {
     },
     avalanche: {
         params: [{
-            chainId: "0xa86a",
-            chainName: "Avalanche",
-            nativeCurrency: {
-                name: "Avalanche",
-                symbol: "AVAX",
-                decimals: 18
-            },
-            rpcUrls: ['https://avalanche.drpc.org'],
-            blockExplorerUrls: ['https://snowtrace.io']
-
+            chainId: "0xa86a"
         }],
         priceFeeds: {
             eth: "0x976B3D034E162d8bD72D6b9C989d545b839003b0",
@@ -157,16 +107,7 @@ const CHAINS = {
     },
     fantom: {
         params: [{
-            chainId: "0xfa",
-            chainName: "Fantom",
-            nativeCurrency: {
-                name: "Fantom",
-                symbol: "FTM",
-                decimals: 18
-            },
-            rpcUrls: ['https://rpc.ftm.tools'],
-            blockExplorerUrls: ['https://ftmscan.com']
-
+            chainId: "0xfa"
         }],
         priceFeeds: {
             eth: "0x11DdD3d147E5b83D01cee7070027092397d63658",
@@ -209,7 +150,7 @@ const CryptoModule = {
             );
         if (!validInput) { return null; }
 
-        const { chainData, chainId } = this.validateChain(chain);
+        const { chainData, chainId } = sypher.validateChain(chain);
         if (!chainData || !chainId) { return null; }
 
         try {
@@ -287,10 +228,10 @@ const CryptoModule = {
         if (!validInput) { return; }
         if (!window.ethereum) { throw new Error("CryptoModule.switchChain: No Ethereum provider found...."); }
 
-        const chainData = CHAINS[chain];
-        if (!chainData || !chainData.params) { throw new Error(`CryptoModule.switchChain: Chain "${chain}" is not supported.`); }
+        const { chainlistData, params } = await this.getChainData(chain);
+        if (!chainlistData) { return; }
 
-        const targetChainId = chainData.params[0].chainId;
+        const targetChainId = params.chainId;
         if (this.currentChain === targetChainId) { return; }
 
         try {
@@ -309,7 +250,7 @@ const CryptoModule = {
                 try {
                     await window.ethereum.request({
                         method: 'wallet_addEthereumChain',
-                        params: chainData.params,
+                        params: params,
                     });
                     this.currentChain = targetChainId;
                 } catch (addError) {
@@ -318,6 +259,44 @@ const CryptoModule = {
             } else {
                 throw new Error(`CryptoModule.switchChain: Failed to switch to chain "${chain}". Details: ${switchError.message}`);
             }
+        }
+    },
+    /**
+     * Get the data for a specific chain from chainlist
+     * 
+     * @example getChainData("optimism") => { chainlistData, params }
+     * 
+     * @param {string} chain - The target chain to get the data for
+     * @returns {Promise<object>} The chainlist data for the specified chain
+     * 
+     * @see CHAINS - for supported chains
+     * 
+     */
+    getChainData: async function (chain) {
+        const validInput = sypher.validateInput({ chain }, { chain: { type: "string", required: true } }, "CryptoModule.getChainData");
+        if (!validInput) { return null; }
+
+        const { chainData, chainId } = sypher.validateChain(chain);
+        if (!chainData || !chainId) { return null; }
+
+        try {
+            const url = `https://raw.githubusercontent.com/ethereum-lists/chains/refs/heads/master/_data/chains/eip155-${chainId}.json`;
+            const response = await fetch(url);
+            if (!response.ok) throw new Error(`Chain data for ID ${chainId} not found`);
+            const data = await response.json();
+            console.log(`Fetched chain data:`, data);
+    
+            const params = [{
+                chainId: `0x${parseInt(data.chainId, 10).toString(16)}`,
+                chainName: data.name,
+                nativeCurrency: data.nativeCurrency,
+                rpcUrls: data.rpc,
+                blockExplorerUrls: data.explorers?.map(explorer => explorer.url) || []
+            }];
+    
+            return { chainlistData: data, params };
+        } catch (error) {
+            throw new Error(`CryptoModule.getChainData: Error fetching chain data: ${error.message}`);
         }
     },
     /**
@@ -345,7 +324,7 @@ const CryptoModule = {
         if (!validInput) { return null; }
         if (!window.ethereum) { throw new Error("CryptoModule.getPriceFeed: No Ethereum provider found...."); }
 
-        const { chainData, chainId } = this.validateChain(chain);
+        const { chainData, chainId } = sypher.validateChain(chain);
         if (!chainData || !chainId) { return null; }
 
         try {
@@ -435,7 +414,7 @@ const CryptoModule = {
         if (!validInput) { return null; }
         if (!window.ethereum) { throw new Error("CryptoModule.getPriceV2: No Ethereum provider found...."); }
 
-        const { chainData, chainId } = this.validateChain(chain);
+        const { chainData, chainId } = sypher.validateChain(chain);
         if (!chainData || !chainId) { return null; }
 
         try {
@@ -526,7 +505,7 @@ const CryptoModule = {
         if (!validInput) { return null; }
         if (!window.ethereum) { throw new Error("CryptoModule.getPriceV3: No Ethereum provider found...."); }
 
-        const { chainData, chainId } = this.validateChain(chain);
+        const { chainData, chainId } = sypher.validateChain(chain);
         if (!chainData || !chainId) { return null; }
 
         try {
@@ -600,7 +579,7 @@ const CryptoModule = {
         if (!validInput) { return null; }
         if (!window.ethereum) { throw new Error("CryptoModule.getPoolV3: No Ethereum provider found...."); }
 
-        const { chainData, chainId } = this.validateChain(chain);
+        const { chainData, chainId } = sypher.validateChain(chain);
         if (!chainData || !chainId) { return null; }
 
         try {
