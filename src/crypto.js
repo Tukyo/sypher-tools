@@ -280,7 +280,8 @@ const CryptoModule = {
         if (!chainData || !chainId) { return null; }
 
         try {
-            const url = `https://raw.githubusercontent.com/ethereum-lists/chains/refs/heads/master/_data/chains/eip155-${chainId}.json`;
+            const chainIdDecimal = parseInt(chainId, 16);
+            const url = `https://raw.githubusercontent.com/ethereum-lists/chains/refs/heads/master/_data/chains/eip155-${chainIdDecimal}.json`;
             const response = await fetch(url);
             if (!response.ok) throw new Error(`Chain data for ID ${chainId} not found`);
             const data = await response.json();
