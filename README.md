@@ -49,16 +49,24 @@ https://cdn.jsdelivr.net/gh/Tukyo/sypher-tools/
 
 ## 💿 **Installation**
 
+**Please Note:** The most efficient way to use this library is with direct import. `ethers.js` is included in the *dist/* directory if needed.
+
+### CDN <!-- omit in toc -->
+
 Include `ethers.js` & `sypher.js` in the `<head>` section of your HTML file:
  ```html
  <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.0/ethers.umd.min.js"></script>
- ```
- ```html
+
  <script src="https://cdn.jsdelivr.net/gh/Tukyo/sypher-tools@0.2.3/dist/build.min.js"></script>
  ```
 
-**Please Note:** It is more efficient to serve these files directly, and it is recommended to directly import them into your project.
+### Direct Import <!-- omit in toc -->
 
+**Recommended**: Import both scripts into the document body.
+ ```html
+<script src="dist/ethers.umd.min.js"></script>
+<script src="dist/build.js"></script>
+ ```
 ---
 
 ## 🛠️ **Usage**
