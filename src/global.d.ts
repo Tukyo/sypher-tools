@@ -1,3 +1,3 @@
 import { SypherNamespace } from "./index";
 
-declare global { const sypher: SypherNamespace; const ethers: typeof import("ethers"); }
+declare global { var sypher: SypherNamespace; var ethers: typeof import("ethers"); }

@@ -1,14 +1,7 @@
 build.json
-package.json
 node_modules
 package-lock.json
-index.html
-script.js
-style.css
-.dev
 src/css
-ethers.umd.min.js
 favicon.ico
-rollup.config.js
-TODO
-tsconfig.json
+temp.defs.d.ts
+private

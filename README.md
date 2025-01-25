@@ -4,7 +4,9 @@
 A comprehensive library of utility methods designed to enhance web development, with a specific focus on crypto frontends. Sypher Tools provides modules for window management, text truncation, interface effects, and crypto operations, all in one lightweight package. **[~20kb]**
 
 ## 💾 **Technologies Used** <!-- omit in toc -->
-![Javascript](https://shields.io/badge/JavaScript-F7DF1E?logo=JavaScript&logoColor=000&style=flat-square)
+![Typescript](https://shields.io/badge/TypeScript-3178C6?logo=TypeScript&logoColor=FFF&style=flat-square)
+![CSS](https://shields.io/badge/CSS-FFFFFF?logo=CSS&logoColor=76b8ff&style=flat-square)
+![Javascript](https://shields.io/badge/-F7DF1E?logo=Javascript&logoColor=000&style=flat-square)
 
 ![License](https://img.shields.io/badge/license-MIT-green) ![Web3](https://img.shields.io/badge/web3-ethers.js-teal)
 
