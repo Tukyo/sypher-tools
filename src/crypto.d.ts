@@ -27,10 +27,11 @@ export interface ICryptoModule {
     /**
      * @description Connect the user's wallet to the website.
      * @param {string} chain - The target chain to connect to
+     * @param {TProviderDetail} providerDetail - The provider details for the wallet
      * @returns {Promise<string>} The connected wallet address
      * @see CHAINS - for supported chains
      */
-    connect(chain: string): Promise<string> | null;
+    connect(chain: string, providerDetail: TProviderDetail | null = null): Promise<string> | null;
 
     /**
      * @description Connection status.
@@ -145,12 +146,18 @@ export interface ICryptoModule {
     clean(tokenDetails: TTokenDetails): object | null;
 
     /**
+     * @description Initialize the discovery of all installed wallets.
+     */
+    initProviderSearch(): void;
+
+    /**
      * @description Get the provider for the current wallet connection.
      * @returns {any} The provider for the current wallet connection
      */
     getProvider(): any;
 }
 
+// #region TOKEN
 /**
  * @description Raw token details fetched in the CryptoModule
  * @typedef {object} TTokenDetails
@@ -176,7 +183,6 @@ export type TTokenDetails = {
     tokenPrice: number;
     userValue: number;
 }
-
 /**
  * @description The final cleaned token details
  * @typedef {object} TCleanedDetails
@@ -203,7 +209,6 @@ export type TCleanedDetails = {
     tokenPrice: number;
     userValue: string;
 }
-
 /**
  * @description The data for a Uniswap V3 pool
  * @typedef {object} TPoolV3Data
@@ -222,7 +227,9 @@ export type TPoolV3Data = {
     decimals1: number;
     liquidity: ethers.BigNumber;
 }
-
+// #endregion TOKEN
+////
+// #region CHAIN
 export interface IChainlistData {
     chainlistData: TChainlistData;
     params: TChainParams;
@@ -271,3 +278,44 @@ export type TChainParams = {
     rpcUrls: string[];
     blockExplorerUrls: string[];
 }
+// #endregion CHAIN
+////
+// #region PROVIDER
+/**
+ * @description EIP-1193 interface
+ */
+export interface EIP1193 {
+    request(args: RequestArguments): Promise<unknown>;
+    on?(event: string, listener: (...args: unknown[]) => void): void;
+    removeListener?(event: string, listener: (...args: unknown[]) => void): void;
+}
+interface RequestArguments {
+    readonly method: string;
+    readonly params?: readonly unknown[] | object;
+}
+/**
+ * @description The Ethereum provider
+ */
+export type TEthereumProvider = { request: (args: { method: string; params?: any[] }) => Promise<any>; };
+/**
+ * @description Discovered providers
+ * @typedef {object} TProviderDetail
+ * @property {TProviderInfo} info - The provider info
+ * @property {EIP1193} provider - The provider object
+ */
+export type TProviderDetail = { info: TProviderInfo, provider: EIP1193; }
+/**
+ * @description Provider info
+ * @typedef {object} TProviderInfo
+ * @property {string} icon - The icon encoded in base64
+ * @property {string} name - The name of the provider
+ * @property {string} rdns - The reverse DNS of the provider
+ * @property {string} uuid - The UUID of the provider
+ */
+export type TProviderInfo = {
+    icon: string,
+    name: string,
+    rdns: string,
+    uuid: string
+}
+// #endregion PROVIDER

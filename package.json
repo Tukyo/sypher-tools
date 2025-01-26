@@ -9,8 +9,8 @@
     "clean": "rimraf dist",
     "defs": "node defs.js",
     "cleandefs": "node cleandefs.js index.d.ts src\\index.d.ts",
-    "build": "npm run clean && npm run build.css && rollup -c",
-    "build.css": "powershell -Command \"New-Item -ItemType Directory -Force -Path dist\\css\\themes; New-Item -ItemType Directory -Force -Path dist\\css; Copy-Item -Path src\\css\\themes\\*.css -Destination dist\\css\\themes\\ -Recurse; Copy-Item -Path src\\css\\*.css -Destination dist\\css\\ -Recurse\" && npx postcss dist\\css\\**\\*.css --use autoprefixer --dir dist\\css --no-map"
+    "build": "npm run clean && rollup -c && npm run build.css",
+    "build.css": "powershell -Command \"robocopy src\\css dist\\css /E /XD themes; robocopy src\\css\\themes dist\\css\\themes /E\" && npx postcss dist\\css\\**\\*.css --use autoprefixer --dir dist\\css --no-map"
   },
   "repository": {
     "type": "git",

@@ -281,13 +281,19 @@ declare namespace sypher {
     declare function getProvider(): any;
 
     /**
-     * @description Applies a theme to a given set of elements.
+     * @description Initializes a theme by adding a stylesheet to the head of the document.
+     * @param {string} [theme="default"] - The theme to apply [Default: "default"]
+     */
+    declare function initTheme(theme: string): void;
+
+    /**
+     * @description Applies a style to a given set of elements.
      * @param {HTMLElement[]} elements - The target HTML elements to apply the theme
      * @param {object} params - The parameters to customize the theme
      * 
      * @interface IInterfaceModule
      */
-    declare function applyTheme(
+    declare function applyStyle(
         elements: HTMLElement[],
         params: { type: string, theme: string }
     ): void;

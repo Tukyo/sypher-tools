@@ -1,4 +1,4 @@
-import { IChainConfig } from "./crypto.d";
+import { IChainConfig, TProviderDetail } from "./crypto.d";
 
 export const ADDRESS_REGEXP: RegExp = /^0x[a-fA-F0-9]{40}$/;
 export const LP_VER: string[] = ["V2", "V3"];
@@ -78,6 +78,7 @@ export const CHAINS: Record<string, IChainConfig> = {
         }
     }
 };
+export const DISCOVERED_PROVIDERS: TProviderDetail[] = [];
 
 export const CHAINLINK_ABI: string[] = [
     "function latestRoundData() view returns (uint80 roundId, int256 answer, uint256 startedAt, uint256 updatedAt, uint80 answeredInRound)"

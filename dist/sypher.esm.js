@@ -389,17 +389,19 @@ const WindowModule = {
 };
 
 const InterfaceModule = {
-    applyTheme: function (elements, params) {
-        console.log(elements);
-        const validInput = sypher.validateInput({ elements, ...params }, {
-            elements: { type: "array", required: true },
-            type: { type: "string", required: true },
+    initTheme: function (theme = "default") {
+        const validInput = sypher.validateInput({ theme }, {
             theme: { type: "string", required: true }
-        }, "InterfaceModule.applyTheme");
+        }, "InterfaceModule.initTheme");
         if (!validInput) {
             return;
         }
-        const { type, theme } = params;
+        if (this._theme) {
+            return;
+        }
+        if (theme === "none") {
+            theme = "custom";
+        }
         const themeStylesheetId = `sypher-${theme}-theme`;
         if (!document.getElementById(themeStylesheetId)) {
             const themeLink = document.createElement('link');
@@ -407,6 +409,25 @@ const InterfaceModule = {
             themeLink.rel = 'stylesheet';
             themeLink.href = `/dist/css/themes/sypher-${theme}-theme.css`;
             document.head.appendChild(themeLink);
+            this._theme = theme;
+        }
+    },
+    applyStyle: function (elements, params) {
+        const validInput = sypher.validateInput({ elements, ...params }, {
+            elements: { type: "array", required: true },
+            type: { type: "string", required: true },
+            theme: { type: "string", required: true }
+        }, "InterfaceModule.applyStyle");
+        if (!validInput) {
+            return;
+        }
+        const type = params.type;
+        let theme = params.theme;
+        if (theme === "none") {
+            theme = "custom";
+        }
+        if (!this._theme) {
+            this.initTheme(theme);
         }
         const typeStylesheetId = `sypher-${type}-style`;
         if (!document.getElementById(typeStylesheetId)) {
@@ -420,8 +441,8 @@ const InterfaceModule = {
             element.classList.add(`${theme}-modal`, `${type}-modal`);
         });
     },
-    createButton: function (element = document.body, onClick = () => sypher.connect("ethereum"), params = { type: "connect", text: "Connect Wallet", options: { modal: false, theme: "default" } }) {
-        const defaultParams = { type: "connect", text: "Connect Wallet", options: { modal: false, theme: "default" } };
+    createButton: function (element = document.body, onClick = () => sypher.connect("ethereum"), params = { type: "connect", text: "Connect Wallet", options: { modal: false, theme: "none" } }) {
+        const defaultParams = { type: "connect", text: "Connect Wallet", options: { modal: false, theme: "none" } };
         const mergedParams = {
             ...defaultParams,
             ...params,
@@ -438,6 +459,14 @@ const InterfaceModule = {
             return null;
         }
         const { type, text, options: { modal, theme } } = mergedParams;
+        const types = ["connect"];
+        const themes = ["none", "custom", "default", "light"];
+        if (!types.includes(type)) {
+            throw new Error(`InterfaceModule.createModal: Type '${type}' not found.`);
+        }
+        if (!themes.includes(theme)) {
+            throw new Error(`InterfaceModule.createModal: Theme '${theme}' not found.`);
+        }
         const className = `${type}-button`;
         const themeName = `${theme}-button`;
         const buttonId = `${type}-button`;
@@ -450,11 +479,16 @@ const InterfaceModule = {
             console.log("Modal Enabled...");
             // TODO: Create modal flow for viewing wallet details when connected
         }
+        const themeParams = { type, theme };
+        if (!themeParams) {
+            return null;
+        }
+        this.applyStyle([button], themeParams);
         element.appendChild(button);
         return button;
     },
     createModal: function (params) {
-        const defaultParams = { append: document.body, type: "log", theme: "default" };
+        const defaultParams = { append: document.body, type: "log", theme: "none" };
         const mergedParams = { ...defaultParams, ...params };
         const validInput = sypher.validateInput({ ...mergedParams }, {
             append: { type: "object", required: true },
@@ -466,12 +500,12 @@ const InterfaceModule = {
         }
         const { append, type, theme } = mergedParams;
         const types = ["log"];
-        const themes = ["default", "light"];
+        const themes = ["none", "custom", "default", "light"];
         if (!types.includes(type)) {
-            throw new Error(`InterfaceModule.applyTheme: Type '${type}' not found.`);
+            throw new Error(`InterfaceModule.createModal: Type '${type}' not found.`);
         }
         if (!themes.includes(theme)) {
-            throw new Error(`InterfaceModule.applyTheme: Theme '${theme}' not found.`);
+            throw new Error(`InterfaceModule.createModal: Theme '${theme}' not found.`);
         }
         const modal = document.createElement('div');
         modal.id = `${type}-modal`;
@@ -482,7 +516,7 @@ const InterfaceModule = {
         const modalToggle = document.createElement('div');
         modalToggle.id = `${type}-mt`;
         modalToggle.classList.add(`${theme}-mt`);
-        this.applyTheme([modal, modalContainer, modalToggle], mergedParams);
+        this.applyStyle([modal, modalContainer, modalToggle], mergedParams);
         append.appendChild(modal);
         modal.appendChild(modalContainer);
         modal.appendChild(modalToggle);
@@ -636,6 +670,10 @@ const CryptoModule = {
             return this._connected;
         }
         try {
+            await ethereum.request({
+                method: 'wallet_requestPermissions',
+                params: [{ eth_accounts: {} }],
+            });
             const accounts = await ethereum.request({ method: 'eth_requestAccounts' });
             if (!Array.isArray(accounts) || accounts.length === 0) {
                 throw new Error("CryptoModule.connect: No accounts returned by the Ethereum provider.");

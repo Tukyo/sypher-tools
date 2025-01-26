@@ -104,7 +104,7 @@ export const LogModule: ILogModule = { // TODO: Add error throwing
         const logModal = document.querySelector("#log-modal");
         const logContainer = document.querySelector("#log-mc");
         const logToggle = document.querySelector("#log-mt");
-        const logShowHTML = `<i class="fa-solid fa-caret-right"></i>`;
+        const logShowHTML = `<i class="fa-solid fa-caret-right"></i>`;  // TODO: Replace FontAwesome with custom SVG 
         const logHideHTML = `<i class="fa-solid fa-caret-left"></i>`;
 
         const originalLog = console.log;
@@ -130,7 +130,6 @@ export const LogModule: ILogModule = { // TODO: Add error throwing
                 logContainer.scrollTop = logContainer.scrollHeight;
             }
         }
-
         function handleSingleArgument(arg: any, logItem: HTMLDivElement) {
             const logDiv = document.createElement("div");
         

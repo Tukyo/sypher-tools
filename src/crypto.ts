@@ -1,8 +1,8 @@
-import { CHAINS, CHAINLINK_ABI, ERC20_ABI, UNISWAP_V2_POOL_ABI, UNISWAP_V3_POOL_ABI, ADDRESS_REGEXP, LP_VER } from "./constants";
-import { TCleanedDetails, ICryptoModule, TPoolV3Data, TTokenDetails, TChainParams } from "./crypto.d";
+import { CHAINS, CHAINLINK_ABI, DISCOVERED_PROVIDERS, ERC20_ABI, UNISWAP_V2_POOL_ABI, UNISWAP_V3_POOL_ABI, ADDRESS_REGEXP, LP_VER } from "./constants";
+import { TCleanedDetails, ICryptoModule, TPoolV3Data, TTokenDetails, TChainParams, TEthereumProvider, TProviderDetail, EIP1193 } from "./crypto.d";
 import { ethers } from "ethers";
 
-type EthereumProvider = { request: (args: { method: string; params?: any[] }) => Promise<any>; };
+
 
 export const CryptoModule: ICryptoModule = {
     initCrypto: async function (chain, contractAddress, poolAddress, version, pair = "eth") {
@@ -56,7 +56,7 @@ export const CryptoModule: ICryptoModule = {
             throw new Error(`CryptoModule.initCrypto: ${message}`);
         }        
     },
-    connect: async function (chain) {
+    connect: async function (chain, providerDetail: TProviderDetail | null = null) {
         const validInput = sypher.validateInput({ chain }, { chain: { type: "string", required: true } }, "CryptoModule.connect");
         if (!validInput) { return null; }
         
@@ -65,25 +65,52 @@ export const CryptoModule: ICryptoModule = {
 
         if (this._connected) { return this._connected; }
 
-        try {
-            const accounts = await ethereum.request({ method: 'eth_requestAccounts' });
-            if (!Array.isArray(accounts) || accounts.length === 0) { throw new Error("CryptoModule.connect: No accounts returned by the Ethereum provider."); }
+        if (providerDetail) {
+            try {
+                const provider: EIP1193 = providerDetail.provider;
+                console.log("[EIP-6963] Using provider:", providerDetail.info.name);
 
-            const primaryAccount = accounts[0];
-            if (!primaryAccount) {
-                console.warn("CryptoModule.connect: Wallet not connected.");
-                return null;
+                const accounts = await provider.request({ method: "eth_requestAccounts" });
+                if (!Array.isArray(accounts) || !accounts.length) {
+                    throw new Error("No accounts returned by the chosen provider.");
+                }
+
+                const primaryAccount = accounts[0];
+                console.log("[EIP-6963] Connected account:", primaryAccount);
+
+                await this.switchChain(chain);
+
+                this._connected = primaryAccount;
+                console.log("Connected account:", primaryAccount);
+
+                return primaryAccount;
+            } catch(error: unknown) {
+                const message = error instanceof Error ? error.message : "An unknown error occurred.";
+                throw new Error(`CryptoModule.connect: ${message}`);
             }
-
-            await this.switchChain(chain);
-
-            this._connected = primaryAccount;
-            console.log("Connected account:", primaryAccount);
-
-            return primaryAccount;
-        } catch (error: unknown) {
-            const message = error instanceof Error ? error.message : "An unknown error occurred.";
-            throw new Error(`CryptoModule.connect: ${message}`);
+        } else {
+            try {
+                const accounts = await ethereum.request({ method: 'eth_requestAccounts' });
+                if (!Array.isArray(accounts) || accounts.length === 0) { 
+                    throw new Error("CryptoModule.connect: No accounts returned by the Ethereum provider.");
+                }
+    
+                const primaryAccount = accounts[0];
+                if (!primaryAccount) {
+                    console.warn("CryptoModule.connect: Wallet not connected.");
+                    return null;
+                }
+    
+                await this.switchChain(chain);
+    
+                this._connected = primaryAccount;
+                console.log("Connected account:", primaryAccount);
+    
+                return primaryAccount;
+            } catch (error: unknown) {
+                const message = error instanceof Error ? error.message : "An unknown error occurred.";
+                throw new Error(`CryptoModule.connect: ${message}`);
+            }
         }
     },
     switchChain: async function (chain) {
@@ -496,10 +523,25 @@ export const CryptoModule: ICryptoModule = {
         console.log("Token Details:", cleanedDetails);
         return cleanedDetails;
     },
+    initProviderSearch: function () {
+        window.addEventListener("eip6963:announceProvider", (event: Event) => {
+            const customEvent = event as CustomEvent<TProviderDetail>;
+
+            DISCOVERED_PROVIDERS.push(customEvent.detail);
+
+            console.log(
+                "[EIP-6963] Wallet announced:",
+                customEvent.detail.info.name,
+                customEvent.detail.info.rdns,
+                customEvent.detail.info.uuid
+            );
+        });
+        window.dispatchEvent(new Event("eip6963:requestProvider"));
+    },
     getProvider: function () {
         if (!("ethereum" in window)) { throw new Error("CryptoModule.getProvider: No Ethereum provider found."); }
 
-        const ethereum = (window.ethereum as unknown) as EthereumProvider;
+        const ethereum = (window.ethereum as unknown) as TEthereumProvider;
         return ethereum;
     }
 };
