@@ -1,6 +1,6 @@
-import { DISCOVERED_PROVIDERS } from "./constants";
-import { TProviderDetail } from "./crypto.d";
-import { IInterfaceModule, TConnectModal, TLogModal } from "./interface.d";
+import { BUTTON_TYPES, DISCOVERED_PROVIDERS, MODAL_TYPES, PLACEHOLDER_PROVIDERS, THEMES } from "./constants";
+import { TInitParams, TProviderDetail } from "./crypto.d";
+import { IInterfaceModule, TButtonParams, TConnectModal, TElementParams, TLoaderParams, TLogModal } from "./interface.d";
 
 export const InterfaceModule: IInterfaceModule = {
     initTheme: function (theme = "default") {
@@ -35,11 +35,11 @@ export const InterfaceModule: IInterfaceModule = {
             }, "InterfaceModule.applyStyle"
         );
         if (!validInput) { return; }
-    
+
         const type = params.type;
 
         let theme = params.theme;
-        if (theme === "none") { theme = "custom"; } 
+        if (theme === "none") { theme = "custom"; }
         if (!this._theme) { this.initTheme(theme); }
 
         const typeStylesheetId = `sypher-${type}-style`;
@@ -51,36 +51,23 @@ export const InterfaceModule: IInterfaceModule = {
             document.head.appendChild(typeLink);
         };
     },
-    createButton: function (
-        element = document.body,
-        onClick = () => sypher.connect("ethereum"),
-        params = { type: "none", text: "Click Me!", icon: "", options: { modal: false, theme: "none", chain: "ethereum" } }
-    ) {
-        const defaultParams = { type: "none", text: "Click Me!", icon: "", options: { modal: false, theme: "none", chain: "ethereum" } };
-        const mergedParams = {
-            ...defaultParams,
-            ...params,
-            options: { ...defaultParams.options, ...params.options },
-        };
-    
-        const validInput = sypher.validateInput(
-            { element, onClick, ...mergedParams },
-            {
-                element: { type: "object", required: false },
-                onClick: { type: "function", required: false },
-                type: { type: "string", required: true },
-                text: { type: "string", required: true },
-                options: { type: "object", required: true },
-            }, "InterfaceModule.createButton"
-        );
-        if (!validInput) { return null; }
+    createButton: function (params: TButtonParams) {
+        const defaultParams = {
+            type: "connect",
+            text: "Connect Wallet",
+            icon: "",
+            modal: false,
+            theme: "none",
+            append: document.body,
+            onClick: () => sypher.connect("ethereum"),
+            initCrypto: {} as TInitParams
+        }
+        const mergedParams = { ...defaultParams, ...params };
 
-        const { type, text, icon, options: { modal, theme, chain } } = mergedParams;
+        const { type, text, icon, modal, theme, append, onClick, initCrypto } = mergedParams;
 
-        const types = ["none", "custom", "connect", "provider"];
-        const themes = ["none", "custom", "default", "light"];
-        if (!types.includes(type)) { throw new Error(`InterfaceModule.createModal: Type '${type}' not found.`); }
-        if (!themes.includes(theme)) { throw new Error(`InterfaceModule.createModal: Theme '${theme}' not found.`); }
+        if (!BUTTON_TYPES.includes(type)) { throw new Error(`InterfaceModule.createModal: Type '${type}' not found.`); }
+        if (!THEMES.includes(theme)) { throw new Error(`InterfaceModule.createModal: Theme '${theme}' not found.`); }
 
         let appliedTheme = this._theme || theme;
         if (theme === "none") { appliedTheme = "custom"; }
@@ -92,6 +79,8 @@ export const InterfaceModule: IInterfaceModule = {
         if (!themeParams) { return null; }
 
         if (appliedType === "connect") {
+            if (initCrypto.chain === "none") { throw new Error(`InterfaceModule.createButton: Chain is required for type 'connect'.`); }
+
             const className = `${appliedType}-button`;
             const themeName = `${appliedTheme}-button`;
             const buttonId = `${appliedType}-button`;
@@ -100,20 +89,30 @@ export const InterfaceModule: IInterfaceModule = {
             button.id = buttonId;
             button.classList.add(className, themeName);
             button.textContent = text;
-        
+            
+            this._connectText = text;
+
+            const finalOnClick = onClick === defaultParams.onClick
+                ? () => sypher.connect(initCrypto.chain !== "none" ? initCrypto.chain : "ethereum")
+                : onClick;
+
             if (modal) {
                 console.log("Modal Enabled...");
-                this.createModal({ append: document.body, type: "connect", theme: appliedTheme, chain });
-            } else { button.onclick = onClick; }
+                button.onclick = () => this.createModal({ append: document.body, type: "connect", theme: appliedTheme, initCrypto });
+                sypher.initProviderSearch();
+            } else { button.onclick = finalOnClick; }
 
             this.applyStyle([button], themeParams);
 
-            element.appendChild(button);
+            append.appendChild(button);
             return button
         } else if (appliedType === "provider") {
+            if (initCrypto.chain === "none") { throw new Error(`InterfaceModule.createButton: Chain is required for type 'provider'.`); }
+
             const modalItem: HTMLDivElement = document.createElement('div');
             modalItem.id = text.toLowerCase().replace(/\s+/g, '-');
             modalItem.classList.add('connect-mi');
+
             modalItem.addEventListener('click', onClick);
 
             const modalItemIcon = document.createElement('img');
@@ -126,40 +125,40 @@ export const InterfaceModule: IInterfaceModule = {
 
             this.applyStyle([modalItem, modalItemIcon, modalItemName], themeParams);
 
-            element.appendChild(modalItem);
+            append.appendChild(modalItem);
             modalItem.appendChild(modalItemIcon);
             modalItem.appendChild(modalItemName);
             return modalItem;
         } else { return null; } //TODO: Throw error
     },
-    createModal: function (params) {
-        const defaultParams = { append: document.body, type: "none", theme: "none", chain: "none" };
+    createModal: async function (params) {
+        const defaultParams = { append: document.body, type: "none", theme: "none", initCrypto: {} as TInitParams };
         const mergedParams = { ...defaultParams, ...params };
-    
+
         const validInput = sypher.validateInput(
             { ...mergedParams },
             {
-                append: { type: "object", required: true },
+                append: { type: "object", required: false },
                 type: { type: "string", required: true },
-                theme: { type: "string", required: false },
-                chain: { type: "string", required: false }
+                theme: { type: "string", required: false }
             }, "InterfaceModule.createModal"
         );
-        if (!validInput) { return; }
+        if (!validInput) { return null; }
 
-        const { append, type, theme, chain } = mergedParams;
+        const { append, type, theme, initCrypto } = mergedParams;
 
-        const types = ["none", "custom", "log", "connect"];
-        const themes = ["none", "custom", "default", "light"];
-        if (!types.includes(type)) { throw new Error(`InterfaceModule.createModal: Type '${type}' not found.`); }
-        if (!themes.includes(theme)) { throw new Error(`InterfaceModule.createModal: Theme '${theme}' not found.`); }
+        if (!MODAL_TYPES.includes(type)) { throw new Error(`InterfaceModule.createModal: Type '${type}' not found.`); }
+        if (!THEMES.includes(theme)) { throw new Error(`InterfaceModule.createModal: Theme '${theme}' not found.`); }
 
-        if (type === "none" || theme === "none") { return; } //TODO: Enable custom modals
+        let appliedTheme = this._theme || theme;
+        if (theme === "none") { appliedTheme = "custom"; }
 
-        const modalObj = this.initModal(type, theme);
-        if (!modalObj) { return; }
+        if (type === "none") { return null; } //TODO: Enable custom modals
 
-        if (modalObj.type  === "log") { 
+        const modalObj = this.initModal(type, appliedTheme);
+        if (!modalObj) { return null; }
+
+        if (modalObj.type === "log") {
             this.applyStyle([modalObj.parent, modalObj.container, modalObj.toggle], mergedParams);
 
             append.appendChild(modalObj.parent);
@@ -167,7 +166,8 @@ export const InterfaceModule: IInterfaceModule = {
             modalObj.parent.appendChild(modalObj.toggle);
 
             sypher.initLogger();
-        } else if (modalObj.type  === "connect") {
+            return modalObj;
+        } else if (modalObj.type === "connect") {
             this.applyStyle([modalObj.parent, modalObj.container, modalObj.toggle, modalObj.head, modalObj.title, modalObj.body], mergedParams);
 
             append.appendChild(modalObj.parent);
@@ -176,22 +176,185 @@ export const InterfaceModule: IInterfaceModule = {
             modalObj.head.appendChild(modalObj.title);
             modalObj.head.appendChild(modalObj.toggle);
             modalObj.container.appendChild(modalObj.body);
+            
+            // TODO: Create isLogging check - console.log(PLACEHOLDER_PROVIDERS);
 
-            DISCOVERED_PROVIDERS.forEach((providerDetail: TProviderDetail) => {
+            const mergedProviders: TProviderDetail[] = [
+                ...PLACEHOLDER_PROVIDERS.map((placeholder) => {
+                    const match = DISCOVERED_PROVIDERS.find(
+                        (discovered) => discovered.info.name === placeholder.info.name
+                    );
+                    const merged = match || placeholder;
+            
+                    if (match) {
+                        if (!merged.info.onboard) {
+                            merged.info.onboard = {
+                                bool: false,
+                                link: "",
+                                deeplink: "",
+                                fallback: {
+                                    ios: "",
+                                    android: "",
+                                },
+                            };
+                        }
+                        merged.info.onboard.bool = false;
+                    }
+            
+                    return merged;
+                }),
+                ...DISCOVERED_PROVIDERS.filter(
+                    (discovered) =>
+                        !PLACEHOLDER_PROVIDERS.some(
+                            (placeholder) => placeholder.info.name === discovered.info.name
+                        )
+                ),
+            ];
+            
+            // TODO: Create isLogging check - console.log(mergedProviders);
+
+            const account = sypher.getConnected();
+
+            mergedProviders.forEach((providerDetail: TProviderDetail) => {
                 const { name, icon } = providerDetail.info;
 
-                this.createButton(
-                    modalObj.body,
-                    () => sypher.connect(chain, providerDetail),
+                const onClick = providerDetail.info.onboard?.bool
+                ? () => { sypher.onboard(providerDetail); }
+                : () => { 
+                    if (initCrypto.chain !== "none") {
+                        sypher.initCrypto({
+                            chain: initCrypto.chain,
+                            contractAddress: initCrypto.contractAddress,
+                            poolAddress: initCrypto.poolAddress,
+                            version: initCrypto.version, //TODO: Check how to make this work with non eth pairs
+                            detail: providerDetail
+                        });
+                    } else { sypher.connect(initCrypto.chain, providerDetail); }
+                }
+
+                const button: HTMLDivElement | HTMLButtonElement | null = this.createButton({
+                    append: modalObj.body,
+                    type: "provider",
+                    text: name,
+                    icon: icon,
+                    modal: false,
+                    theme: appliedTheme,
+                    onClick: onClick,
+                    initCrypto: initCrypto
+                });
+
+                if (button !== null) { if (account !== null && account !== undefined) { button.style.display = "none"; } }
+            });
+
+            if (account !== null && account !== undefined)  {
+                modalObj.title.innerHTML = "Account";
+
+                const provider = new ethers.providers.Web3Provider(window.ethereum);
+                const signer = provider.getSigner();
+                const balance = await signer.getBalance();
+                
+                const accountView: HTMLElement | null = this.createElement(
                     {
-                        type: "provider",
-                        text: name,
-                        icon: icon,
-                        options: { modal: false, theme: "none", chain: chain }
+                        append: modalObj.body,
+                        type: "div",
+                        id: 'account-view',
+                        children: [
+                            { // Header
+                                type: "div",
+                                classes: ["av-h"],
+                                children: [
+                                    {
+                                        type: "h2",
+                                        classes: ["av-h-ti"],
+                                        innerHTML: `${sypher.truncate(account)}`
+                                    },
+                                    {
+                                        type: "h3",
+                                        classes: ["av-h-ba"],
+                                        innerHTML: `${sypher.truncateBalance(parseFloat(balance.toString()))} ETH` // TODO: Update 'ETH' to native token of chain
+                                    }
+                                ]
+                            },
+                            { // Body
+                                type: "div",
+                                classes: ["av-b"],
+                                children: [
+                                    {
+                                        type: "div",
+                                        id: "av-b-provider",
+                                        classes: ["av-b-b"],
+                                        events: { click: () => { 
+                                            if (accountView) { accountView.style.display = "none"; }
+                                            
+                                            const buttons = document.querySelectorAll('.connect-mi');
+                                            if (buttons) { buttons.forEach((button) => { (button as HTMLDivElement).style.display = "flex"; }); }
+        
+                                            modalObj.title.innerHTML = "Change Wallet";
+                                        }},
+                                        children: [
+                                            {
+                                                type: "div",
+                                                classes: ["av-b-bn-ic"],
+                                                children: [
+                                                    {
+                                                        type: "img",
+                                                        classes: ["av-b-bn-i"],
+                                                        attributes: {
+                                                            src: mergedProviders[0].info.icon
+                                                        }
+                                                    },
+                                                    {
+                                                        type: "img",
+                                                        classes: ["av-b-bn-i"],
+                                                        attributes: {
+                                                            src: mergedProviders[1].info.icon
+                                                        }
+                                                    }
+                                                ]
+                                            },
+                                            {
+                                                type: "div",
+                                                classes: ["av-b-bn-t"],
+                                                innerHTML: "Change Wallet"
+                                            }
+                                        ],
+                                    },
+                                    {
+                                        type: "div",
+                                        id: "av-b-history",
+                                        classes: ["av-b-b"],
+                                        innerHTML: "Recent Activity"
+                                    }
+                                ]
+                            },
+                            {// Disconnect
+                                type: "div",
+                                classes: ["av-x"],
+                                events: { click: () => { 
+                                    sypher.disconnect(); 
+
+                                    if (accountView && accountView.parentNode) {
+                                        accountView.parentNode.removeChild(accountView);
+                                    }
+                                    
+                                    const buttons = document.querySelectorAll('.connect-mi');
+                                    if (buttons) { buttons.forEach((button) => { (button as HTMLDivElement).style.display = "flex"; }); }
+
+                                    const connectButton = document.getElementById('connect-button');
+                                    if (connectButton && this._connectText) { connectButton.innerHTML = this._connectText; }
+
+                                    modalObj.title.innerHTML = "Connect Wallet";
+                                }},
+                                innerHTML: "Disconnect"
+                            }
+                        ]
                     }
                 );
-            });
-        } else { return; } //TODO: Throw error
+                if (!accountView) { return null; }
+            }
+
+            return modalObj;
+        } else { return null; } //TODO: Throw error
     },
     initModal: function (type, theme = "custom") {
         const validInput = sypher.validateInput(
@@ -209,11 +372,11 @@ export const InterfaceModule: IInterfaceModule = {
             const modal = document.createElement('div');
             modal.id = `${type}-modal`;
             modal.classList.add(`${theme}-modal`);
-    
+
             const modalContainer = document.createElement('div');
             modalContainer.id = `${type}-mc`;
             modalContainer.classList.add(`${theme}-mc`);
-    
+
             const modalToggle = document.createElement('div');
             modalToggle.id = `${type}-mt`;
             modalToggle.classList.add(`${theme}-mt`);
@@ -229,11 +392,11 @@ export const InterfaceModule: IInterfaceModule = {
             const connectModal = document.createElement('div');
             connectModal.id = `${type}-modal`;
             connectModal.classList.add(`${theme}-modal`);
-        
+
             const modalContainer = document.createElement('div');
             modalContainer.id = `${type}-mc`;
             modalContainer.classList.add(`${theme}-mc`);
-        
+
             const modalHeader = document.createElement('div');
             modalHeader.id = `${type}-mh`;
             modalHeader.classList.add(`${theme}-mh`);
@@ -243,12 +406,12 @@ export const InterfaceModule: IInterfaceModule = {
             modalClose.classList.add(`${theme}-mx`);
             modalClose.src = "https://raw.githubusercontent.com/leungwensen/svg-icon/8b84d725b0d2be8f5d87cac7f2c386682ce43563/dist/svg/zero/close-c.svg";
             modalClose.addEventListener('click', () => { connectModal.remove() }); // TODO: Might need to change this
-        
+
             const modalTitle = document.createElement('h2');
             modalTitle.id = `${type}-mt`;
             modalTitle.classList.add(`${theme}-mt`);
             modalTitle.innerText = "Connect Wallet";
-        
+
             const modalBody = document.createElement('div');
             modalBody.id = `${type}-mb`;
             modalBody.classList.add(`${theme}-mb`);
@@ -265,22 +428,72 @@ export const InterfaceModule: IInterfaceModule = {
             return modalObj;
         } else { return null; }
     },
-    toggleLoader: function (element, loaderHTML, isEnabled = true, newText = "") {
-        const validInput = sypher.validateInput(
-                { element, isEnabled, loaderHTML, newText },
-                {
-                    element: { type: "object", required: true },
-                    isEnabled: { type: "bool", required: false },
-                    loaderHTML: { type: "string", required: true },
-                    newText: { type: "string", required: false }
-                }, "InterfaceModule.toggleLoader"
-            );
-        if (!validInput) { return; }
+    createElement: function (params: TElementParams): HTMLElement | null {
+        const defaultParams: TElementParams = {
+            append: document.body,
+            type: "div",
+            id: "",
+            classes: [],
+            attributes: {},
+            events: {},
+            innerHTML: "",
+            children: []
+        };
+        const mergedParams = { ...defaultParams, ...params };
+
+        const { append, type, id, theme, classes, attributes, events, innerHTML, children } = mergedParams;
+
+        if (theme) { if (!THEMES.includes(theme)) { throw new Error(`InterfaceModule.createElement: Theme '${theme}' not found.`); } }
+
+        let appliedTheme = this._theme || theme;
+        if (theme === "none") { appliedTheme = "custom"; }
+
+        const element = document.createElement(type);
+        if (id && id !== "" ) { element.id = id; }
+        element.classList.add(`sypher-${appliedTheme}-element`);
+
+        if (classes) { classes.forEach((className) => { element.classList.add(className); }); }
+        if (attributes) { for (const [key, value] of Object.entries(attributes)) { element.setAttribute(key, value); } }
+        if (events) { for (const [key, value] of Object.entries(events)) { element.addEventListener(key, value); } }
+        if (innerHTML && innerHTML !== "" ) { element.innerHTML = innerHTML; }
+        if (children) {
+            children.forEach((childParams) => {
+                const childElement = this.createElement(childParams);
+                if (childElement) {
+                    element.appendChild(childElement);
+                }
+            });
+        }
+
+        if (append) { append.appendChild(element); }
+        return element;
+    },
+    toggleLoader: function (params: TLoaderParams) {
+        const defaultParams = {
+            element: document.body,
+            isEnabled: true,
+            newText: "",
+            loaderHTML: `<div class="loader"></div>`,
+            replace: true
+        }
+        const mergedParams = { ...defaultParams, ...params };
+
+        const { element, isEnabled, newText, loaderHTML, replace } = mergedParams;
 
         if (isEnabled) {
-            element.innerHTML = loaderHTML;
+            if (replace) { element.innerHTML = loaderHTML; }
+            else if (!element.querySelector('.loader')) {
+                const loader = document.createElement('div');
+                loader.classList.add('loader');
+                element.appendChild(loader);
+            }
         } else {
-            element.innerHTML = newText;
+            if (newText === "sypher.revert") {
+                const loader = element.querySelector('.loader');
+                if (loader) { loader.remove(); }
+                return;
+            }
+            else { element.innerHTML = newText; }
         }
     },
     parallax: function () {
@@ -289,9 +502,9 @@ export const InterfaceModule: IInterfaceModule = {
             console.warn(`InterfaceModule.parallax: Parallax enabled, but no elements found with the [data-speed] attribute.`);
             return;
         }
-    
+
         console.log("Parallax enabled on ", parallaxElements.length, " elements.");
-    
+
         function applyParallax() {
             parallaxElements.forEach(element => {
                 const speed = parseFloat(element.dataset.speed || '0.5');
@@ -306,15 +519,15 @@ export const InterfaceModule: IInterfaceModule = {
     },
     fade: function (distance = '20px', length = '0.5s') {
         const validInput = sypher.validateInput(
-                { distance, length },
-                {
-                    distance: { type: "string", required: false },
-                    length: { type: "string", required: false }
-                }, "InterfaceModule.fade"
-            );
+            { distance, length },
+            {
+                distance: { type: "string", required: false },
+                length: { type: "string", required: false }
+            }, "InterfaceModule.fade"
+        );
         if (!validInput) { return; }
 
-        const elements = document.querySelectorAll('[data-fade]')  as NodeListOf<HTMLElement>;;
+        const elements = document.querySelectorAll('[data-fade]') as NodeListOf<HTMLElement>;;
         if (elements.length === 0) {
             console.warn(`InterfaceModule.fade: Fade enabled, but no elements found with the [data-fade] attribute.`);
             return;

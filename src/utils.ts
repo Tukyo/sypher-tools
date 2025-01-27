@@ -1,5 +1,5 @@
 import { CHAINS } from "./constants";
-import { IHelperModule, ILogModule, ITruncationModule, IWindowModule } from "./utils.d";
+import { IHelperModule, ILogModule, ITruncationModule, IWindowModule, TScreenDetails, TUserEnvironment } from "./utils.d";
 
 export const HelperModule: IHelperModule = {
     validateInput: function (inputs: { [key: string]: any }, rules, context = "validateInput") {
@@ -276,5 +276,56 @@ export const WindowModule: IWindowModule = {
         const pageFocused = document.visibilityState === "visible";
         if (pageFocused) console.log(`Page Focused...`); else console.log(`Page Unfocused...`);
         return pageFocused;
+    },
+    userEnvironment: function() {
+        const userAgent = navigator.userAgent || navigator.vendor;
+        const isMobile = /Mobi|Android|iPhone|iPad|iPod|BlackBerry|Windows Phone|webOS/i.test(userAgent);
+        const isTablet = /iPad|Tablet/i.test(userAgent);
+        const isDesktop = !isMobile && !isTablet;
+        const screenDetails: TScreenDetails = {
+            width: window.screen.width,
+            height: window.screen.height,
+            availableWidth: window.screen.availWidth,
+            availableHeight: window.screen.availHeight,
+            colorDepth: window.screen.colorDepth,
+            pixelDepth: window.screen.pixelDepth
+        };
+        const browserDetails = (() => {
+            const ua = userAgent.toLowerCase();
+            if (/chrome|crios|crmo/i.test(ua) && !/edge|opr\//i.test(ua)) return 'Chrome';
+            if (/firefox|fxios/i.test(ua)) return 'Firefox';
+            if (/safari/i.test(ua) && !/chrome|crios|crmo|opr\//i.test(ua)) return 'Safari';
+            if (/opr\//i.test(ua)) return 'Opera';
+            if (/edg/i.test(ua)) return 'Edge';
+            if (/msie|trident/i.test(ua)) return 'Internet Explorer';
+            return 'Unknown';
+        })();
+        const osDetails = (() => {
+            if (/windows phone/i.test(userAgent)) return 'Windows Phone';
+            if (/win/i.test(userAgent)) return 'Windows';
+            if (/android/i.test(userAgent)) return 'Android';
+            if (/mac/i.test(userAgent)) return 'MacOS';
+            if (/iphone|ipad|ipod/i.test(userAgent)) return 'iOS';
+            if (/linux/i.test(userAgent)) return 'Linux';
+            return 'Unknown';
+        })();
+
+        const environment: TUserEnvironment = {
+            isMobile: isMobile,
+            isTablet: isTablet,
+            isDesktop: isDesktop,
+            deviceType: isMobile ? (isTablet ? 'Tablet' : 'Mobile') : 'Desktop',
+            browser: browserDetails,
+            operatingSystem: osDetails,
+            userAgent: userAgent,
+            ethereum: ("ethereum" in window) && typeof window.ethereum !== 'undefined',
+            platform: navigator.platform,
+            languages: navigator.languages || [navigator.language],
+            cookiesEnabled: navigator.cookieEnabled,
+            screenDetails: screenDetails,
+            timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
+        };
+
+        return environment;
     }
 }

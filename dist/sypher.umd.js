@@ -2,10 +2,9 @@
     typeof exports === 'object' && typeof module !== 'undefined' ? factory(require('ethers')) :
     typeof define === 'function' && define.amd ? define(['ethers'], factory) :
     (global = typeof globalThis !== 'undefined' ? globalThis : global || self, factory(global.ethers));
-})(this, (function (ethers) { 'use strict';
+})(this, (function (ethers$1) { 'use strict';
 
     const ADDRESS_REGEXP = /^0x[a-fA-F0-9]{40}$/;
-    const LP_VER = ["V2", "V3"];
     const CHAINS = {
         ethereum: {
             params: [{ chainId: "0x1" }],
@@ -81,6 +80,55 @@
             }
         }
     };
+    const DISCOVERED_PROVIDERS = [];
+    const PLACEHOLDER_PROVIDERS = [
+        {
+            info: {
+                icon: "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNTYiIGhlaWdodD0iNTYiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHBhdGggZD0iTTI4IDU2YzE1LjQ2NCAwIDI4LTEyLjUzNiAyOC0yOFM0My40NjQgMCAyOCAwIDAgMTIuNTM2IDAgMjhzMTIuNTM2IDI4IDI4IDI4WiIgZmlsbD0iIzFCNTNFNCIvPjxwYXRoIGZpbGwtcnVsZT0iZXZlbm9kZCIgY2xpcC1ydWxlPSJldmVub2RkIiBkPSJNNyAyOGMwIDExLjU5OCA5LjQwMiAyMSAyMSAyMXMyMS05LjQwMiAyMS0yMVMzOS41OTggNyAyOCA3IDcgMTYuNDAyIDcgMjhabTE3LjIzNC02Ljc2NmEzIDMgMCAwIDAtMyAzdjcuNTMzYTMgMyAwIDAgMCAzIDNoNy41MzNhMyAzIDAgMCAwIDMtM3YtNy41MzNhMyAzIDAgMCAwLTMtM2gtNy41MzNaIiBmaWxsPSIjZmZmIi8+PC9zdmc+",
+                name: "Coinbase Wallet",
+                rdns: "com.coinbase.wallet",
+                uuid: "96b79a0d-c5cd-48de-924b-af5c7bb68b7e",
+                onboard: {
+                    bool: true,
+                    link: "https://www.coinbase.com/wallet",
+                    deeplink: "cbwallet://",
+                    fallback: {
+                        ios: "https://apps.apple.com/us/app/coinbase-wallet-nfts-crypto/id1278383455",
+                        android: "https://play.google.com/store/apps/details?id=org.toshi"
+                    }
+                }
+            },
+            provider: {
+                request: async () => {
+                    console.log(`Placeholder Coinbase Wallet clicked.`);
+                    return Promise.resolve("Placeholder Coinbase Wallet Response");
+                }
+            }
+        },
+        {
+            info: {
+                icon: "data:image/svg+xml;base64,PHN2ZyBmaWxsPSJub25lIiBoZWlnaHQ9IjMzIiB2aWV3Qm94PSIwIDAgMzUgMzMiIHdpZHRoPSIzNSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIHN0cm9rZS13aWR0aD0iLjI1Ij48cGF0aCBkPSJtMzIuOTU4MiAxLTEzLjEzNDEgOS43MTgzIDIuNDQyNC01LjcyNzMxeiIgZmlsbD0iI2UxNzcyNiIgc3Ryb2tlPSIjZTE3NzI2Ii8+PGcgZmlsbD0iI2UyNzYyNSIgc3Ryb2tlPSIjZTI3NjI1Ij48cGF0aCBkPSJtMi42NjI5NiAxIDEzLjAxNzE0IDkuODA5LTIuMzI1NC01LjgxODAyeiIvPjxwYXRoIGQ9Im0yOC4yMjk1IDIzLjUzMzUtMy40OTQ3IDUuMzM4NiA3LjQ4MjkgMi4wNjAzIDIuMTQzNi03LjI4MjN6Ii8+PHBhdGggZD0ibTEuMjcyODEgMjMuNjUwMSAyLjEzMDU1IDcuMjgyMyA3LjQ2OTk0LTIuMDYwMy0zLjQ4MTY2LTUuMzM4NnoiLz48cGF0aCBkPSJtMTAuNDcwNiAxNC41MTQ5LTIuMDc4NiAzLjEzNTggNy40MDUuMzM2OS0uMjQ2OS03Ljk2OXoiLz48cGF0aCBkPSJtMjUuMTUwNSAxNC41MTQ5LTUuMTU3NS00LjU4NzA0LS4xNjg4IDguMDU5NzQgNy40MDQ5LS4zMzY5eiIvPjxwYXRoIGQ9Im0xMC44NzMzIDI4Ljg3MjEgNC40ODE5LTIuMTYzOS0zLjg1ODMtMy4wMDYyeiIvPjxwYXRoIGQ9Im0yMC4yNjU5IDI2LjcwODIgNC40Njg5IDIuMTYzOS0uNjEwNS01LjE3MDF6Ii8+PC9nPjxwYXRoIGQ9Im0yNC43MzQ4IDI4Ljg3MjEtNC40NjktMi4xNjM5LjM2MzggMi45MDI1LS4wMzkgMS4yMzF6IiBmaWxsPSIjZDViZmIyIiBzdHJva2U9IiNkNWJmYjIiLz48cGF0aCBkPSJtMTAuODczMiAyOC44NzIxIDQuMTU3MiAxLjk2OTYtLjAyNi0xLjIzMS4zNTA4LTIuOTAyNXoiIGZpbGw9IiNkNWJmYjIiIHN0cm9rZT0iI2Q1YmZiMiIvPjxwYXRoIGQ9Im0xNS4xMDg0IDIxLjc4NDItMy43MTU1LTEuMDg4NCAyLjYyNDMtMS4yMDUxeiIgZmlsbD0iIzIzMzQ0NyIgc3Ryb2tlPSIjMjMzNDQ3Ii8+PHBhdGggZD0ibTIwLjUxMjYgMjEuNzg0MiAxLjA5MTMtMi4yOTM1IDIuNjM3MiAxLjIwNTF6IiBmaWxsPSIjMjMzNDQ3IiBzdHJva2U9IiMyMzM0NDciLz48cGF0aCBkPSJtMTAuODczMyAyOC44NzIxLjY0OTUtNS4zMzg2LTQuMTMxMTcuMTE2N3oiIGZpbGw9IiNjYzYyMjgiIHN0cm9rZT0iI2NjNjIyOCIvPjxwYXRoIGQ9Im0yNC4wOTgyIDIzLjUzMzUuNjM2NiA1LjMzODYgMy40OTQ2LTUuMjIxOXoiIGZpbGw9IiNjYzYyMjgiIHN0cm9rZT0iI2NjNjIyOCIvPjxwYXRoIGQ9Im0yNy4yMjkxIDE3LjY1MDctNy40MDUuMzM2OS42ODg1IDMuNzk2NiAxLjA5MTMtMi4yOTM1IDIuNjM3MiAxLjIwNTF6IiBmaWxsPSIjY2M2MjI4IiBzdHJva2U9IiNjYzYyMjgiLz48cGF0aCBkPSJtMTEuMzkyOSAyMC42OTU4IDIuNjI0Mi0xLjIwNTEgMS4wOTEzIDIuMjkzNS42ODg1LTMuNzk2Ni03LjQwNDk1LS4zMzY5eiIgZmlsbD0iI2NjNjIyOCIgc3Ryb2tlPSIjY2M2MjI4Ii8+PHBhdGggZD0ibTguMzkyIDE3LjY1MDcgMy4xMDQ5IDYuMDUxMy0uMTAzOS0zLjAwNjJ6IiBmaWxsPSIjZTI3NTI1IiBzdHJva2U9IiNlMjc1MjUiLz48cGF0aCBkPSJtMjQuMjQxMiAyMC42OTU4LS4xMTY5IDMuMDA2MiAzLjEwNDktNi4wNTEzeiIgZmlsbD0iI2UyNzUyNSIgc3Ryb2tlPSIjZTI3NTI1Ii8+PHBhdGggZD0ibTE1Ljc5NyAxNy45ODc2LS42ODg2IDMuNzk2Ny44NzA0IDQuNDgzMy4xOTQ5LTUuOTA4N3oiIGZpbGw9IiNlMjc1MjUiIHN0cm9rZT0iI2UyNzUyNSIvPjxwYXRoIGQ9Im0xOS44MjQyIDE3Ljk4NzYtLjM2MzggMi4zNTg0LjE4MTkgNS45MjE2Ljg3MDQtNC40ODMzeiIgZmlsbD0iI2UyNzUyNSIgc3Ryb2tlPSIjZTI3NTI1Ii8+PHBhdGggZD0ibTIwLjUxMjcgMjEuNzg0Mi0uODcwNCA0LjQ4MzQuNjIzNi40NDA2IDMuODU4NC0zLjAwNjIuMTE2OS0zLjAwNjJ6IiBmaWxsPSIjZjU4NDFmIiBzdHJva2U9IiNmNTg0MWYiLz48cGF0aCBkPSJtMTEuMzkyOSAyMC42OTU4LjEwNCAzLjAwNjIgMy44NTgzIDMuMDA2Mi42MjM2LS40NDA2LS44NzA0LTQuNDgzNHoiIGZpbGw9IiNmNTg0MWYiIHN0cm9rZT0iI2Y1ODQxZiIvPjxwYXRoIGQ9Im0yMC41OTA2IDMwLjg0MTcuMDM5LTEuMjMxLS4zMzc4LS4yODUxaC00Ljk2MjZsLS4zMjQ4LjI4NTEuMDI2IDEuMjMxLTQuMTU3Mi0xLjk2OTYgMS40NTUxIDEuMTkyMSAyLjk0ODkgMi4wMzQ0aDUuMDUzNmwyLjk2Mi0yLjAzNDQgMS40NDItMS4xOTIxeiIgZmlsbD0iI2MwYWM5ZCIgc3Ryb2tlPSIjYzBhYzlkIi8+PHBhdGggZD0ibTIwLjI2NTkgMjYuNzA4Mi0uNjIzNi0uNDQwNmgtMy42NjM1bC0uNjIzNi40NDA2LS4zNTA4IDIuOTAyNS4zMjQ4LS4yODUxaDQuOTYyNmwuMzM3OC4yODUxeiIgZmlsbD0iIzE2MTYxNiIgc3Ryb2tlPSIjMTYxNjE2Ii8+PHBhdGggZD0ibTMzLjUxNjggMTEuMzUzMiAxLjEwNDMtNS4zNjQ0Ny0xLjY2MjktNC45ODg3My0xMi42OTIzIDkuMzk0NCA0Ljg4NDYgNC4xMjA1IDYuODk4MyAyLjAwODUgMS41Mi0xLjc3NTItLjY2MjYtLjQ3OTUgMS4wNTIzLS45NTg4LS44MDU0LS42MjIgMS4wNTIzLS44MDM0eiIgZmlsbD0iIzc2M2UxYSIgc3Ryb2tlPSIjNzYzZTFhIi8+PHBhdGggZD0ibTEgNS45ODg3MyAxLjExNzI0IDUuMzY0NDctLjcxNDUxLjUzMTMgMS4wNjUyNy44MDM0LS44MDU0NS42MjIgMS4wNTIyOC45NTg4LS42NjI1NS40Nzk1IDEuNTE5OTcgMS43NzUyIDYuODk4MzUtMi4wMDg1IDQuODg0Ni00LjEyMDUtMTIuNjkyMzMtOS4zOTQ0eiIgZmlsbD0iIzc2M2UxYSIgc3Ryb2tlPSIjNzYzZTFhIi8+PHBhdGggZD0ibTMyLjA0ODkgMTYuNTIzNC02Ljg5ODMtMi4wMDg1IDIuMDc4NiAzLjEzNTgtMy4xMDQ5IDYuMDUxMyA0LjEwNTItLjA1MTloNi4xMzE4eiIgZmlsbD0iI2Y1ODQxZiIgc3Ryb2tlPSIjZjU4NDFmIi8+PHBhdGggZD0ibTEwLjQ3MDUgMTQuNTE0OS02Ljg5ODI4IDIuMDA4NS0yLjI5OTQ0IDcuMTI2N2g2LjExODgzbDQuMTA1MTkuMDUxOS0zLjEwNDg3LTYuMDUxM3oiIGZpbGw9IiNmNTg0MWYiIHN0cm9rZT0iI2Y1ODQxZiIvPjxwYXRoIGQ9Im0xOS44MjQxIDE3Ljk4NzYuNDQxNy03LjU5MzIgMi4wMDA3LTUuNDAzNGgtOC45MTE5bDIuMDAwNiA1LjQwMzQuNDQxNyA3LjU5MzIuMTY4OSAyLjM4NDIuMDEzIDUuODk1OGgzLjY2MzVsLjAxMy01Ljg5NTh6IiBmaWxsPSIjZjU4NDFmIiBzdHJva2U9IiNmNTg0MWYiLz48L2c+PC9zdmc+",
+                name: "MetaMask",
+                rdns: "io.metamask",
+                uuid: "974b295e-a371-4e37-a428-b82abf69ec3c",
+                onboard: {
+                    bool: true,
+                    link: "https://metamask.io/",
+                    deeplink: "metamask://",
+                    fallback: {
+                        ios: "https://apps.apple.com/us/app/metamask-blockchain-wallet/id1438144202",
+                        android: "https://play.google.com/store/apps/details?id=io.metamask&pli=1"
+                    }
+                }
+            },
+            provider: {
+                request: async () => {
+                    console.log(`Placeholder MetaMask clicked.`);
+                    return Promise.resolve("Placeholder MetaMask Response");
+                }
+            }
+        }
+    ];
     const CHAINLINK_ABI = [
         "function latestRoundData() view returns (uint80 roundId, int256 answer, uint256 startedAt, uint256 updatedAt, uint80 answeredInRound)"
     ];
@@ -113,6 +161,9 @@
         "function decimals() view returns (uint8)",
         "function liquidity() view returns (uint128)"
     ];
+    const THEMES = ["none", "custom", "default", "light"];
+    const BUTTON_TYPES = ["none", "custom", "connect", "provider"];
+    const MODAL_TYPES = ["none", "custom", "log", "connect"];
 
     const HelperModule = {
         validateInput: function (inputs, rules, context = "validateInput") {
@@ -214,7 +265,7 @@
             const logModal = document.querySelector("#log-modal");
             const logContainer = document.querySelector("#log-mc");
             const logToggle = document.querySelector("#log-mt");
-            const logShowHTML = `<i class="fa-solid fa-caret-right"></i>`;
+            const logShowHTML = `<i class="fa-solid fa-caret-right"></i>`; // TODO: Replace FontAwesome with custom SVG 
             const logHideHTML = `<i class="fa-solid fa-caret-left"></i>`;
             const originalLog = console.log;
             const originalError = console.error;
@@ -389,6 +440,67 @@
             else
                 console.log(`Page Unfocused...`);
             return pageFocused;
+        },
+        userEnvironment: function () {
+            const userAgent = navigator.userAgent || navigator.vendor;
+            const isMobile = /Mobi|Android|iPhone|iPad|iPod|BlackBerry|Windows Phone|webOS/i.test(userAgent);
+            const isTablet = /iPad|Tablet/i.test(userAgent);
+            const isDesktop = !isMobile && !isTablet;
+            const screenDetails = {
+                width: window.screen.width,
+                height: window.screen.height,
+                availableWidth: window.screen.availWidth,
+                availableHeight: window.screen.availHeight,
+                colorDepth: window.screen.colorDepth,
+                pixelDepth: window.screen.pixelDepth
+            };
+            const browserDetails = (() => {
+                const ua = userAgent.toLowerCase();
+                if (/chrome|crios|crmo/i.test(ua) && !/edge|opr\//i.test(ua))
+                    return 'Chrome';
+                if (/firefox|fxios/i.test(ua))
+                    return 'Firefox';
+                if (/safari/i.test(ua) && !/chrome|crios|crmo|opr\//i.test(ua))
+                    return 'Safari';
+                if (/opr\//i.test(ua))
+                    return 'Opera';
+                if (/edg/i.test(ua))
+                    return 'Edge';
+                if (/msie|trident/i.test(ua))
+                    return 'Internet Explorer';
+                return 'Unknown';
+            })();
+            const osDetails = (() => {
+                if (/windows phone/i.test(userAgent))
+                    return 'Windows Phone';
+                if (/win/i.test(userAgent))
+                    return 'Windows';
+                if (/android/i.test(userAgent))
+                    return 'Android';
+                if (/mac/i.test(userAgent))
+                    return 'MacOS';
+                if (/iphone|ipad|ipod/i.test(userAgent))
+                    return 'iOS';
+                if (/linux/i.test(userAgent))
+                    return 'Linux';
+                return 'Unknown';
+            })();
+            const environment = {
+                isMobile: isMobile,
+                isTablet: isTablet,
+                isDesktop: isDesktop,
+                deviceType: isMobile ? (isTablet ? 'Tablet' : 'Mobile') : 'Desktop',
+                browser: browserDetails,
+                operatingSystem: osDetails,
+                userAgent: userAgent,
+                ethereum: ("ethereum" in window) && typeof window.ethereum !== 'undefined',
+                platform: navigator.platform,
+                languages: navigator.languages || [navigator.language],
+                cookiesEnabled: navigator.cookieEnabled,
+                screenDetails: screenDetails,
+                timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
+            };
+            return environment;
         }
     };
 
@@ -441,109 +553,458 @@
                 typeLink.href = `/dist/css/sypher-${type}.css`;
                 document.head.appendChild(typeLink);
             }
-            elements.forEach(element => {
-                element.classList.add(`${theme}-modal`, `${type}-modal`);
-            });
         },
-        createButton: function (element = document.body, onClick = () => sypher.connect("ethereum"), params = { type: "connect", text: "Connect Wallet", options: { modal: false, theme: "none" } }) {
-            const defaultParams = { type: "connect", text: "Connect Wallet", options: { modal: false, theme: "none" } };
-            const mergedParams = {
-                ...defaultParams,
-                ...params,
-                options: { ...defaultParams.options, ...params.options },
+        createButton: function (params) {
+            const defaultParams = {
+                type: "connect",
+                text: "Connect Wallet",
+                icon: "",
+                modal: false,
+                theme: "none",
+                append: document.body,
+                onClick: () => sypher.connect("ethereum"),
+                initCrypto: {}
             };
-            const validInput = sypher.validateInput({ element, onClick, ...mergedParams }, {
-                element: { type: "object", required: false },
-                onClick: { type: "function", required: false },
-                type: { type: "string", required: true },
-                text: { type: "string", required: true },
-                options: { type: "object", required: true },
-            }, "InterfaceModule.createButton");
-            if (!validInput) {
-                return null;
-            }
-            const { type, text, options: { modal, theme } } = mergedParams;
-            const types = ["connect"];
-            const themes = ["none", "custom", "default", "light"];
-            if (!types.includes(type)) {
+            const mergedParams = { ...defaultParams, ...params };
+            const { type, text, icon, modal, theme, append, onClick, initCrypto } = mergedParams;
+            if (!BUTTON_TYPES.includes(type)) {
                 throw new Error(`InterfaceModule.createModal: Type '${type}' not found.`);
             }
-            if (!themes.includes(theme)) {
+            if (!THEMES.includes(theme)) {
                 throw new Error(`InterfaceModule.createModal: Theme '${theme}' not found.`);
             }
-            const className = `${type}-button`;
-            const themeName = `${theme}-button`;
-            const buttonId = `${type}-button`;
-            const button = document.createElement('button');
-            button.id = buttonId;
-            button.classList.add(className, themeName);
-            button.textContent = text;
-            button.onclick = onClick;
-            if (modal) {
-                console.log("Modal Enabled...");
-                // TODO: Create modal flow for viewing wallet details when connected
+            let appliedTheme = this._theme || theme;
+            if (theme === "none") {
+                appliedTheme = "custom";
             }
-            const themeParams = { type, theme };
+            let appliedType = type;
+            if (type === "none") {
+                appliedType = "custom";
+            }
+            const themeParams = { type, theme: appliedTheme };
             if (!themeParams) {
                 return null;
             }
-            this.applyStyle([button], themeParams);
-            element.appendChild(button);
-            return button;
+            if (appliedType === "connect") {
+                if (initCrypto.chain === "none") {
+                    throw new Error(`InterfaceModule.createButton: Chain is required for type 'connect'.`);
+                }
+                const className = `${appliedType}-button`;
+                const themeName = `${appliedTheme}-button`;
+                const buttonId = `${appliedType}-button`;
+                const button = document.createElement('button');
+                button.id = buttonId;
+                button.classList.add(className, themeName);
+                button.textContent = text;
+                this._connectText = text;
+                const finalOnClick = onClick === defaultParams.onClick
+                    ? () => sypher.connect(initCrypto.chain !== "none" ? initCrypto.chain : "ethereum")
+                    : onClick;
+                if (modal) {
+                    console.log("Modal Enabled...");
+                    button.onclick = () => this.createModal({ append: document.body, type: "connect", theme: appliedTheme, initCrypto });
+                    sypher.initProviderSearch();
+                }
+                else {
+                    button.onclick = finalOnClick;
+                }
+                this.applyStyle([button], themeParams);
+                append.appendChild(button);
+                return button;
+            }
+            else if (appliedType === "provider") {
+                if (initCrypto.chain === "none") {
+                    throw new Error(`InterfaceModule.createButton: Chain is required for type 'provider'.`);
+                }
+                const modalItem = document.createElement('div');
+                modalItem.id = text.toLowerCase().replace(/\s+/g, '-');
+                modalItem.classList.add('connect-mi');
+                modalItem.addEventListener('click', onClick);
+                const modalItemIcon = document.createElement('img');
+                modalItemIcon.classList.add('connect-mim');
+                modalItemIcon.src = icon;
+                const modalItemName = document.createElement('span');
+                modalItemName.classList.add('connect-min');
+                modalItemName.innerText = text;
+                this.applyStyle([modalItem, modalItemIcon, modalItemName], themeParams);
+                append.appendChild(modalItem);
+                modalItem.appendChild(modalItemIcon);
+                modalItem.appendChild(modalItemName);
+                return modalItem;
+            }
+            else {
+                return null;
+            } //TODO: Throw error
         },
-        createModal: function (params) {
-            const defaultParams = { append: document.body, type: "log", theme: "none" };
+        createModal: async function (params) {
+            const defaultParams = { append: document.body, type: "none", theme: "none", initCrypto: {} };
             const mergedParams = { ...defaultParams, ...params };
             const validInput = sypher.validateInput({ ...mergedParams }, {
-                append: { type: "object", required: true },
+                append: { type: "object", required: false },
                 type: { type: "string", required: true },
-                theme: { type: "string", required: true }
+                theme: { type: "string", required: false }
             }, "InterfaceModule.createModal");
             if (!validInput) {
                 return null;
             }
-            const { append, type, theme } = mergedParams;
-            const types = ["log"];
-            const themes = ["none", "custom", "default", "light"];
-            if (!types.includes(type)) {
+            const { append, type, theme, initCrypto } = mergedParams;
+            if (!MODAL_TYPES.includes(type)) {
                 throw new Error(`InterfaceModule.createModal: Type '${type}' not found.`);
             }
-            if (!themes.includes(theme)) {
+            if (!THEMES.includes(theme)) {
                 throw new Error(`InterfaceModule.createModal: Theme '${theme}' not found.`);
             }
-            const modal = document.createElement('div');
-            modal.id = `${type}-modal`;
-            modal.classList.add(`${theme}-modal`);
-            const modalContainer = document.createElement('div');
-            modalContainer.id = `${type}-mc`;
-            modalContainer.classList.add(`${theme}-mc`);
-            const modalToggle = document.createElement('div');
-            modalToggle.id = `${type}-mt`;
-            modalToggle.classList.add(`${theme}-mt`);
-            this.applyStyle([modal, modalContainer, modalToggle], mergedParams);
-            append.appendChild(modal);
-            modal.appendChild(modalContainer);
-            modal.appendChild(modalToggle);
-            if (type === "log") {
+            let appliedTheme = this._theme || theme;
+            if (theme === "none") {
+                appliedTheme = "custom";
+            }
+            if (type === "none") {
+                return null;
+            } //TODO: Enable custom modals
+            const modalObj = this.initModal(type, appliedTheme);
+            if (!modalObj) {
+                return null;
+            }
+            if (modalObj.type === "log") {
+                this.applyStyle([modalObj.parent, modalObj.container, modalObj.toggle], mergedParams);
+                append.appendChild(modalObj.parent);
+                modalObj.parent.appendChild(modalObj.container);
+                modalObj.parent.appendChild(modalObj.toggle);
                 sypher.initLogger();
+                return modalObj;
             }
-            return modal;
-        },
-        toggleLoader: function (element, loaderHTML, isEnabled = true, newText = "") {
-            const validInput = sypher.validateInput({ element, isEnabled, loaderHTML, newText }, {
-                element: { type: "object", required: true },
-                isEnabled: { type: "bool", required: false },
-                loaderHTML: { type: "string", required: true },
-                newText: { type: "string", required: false }
-            }, "InterfaceModule.toggleLoader");
-            if (!validInput) {
-                return;
-            }
-            if (isEnabled) {
-                element.innerHTML = loaderHTML;
+            else if (modalObj.type === "connect") {
+                this.applyStyle([modalObj.parent, modalObj.container, modalObj.toggle, modalObj.head, modalObj.title, modalObj.body], mergedParams);
+                append.appendChild(modalObj.parent);
+                modalObj.parent.appendChild(modalObj.container);
+                modalObj.container.appendChild(modalObj.head);
+                modalObj.head.appendChild(modalObj.title);
+                modalObj.head.appendChild(modalObj.toggle);
+                modalObj.container.appendChild(modalObj.body);
+                // TODO: Create isLogging check - console.log(PLACEHOLDER_PROVIDERS);
+                const mergedProviders = [
+                    ...PLACEHOLDER_PROVIDERS.map((placeholder) => {
+                        const match = DISCOVERED_PROVIDERS.find((discovered) => discovered.info.name === placeholder.info.name);
+                        const merged = match || placeholder;
+                        if (match) {
+                            if (!merged.info.onboard) {
+                                merged.info.onboard = {
+                                    bool: false,
+                                    link: "",
+                                    deeplink: "",
+                                    fallback: {
+                                        ios: "",
+                                        android: "",
+                                    },
+                                };
+                            }
+                            merged.info.onboard.bool = false;
+                        }
+                        return merged;
+                    }),
+                    ...DISCOVERED_PROVIDERS.filter((discovered) => !PLACEHOLDER_PROVIDERS.some((placeholder) => placeholder.info.name === discovered.info.name)),
+                ];
+                // TODO: Create isLogging check - console.log(mergedProviders);
+                const account = sypher.getConnected();
+                mergedProviders.forEach((providerDetail) => {
+                    const { name, icon } = providerDetail.info;
+                    const onClick = providerDetail.info.onboard?.bool
+                        ? () => { sypher.onboard(providerDetail); }
+                        : () => {
+                            if (initCrypto.chain !== "none") {
+                                sypher.initCrypto({
+                                    chain: initCrypto.chain,
+                                    contractAddress: initCrypto.contractAddress,
+                                    poolAddress: initCrypto.poolAddress,
+                                    version: initCrypto.version, //TODO: Check how to make this work with non eth pairs
+                                    detail: providerDetail
+                                });
+                            }
+                            else {
+                                sypher.connect(initCrypto.chain, providerDetail);
+                            }
+                        };
+                    const button = this.createButton({
+                        append: modalObj.body,
+                        type: "provider",
+                        text: name,
+                        icon: icon,
+                        modal: false,
+                        theme: appliedTheme,
+                        onClick: onClick,
+                        initCrypto: initCrypto
+                    });
+                    if (button !== null) {
+                        if (account !== null && account !== undefined) {
+                            button.style.display = "none";
+                        }
+                    }
+                });
+                if (account !== null && account !== undefined) {
+                    modalObj.title.innerHTML = "Account";
+                    const provider = new ethers.providers.Web3Provider(window.ethereum);
+                    const signer = provider.getSigner();
+                    const balance = await signer.getBalance();
+                    const accountView = this.createElement({
+                        append: modalObj.body,
+                        type: "div",
+                        id: 'account-view',
+                        children: [
+                            {
+                                type: "div",
+                                classes: ["av-h"],
+                                children: [
+                                    {
+                                        type: "h2",
+                                        classes: ["av-h-ti"],
+                                        innerHTML: `${sypher.truncate(account)}`
+                                    },
+                                    {
+                                        type: "h3",
+                                        classes: ["av-h-ba"],
+                                        innerHTML: `${sypher.truncateBalance(parseFloat(balance.toString()))} ETH` // TODO: Update 'ETH' to native token of chain
+                                    }
+                                ]
+                            },
+                            {
+                                type: "div",
+                                classes: ["av-b"],
+                                children: [
+                                    {
+                                        type: "div",
+                                        id: "av-b-provider",
+                                        classes: ["av-b-b"],
+                                        events: { click: () => {
+                                                if (accountView) {
+                                                    accountView.style.display = "none";
+                                                }
+                                                const buttons = document.querySelectorAll('.connect-mi');
+                                                if (buttons) {
+                                                    buttons.forEach((button) => { button.style.display = "flex"; });
+                                                }
+                                                modalObj.title.innerHTML = "Change Wallet";
+                                            } },
+                                        children: [
+                                            {
+                                                type: "div",
+                                                classes: ["av-b-bn-ic"],
+                                                children: [
+                                                    {
+                                                        type: "img",
+                                                        classes: ["av-b-bn-i"],
+                                                        attributes: {
+                                                            src: mergedProviders[0].info.icon
+                                                        }
+                                                    },
+                                                    {
+                                                        type: "img",
+                                                        classes: ["av-b-bn-i"],
+                                                        attributes: {
+                                                            src: mergedProviders[1].info.icon
+                                                        }
+                                                    }
+                                                ]
+                                            },
+                                            {
+                                                type: "div",
+                                                classes: ["av-b-bn-t"],
+                                                innerHTML: "Change Wallet"
+                                            }
+                                        ],
+                                    },
+                                    {
+                                        type: "div",
+                                        id: "av-b-history",
+                                        classes: ["av-b-b"],
+                                        innerHTML: "Recent Activity"
+                                    }
+                                ]
+                            },
+                            {
+                                type: "div",
+                                classes: ["av-x"],
+                                events: { click: () => {
+                                        sypher.disconnect();
+                                        if (accountView && accountView.parentNode) {
+                                            accountView.parentNode.removeChild(accountView);
+                                        }
+                                        const buttons = document.querySelectorAll('.connect-mi');
+                                        if (buttons) {
+                                            buttons.forEach((button) => { button.style.display = "flex"; });
+                                        }
+                                        const connectButton = document.getElementById('connect-button');
+                                        if (connectButton && this._connectText) {
+                                            connectButton.innerHTML = this._connectText;
+                                        }
+                                        modalObj.title.innerHTML = "Connect Wallet";
+                                    } },
+                                innerHTML: "Disconnect"
+                            }
+                        ]
+                    });
+                    if (!accountView) {
+                        return null;
+                    }
+                }
+                return modalObj;
             }
             else {
-                element.innerHTML = newText;
+                return null;
+            } //TODO: Throw error
+        },
+        initModal: function (type, theme = "custom") {
+            const validInput = sypher.validateInput({ type }, {
+                type: { type: "string", required: true },
+                theme: { type: "string", required: false }
+            }, "InterfaceModule.initModal");
+            if (!validInput) {
+                return null;
+            }
+            if (type === "none" || type === "custom") {
+                return null;
+            } //TODO: Enable custom modals
+            if (type === "log") {
+                const modal = document.createElement('div');
+                modal.id = `${type}-modal`;
+                modal.classList.add(`${theme}-modal`);
+                const modalContainer = document.createElement('div');
+                modalContainer.id = `${type}-mc`;
+                modalContainer.classList.add(`${theme}-mc`);
+                const modalToggle = document.createElement('div');
+                modalToggle.id = `${type}-mt`;
+                modalToggle.classList.add(`${theme}-mt`);
+                const modalObj = {
+                    type: type,
+                    parent: modal,
+                    container: modalContainer,
+                    toggle: modalToggle
+                };
+                return modalObj;
+            }
+            else if (type === "connect") {
+                const connectModal = document.createElement('div');
+                connectModal.id = `${type}-modal`;
+                connectModal.classList.add(`${theme}-modal`);
+                const modalContainer = document.createElement('div');
+                modalContainer.id = `${type}-mc`;
+                modalContainer.classList.add(`${theme}-mc`);
+                const modalHeader = document.createElement('div');
+                modalHeader.id = `${type}-mh`;
+                modalHeader.classList.add(`${theme}-mh`);
+                const modalClose = document.createElement('img');
+                modalClose.id = `${type}-mx`;
+                modalClose.classList.add(`${theme}-mx`);
+                modalClose.src = "https://raw.githubusercontent.com/leungwensen/svg-icon/8b84d725b0d2be8f5d87cac7f2c386682ce43563/dist/svg/zero/close-c.svg";
+                modalClose.addEventListener('click', () => { connectModal.remove(); }); // TODO: Might need to change this
+                const modalTitle = document.createElement('h2');
+                modalTitle.id = `${type}-mt`;
+                modalTitle.classList.add(`${theme}-mt`);
+                modalTitle.innerText = "Connect Wallet";
+                const modalBody = document.createElement('div');
+                modalBody.id = `${type}-mb`;
+                modalBody.classList.add(`${theme}-mb`);
+                const modalObj = {
+                    type: type,
+                    parent: connectModal,
+                    container: modalContainer,
+                    toggle: modalClose,
+                    head: modalHeader,
+                    title: modalTitle,
+                    body: modalBody
+                };
+                return modalObj;
+            }
+            else {
+                return null;
+            }
+        },
+        createElement: function (params) {
+            const defaultParams = {
+                append: document.body,
+                type: "div",
+                id: "",
+                classes: [],
+                attributes: {},
+                events: {},
+                innerHTML: "",
+                children: []
+            };
+            const mergedParams = { ...defaultParams, ...params };
+            const { append, type, id, theme, classes, attributes, events, innerHTML, children } = mergedParams;
+            if (theme) {
+                if (!THEMES.includes(theme)) {
+                    throw new Error(`InterfaceModule.createElement: Theme '${theme}' not found.`);
+                }
+            }
+            let appliedTheme = this._theme || theme;
+            if (theme === "none") {
+                appliedTheme = "custom";
+            }
+            const element = document.createElement(type);
+            if (id && id !== "") {
+                element.id = id;
+            }
+            element.classList.add(`sypher-${appliedTheme}-element`);
+            if (classes) {
+                classes.forEach((className) => { element.classList.add(className); });
+            }
+            if (attributes) {
+                for (const [key, value] of Object.entries(attributes)) {
+                    element.setAttribute(key, value);
+                }
+            }
+            if (events) {
+                for (const [key, value] of Object.entries(events)) {
+                    element.addEventListener(key, value);
+                }
+            }
+            if (innerHTML && innerHTML !== "") {
+                element.innerHTML = innerHTML;
+            }
+            if (children) {
+                children.forEach((childParams) => {
+                    const childElement = this.createElement(childParams);
+                    if (childElement) {
+                        element.appendChild(childElement);
+                    }
+                });
+            }
+            if (append) {
+                append.appendChild(element);
+            }
+            return element;
+        },
+        toggleLoader: function (params) {
+            const defaultParams = {
+                element: document.body,
+                isEnabled: true,
+                newText: "",
+                loaderHTML: `<div class="loader"></div>`,
+                replace: true
+            };
+            const mergedParams = { ...defaultParams, ...params };
+            const { element, isEnabled, newText, loaderHTML, replace } = mergedParams;
+            if (isEnabled) {
+                if (replace) {
+                    element.innerHTML = loaderHTML;
+                }
+                else if (!element.querySelector('.loader')) {
+                    const loader = document.createElement('div');
+                    loader.classList.add('loader');
+                    element.appendChild(loader);
+                }
+            }
+            else {
+                if (newText === "sypher.revert") {
+                    const loader = element.querySelector('.loader');
+                    if (loader) {
+                        loader.remove();
+                    }
+                    return;
+                }
+                else {
+                    element.innerHTML = newText;
+                }
             }
         },
         parallax: function () {
@@ -601,18 +1062,13 @@
     };
 
     const CryptoModule = {
-        initCrypto: async function (chain, contractAddress, poolAddress, version, pair = "eth") {
-            const validInput = sypher.validateInput({ chain, contractAddress, poolAddress, version, pair }, {
-                chain: { type: "string", required: true },
-                contractAddress: { type: "string", required: true, regex: ADDRESS_REGEXP },
-                poolAddress: { type: "string", required: true, regex: ADDRESS_REGEXP },
-                version: { type: "string", required: true, enum: LP_VER },
-                pair: { type: "string", required: false }
-            }, "CryptoModule.initCrypto");
-            if (!validInput) {
+        initCrypto: async function (params) {
+            const defaultParams = { chain: "ethereum", contractAddress: "", poolAddress: "", version: "V2", pair: "eth" };
+            const p = { ...defaultParams, ...params };
+            if (!p) {
                 return null;
             }
-            const chainValidation = sypher.validateChain(chain);
+            const chainValidation = sypher.validateChain(p.chain);
             if (!chainValidation) {
                 return null;
             }
@@ -621,26 +1077,26 @@
                 return null;
             }
             try {
-                const account = await this.connect(chain);
+                const account = await this.connect(p.chain, p.detail);
                 if (!account) {
                     return null;
                 }
-                console.log("Getting details for:", { chain, contractAddress, poolAddress, version, pair });
-                const tokenDetails = await this.getTokenDetails(chain, contractAddress);
+                console.log("Getting details for:", p);
+                const tokenDetails = await this.getTokenDetails(p.chain, p.contractAddress);
                 if (!tokenDetails) {
                     return null;
                 }
                 const { balance, decimals, name, symbol, totalSupply } = tokenDetails;
                 let tokenPrice;
-                if (version === "V2") {
-                    const priceV2 = await this.getPriceV2(chain, poolAddress, pair);
+                if (p.version === "V2") {
+                    const priceV2 = await this.getPriceV2(p.chain, p.poolAddress, p.pair);
                     if (!priceV2) {
                         return null;
                     }
                     tokenPrice = priceV2;
                 }
-                else if (version === "V3") {
-                    const priceV3 = await this.getPriceV3(chain, contractAddress, poolAddress, pair);
+                else if (p.version === "V3") {
+                    const priceV3 = await this.getPriceV3(p.chain, p.contractAddress, p.poolAddress, p.pair);
                     if (!priceV3) {
                         return null;
                     }
@@ -653,48 +1109,155 @@
                 if (!userValue) {
                     return null;
                 }
-                const cleanedDetails = this.clean({ contractAddress, poolAddress, balance, decimals, name, symbol, totalSupply, tokenPrice, userValue });
-                return cleanedDetails;
+                const contractAddress = p.contractAddress;
+                const poolAddress = p.poolAddress;
+                const details = { contractAddress, poolAddress, balance, decimals, name, symbol, totalSupply, tokenPrice, userValue };
+                if (!details) {
+                    return null;
+                }
+                const cleanedDetails = this.clean(details);
+                if (!cleanedDetails) {
+                    return null;
+                }
+                const detailsObj = cleanedDetails;
+                return detailsObj;
             }
             catch (error) {
-                const message = error instanceof Error ? error.message : "An unknown error occurred.";
-                throw new Error(`CryptoModule.initCrypto: ${message}`);
+                throw new Error(`CryptoModule.initCrypto: ${error instanceof Error ? error.message : JSON.stringify(error)}`);
             }
         },
-        connect: async function (chain) {
+        connect: async function (chain, providerDetail = null) {
             const validInput = sypher.validateInput({ chain }, { chain: { type: "string", required: true } }, "CryptoModule.connect");
             if (!validInput) {
                 return null;
             }
+            const connectButton = document.getElementById("connect-button") || null;
             const ethereum = this.getProvider();
             if (!ethereum) {
                 return null;
             }
-            if (this._connected) {
+            if (this._connected && !providerDetail) {
                 return this._connected;
             }
-            try {
-                await ethereum.request({
-                    method: 'wallet_requestPermissions',
-                    params: [{ eth_accounts: {} }],
-                });
-                const accounts = await ethereum.request({ method: 'eth_requestAccounts' });
-                if (!Array.isArray(accounts) || accounts.length === 0) {
-                    throw new Error("CryptoModule.connect: No accounts returned by the Ethereum provider.");
+            if (providerDetail) {
+                const connectButtons = document.querySelectorAll(".connect-mi");
+                if (!connectButtons) {
+                    return;
                 }
-                const primaryAccount = accounts[0];
-                if (!primaryAccount) {
-                    console.warn("CryptoModule.connect: Wallet not connected.");
-                    return null;
+                const connectBody = document.getElementById("connect-mb");
+                if (!connectBody) {
+                    return;
                 }
-                await this.switchChain(chain);
-                this._connected = primaryAccount;
-                console.log("Connected account:", primaryAccount);
-                return primaryAccount;
+                const connectModalC = document.getElementById("connect-mc");
+                if (!connectModalC) {
+                    return;
+                }
+                const connectModal = document.getElementById("connect-modal");
+                if (!connectModal) {
+                    return;
+                }
+                connectButtons.forEach((button) => { button.style.display = "none"; });
+                const params = {
+                    element: connectBody,
+                    loaderHTML: "<div class='loader'></div>",
+                    isEnabled: true,
+                    replace: false
+                };
+                sypher.toggleLoader(params);
+                try {
+                    const provider = providerDetail.provider;
+                    console.log("[EIP-6963] Using provider:", providerDetail.info.name);
+                    const accounts = await provider.request({ method: "eth_requestAccounts" });
+                    if (!Array.isArray(accounts) || !accounts.length) {
+                        throw new Error("No accounts returned by the chosen provider.");
+                    }
+                    const primaryAccount = accounts[0];
+                    console.log("[EIP-6963] Connected account:", primaryAccount);
+                    await this.switchChain(chain);
+                    this._connected = primaryAccount;
+                    console.log("Connected account:", primaryAccount);
+                    connectBody.innerHTML = `
+                    <div class="connect-sb">
+                        <p class="connect-s">Connected to ${providerDetail.info.name}</p>
+                        <p class="connect-s">Account: <span class="sypher-a">${sypher.truncate(primaryAccount)}</span></p>
+                    </div>
+                `;
+                    connectBody.classList.add("min-height-a");
+                    connectModalC.classList.add("height-a");
+                    setTimeout(() => { connectModal.style.opacity = "0%"; }, 5000);
+                    setTimeout(() => { connectModal.remove(); }, 6000);
+                    if (connectButton !== null) {
+                        connectButton.innerHTML = `${sypher.truncate(primaryAccount)}`;
+                    }
+                    return primaryAccount;
+                }
+                catch (error) {
+                    const detailedError = error instanceof Error ? `${error.message}\n${error.stack}` : JSON.stringify(error, Object.getOwnPropertyNames(error));
+                    if (error.code === 4001) {
+                        console.log("User denied wallet access...");
+                        if (connectBody) {
+                            const params = {
+                                element: connectBody,
+                                isEnabled: false,
+                                newText: "sypher.revert"
+                            };
+                            sypher.toggleLoader(params);
+                        }
+                        connectButtons.forEach((button) => { button.style.display = "flex"; });
+                        return;
+                    }
+                    throw new Error(`CryptoModule.connect: ${detailedError}`);
+                }
             }
-            catch (error) {
-                const message = error instanceof Error ? error.message : "An unknown error occurred.";
-                throw new Error(`CryptoModule.connect: ${message}`);
+            else {
+                try {
+                    const accounts = await ethereum.request({ method: 'eth_requestAccounts' });
+                    if (!Array.isArray(accounts) || accounts.length === 0) {
+                        throw new Error("CryptoModule.connect: No accounts returned by the Ethereum provider.");
+                    }
+                    const primaryAccount = accounts[0];
+                    if (!primaryAccount) {
+                        console.warn("CryptoModule.connect: Wallet not connected.");
+                        return null;
+                    }
+                    await this.switchChain(chain);
+                    this._connected = primaryAccount;
+                    console.log("Connected account:", primaryAccount);
+                    if (connectButton !== null) {
+                        connectButton.innerHTML = `${sypher.truncate(primaryAccount)}`;
+                    }
+                    return primaryAccount;
+                }
+                catch (error) {
+                    const detailedError = error instanceof Error ? `${error.message}\n${error.stack}` : JSON.stringify(error, Object.getOwnPropertyNames(error));
+                    throw new Error(`CryptoModule.connect: ${detailedError}`);
+                }
+            }
+        },
+        disconnect: async function () { this._connected = undefined; },
+        onboard: async function (providerDetail) {
+            const userEnv = sypher.userEnvironment();
+            const isMobile = userEnv.isMobile;
+            const isApple = userEnv.operatingSystem.toLowerCase() === "ios";
+            const isAndroid = userEnv.operatingSystem.toLowerCase() === "android";
+            if (!isMobile) {
+                window.open(providerDetail.info.onboard.link, "_blank");
+                return;
+            }
+            if (isMobile) {
+                const { deeplink, fallback } = providerDetail.info.onboard;
+                if (isApple || isAndroid) {
+                    const platform = isApple ? "ios" : "android";
+                    const fallbackTimer = setTimeout(() => {
+                        console.log("Deeplink failed, redirecting to App Store...");
+                        window.location.href = fallback[platform];
+                    }, 1000);
+                    window.location.href = deeplink;
+                    window.addEventListener("blur", () => clearTimeout(fallbackTimer), { once: true });
+                }
+                else {
+                    return;
+                }
             }
         },
         switchChain: async function (chain) {
@@ -742,13 +1305,11 @@
                         this._currentChain = targetChainId;
                     }
                     catch (addError) {
-                        const addErrorMessage = addError instanceof Error ? addError.message : "An unknown error occurred.";
-                        throw new Error(`CryptoModule.switchChain: Unable to switch or add chain "${chain}". Details: ${addErrorMessage}`);
+                        throw new Error(`CryptoModule.switchChain: Unable to add chain "${chain}". Details: ${addError}`);
                     }
                 }
                 else {
-                    const switchErrorMessage = switchError instanceof Error ? switchError.message : "An unknown error occurred.";
-                    throw new Error(`CryptoModule.switchChain: Failed to switch to chain "${chain}". Details: ${switchErrorMessage}`);
+                    throw new Error(`CryptoModule.switchChain: Unable to switch chain "${chain}". Details: ${switchError}`);
                 }
             }
         },
@@ -783,8 +1344,7 @@
                 return { chainlistData: data, params };
             }
             catch (error) {
-                const message = error instanceof Error ? error.message : "An unknown error occurred.";
-                throw new Error(`CryptoModule.getChainData: ${message}`);
+                throw new Error(`CryptoModule.getChainData: ${error instanceof Error ? error.message : JSON.stringify(error)}`);
             }
         },
         getPriceFeed: async function (chain, pair = "eth") {
@@ -808,7 +1368,10 @@
                 return null;
             }
             try {
-                const account = await this.connect(chain);
+                let account = this._connected;
+                if (account === null || account === undefined) {
+                    account = await this.connect(chain);
+                }
                 if (!account) {
                     return null;
                 }
@@ -816,17 +1379,16 @@
                 if (!chainlinkAddress) {
                     throw new Error(`Chain ${chain} is not supported`);
                 }
-                const provider = new ethers.ethers.providers.Web3Provider(ethereum);
+                const provider = new ethers$1.ethers.providers.Web3Provider(ethereum);
                 const signer = provider.getSigner();
-                const contract = new ethers.ethers.Contract(chainlinkAddress, CHAINLINK_ABI, signer);
+                const contract = new ethers$1.ethers.Contract(chainlinkAddress, CHAINLINK_ABI, signer);
                 const roundData = await contract.latestRoundData();
-                const price = ethers.ethers.utils.formatUnits(roundData.answer, 8);
+                const price = ethers$1.ethers.utils.formatUnits(roundData.answer, 8);
                 console.log(`ETH Price on ${chain}: $${price}`);
                 return price;
             }
             catch (error) {
-                const message = error instanceof Error ? error.message : "An unknown error occurred.";
-                throw new Error(`CryptoModule.getPriceFeed: ${message}`);
+                throw new Error(`CryptoModule.getPriceFeed: ${error instanceof Error ? error.message : JSON.stringify(error)}`);
             }
         },
         getTokenDetails: async function (chain, contractAddress) {
@@ -842,14 +1404,17 @@
                 return null;
             }
             try {
-                const account = await this.connect(chain);
+                let account = this._connected;
+                if (account === null || account === undefined) {
+                    account = await this.connect(chain);
+                }
                 if (!account) {
                     return null;
                 }
-                const provider = new ethers.ethers.providers.Web3Provider(ethereum);
+                const provider = new ethers$1.ethers.providers.Web3Provider(ethereum);
                 const signer = provider.getSigner();
                 const address = await signer.getAddress();
-                const contract = new ethers.ethers.Contract(contractAddress, ERC20_ABI, signer);
+                const contract = new ethers$1.ethers.Contract(contractAddress, ERC20_ABI, signer);
                 const balance = await contract.balanceOf(address);
                 const decimals = await contract.decimals();
                 const name = await contract.name();
@@ -859,8 +1424,7 @@
                 return { balance, decimals, name, symbol, totalSupply };
             }
             catch (error) {
-                const message = error instanceof Error ? error.message : "An unknown error occurred.";
-                throw new Error(`CryptoModule.getTokenDetails: ${message}`);
+                throw new Error(`CryptoModule.getTokenDetails: ${error instanceof Error ? error.message : JSON.stringify(error)}`);
             }
         },
         getPriceV2: async function (chain, poolAddress, pair) {
@@ -885,23 +1449,26 @@
                 return null;
             }
             try {
-                const account = await this.connect(chain);
+                let account = this._connected;
+                if (account === null || account === undefined) {
+                    account = await this.connect(chain);
+                }
                 if (!account) {
                     return null;
                 }
                 const chainlinkResult = await this.getPriceFeed(chain, pair);
                 if (!chainlinkResult)
                     return null;
-                const provider = new ethers.ethers.providers.Web3Provider(ethereum);
+                const provider = new ethers$1.ethers.providers.Web3Provider(ethereum);
                 const signer = provider.getSigner();
-                const uniswapV2 = new ethers.ethers.Contract(poolAddress, UNISWAP_V2_POOL_ABI, signer);
+                const uniswapV2 = new ethers$1.ethers.Contract(poolAddress, UNISWAP_V2_POOL_ABI, signer);
                 const token0 = await uniswapV2.token0();
                 const token1 = await uniswapV2.token1();
                 const reserves = await uniswapV2.getReserves();
                 const reserve0 = reserves._reserve0;
                 const reserve1 = reserves._reserve1;
-                const token0Contract = new ethers.ethers.Contract(token0, ERC20_ABI, signer);
-                const token1Contract = new ethers.ethers.Contract(token1, ERC20_ABI, signer);
+                const token0Contract = new ethers$1.ethers.Contract(token0, ERC20_ABI, signer);
+                const token1Contract = new ethers$1.ethers.Contract(token1, ERC20_ABI, signer);
                 const decimals0 = await token0Contract.decimals();
                 const decimals1 = await token1Contract.decimals();
                 console.log("Reserve 0:", reserve0);
@@ -910,13 +1477,13 @@
                 console.log("Token 1:", token1);
                 console.log("Decimals 0:", decimals0);
                 console.log("Decimals 1:", decimals1);
-                const reserve0BN = ethers.ethers.BigNumber.from(reserve0);
-                const reserve1BN = ethers.ethers.BigNumber.from(reserve1);
+                const reserve0BN = ethers$1.ethers.BigNumber.from(reserve0);
+                const reserve1BN = ethers$1.ethers.BigNumber.from(reserve1);
                 // Convert each reserve to a normal floating-point value, adjusting by its decimals
                 // e.g. if reserve0 = 123456789 (raw) and decimals0 = 6, then
                 // parseFloat(ethers.utils.formatUnits(reserve0BN, 6)) => 123.456789
-                const reserve0Float = parseFloat(ethers.ethers.utils.formatUnits(reserve0BN, decimals0));
-                const reserve1Float = parseFloat(ethers.ethers.utils.formatUnits(reserve1BN, decimals1));
+                const reserve0Float = parseFloat(ethers$1.ethers.utils.formatUnits(reserve0BN, decimals0));
+                const reserve1Float = parseFloat(ethers$1.ethers.utils.formatUnits(reserve1BN, decimals1));
                 const pairAddress = CHAINS[chain].pairAddresses[pair];
                 console.log("Pair Address:", pairAddress);
                 let priceRatio;
@@ -934,8 +1501,7 @@
                 return tokenPriceUSD;
             }
             catch (error) {
-                const message = error instanceof Error ? error.message : "An unknown error occurred.";
-                throw new Error(`CryptoModule.getPriceV2: Error ${message}`);
+                throw new Error(`CryptoModule.getPriceV2: ${error instanceof Error ? error.message : JSON.stringify(error)}`);
             }
         },
         getPriceV3: async function (chain, contractAddress, poolAddress, pair) {
@@ -961,7 +1527,10 @@
                 return null;
             }
             try {
-                const account = await this.connect(chain);
+                let account = this._connected;
+                if (account === null || account === undefined) {
+                    account = await this.connect(chain);
+                }
                 if (!account) {
                     return null;
                 }
@@ -974,16 +1543,16 @@
                 const pairAddress = CHAINS[chain].pairAddresses[pair];
                 console.log("Pair Address:", pairAddress);
                 // 2: Calculate the price ratio = token1/token0 using precise big-number math
-                const formattedSqrtPricex96 = ethers.ethers.BigNumber.from(sqrtPriceX96);
-                const Q96 = ethers.ethers.BigNumber.from("79228162514264337593543950336");
+                const formattedSqrtPricex96 = ethers$1.ethers.BigNumber.from(sqrtPriceX96);
+                const Q96 = ethers$1.ethers.BigNumber.from("79228162514264337593543950336");
                 const numerator = formattedSqrtPricex96
                     .mul(formattedSqrtPricex96)
-                    .mul(ethers.ethers.BigNumber.from(10).pow(decimals0));
-                const denominator = Q96.mul(Q96).mul(ethers.ethers.BigNumber.from(10).pow(decimals1));
+                    .mul(ethers$1.ethers.BigNumber.from(10).pow(decimals0));
+                const denominator = Q96.mul(Q96).mul(ethers$1.ethers.BigNumber.from(10).pow(decimals1));
                 const ratioBN = numerator.div(denominator);
                 const remainder = numerator.mod(denominator);
                 const decimalsWanted = 8;
-                const scaleFactor = ethers.ethers.BigNumber.from(10).pow(decimalsWanted);
+                const scaleFactor = ethers$1.ethers.BigNumber.from(10).pow(decimalsWanted);
                 const remainderScaled = remainder.mul(scaleFactor).div(denominator);
                 const ratioFloat = parseFloat(ratioBN.toString()) +
                     parseFloat(remainderScaled.toString()) / Math.pow(10, decimalsWanted);
@@ -1008,8 +1577,7 @@
                 return tokenPriceUSD;
             }
             catch (error) {
-                const message = error instanceof Error ? error.message : "An unknown error occurred.";
-                throw new Error(`CryptoModule.getPriceV3: ${message}`);
+                throw new Error(`CryptoModule.getPriceV3: ${error instanceof Error ? error.message : JSON.stringify(error)}`);
             }
         },
         getPoolV3: async function (chain, contractAddress, poolAddress) {
@@ -1034,13 +1602,16 @@
                 return null;
             }
             try {
-                const account = await this.connect(chain);
+                let account = this._connected;
+                if (account === null || account === undefined) {
+                    account = await this.connect(chain);
+                }
                 if (!account) {
                     return null;
                 }
-                const provider = new ethers.ethers.providers.Web3Provider(ethereum);
+                const provider = new ethers$1.ethers.providers.Web3Provider(ethereum);
                 const signer = provider.getSigner();
-                const pool = new ethers.ethers.Contract(poolAddress, UNISWAP_V3_POOL_ABI, signer);
+                const pool = new ethers$1.ethers.Contract(poolAddress, UNISWAP_V3_POOL_ABI, signer);
                 const slot0 = await pool.slot0();
                 const sqrtPriceX96 = slot0.sqrtPriceX96;
                 console.log("Sqrt Price X96:", sqrtPriceX96);
@@ -1048,8 +1619,8 @@
                 const token1 = await pool.token1();
                 console.log("Token 0:", token0);
                 console.log("Token 1:", token1);
-                const token0Contract = new ethers.ethers.Contract(token0, ERC20_ABI, signer);
-                const token1Contract = new ethers.ethers.Contract(token1, ERC20_ABI, signer);
+                const token0Contract = new ethers$1.ethers.Contract(token0, ERC20_ABI, signer);
+                const token1Contract = new ethers$1.ethers.Contract(token1, ERC20_ABI, signer);
                 const decimals0 = await token0Contract.decimals();
                 const decimals1 = await token1Contract.decimals();
                 console.log("Decimals 0:", decimals0);
@@ -1060,8 +1631,7 @@
                 return poolData;
             }
             catch (error) {
-                const message = error instanceof Error ? error.message : "An unknown error occurred.";
-                throw new Error(`CryptoModule.getPoolV3: ${message}`);
+                throw new Error(`CryptoModule.getPoolV3: ${error instanceof Error ? error.message : JSON.stringify(error)}`);
             }
         },
         getUserValue: function (balance, price) {
@@ -1078,8 +1648,7 @@
                 return value;
             }
             catch (error) {
-                const message = error instanceof Error ? error.message : "An unknown error occurred.";
-                throw new Error(`CryptoModule.getUserValue: ${message}`);
+                throw new Error(`CryptoModule.getUserValue: ${error instanceof Error ? error.message : JSON.stringify(error)}`);
             }
         },
         clean: function (tokenDetails) {
@@ -1091,24 +1660,32 @@
             const cleanedDetails = {
                 contractAddress,
                 poolAddress,
-                balance: parseFloat(ethers.ethers.utils.formatUnits(balance, decimals)),
+                balance: parseFloat(ethers$1.ethers.utils.formatUnits(balance, decimals)),
                 decimals,
                 name,
                 symbol,
-                totalSupply: parseFloat(ethers.ethers.utils.formatUnits(totalSupply, decimals)),
+                totalSupply: parseFloat(ethers$1.ethers.utils.formatUnits(totalSupply, decimals)),
                 tokenPrice: parseFloat(tokenPrice.toString()),
                 userValue: (parseFloat(userValue.toString()) / Math.pow(10, decimals)).toFixed(decimals).toString()
             };
             console.log("Token Details:", cleanedDetails);
             return cleanedDetails;
         },
+        initProviderSearch: function () {
+            window.addEventListener("eip6963:announceProvider", (event) => {
+                const customEvent = event;
+                DISCOVERED_PROVIDERS.push(customEvent.detail);
+                // TODO: Create isLogging check - console.log("[EIP-6963]:", (customEvent.detail));
+            });
+            window.dispatchEvent(new Event("eip6963:requestProvider"));
+        },
         getProvider: function () {
-            if (!("ethereum" in window)) {
+            if (typeof window === "undefined" || !window.ethereum) {
                 throw new Error("CryptoModule.getProvider: No Ethereum provider found.");
             }
-            const ethereum = window.ethereum;
-            return ethereum;
-        }
+            return window.ethereum;
+        },
+        getConnected() { return this._connected ?? null; }
     };
 
     (function (global) {

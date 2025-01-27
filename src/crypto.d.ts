@@ -16,13 +16,7 @@ export interface ICryptoModule {
      * 
      * -------> Call this function to get started! <-------
      */
-    initCrypto(
-        chain: string,
-        contractAddress: string,
-        poolAddress: string,
-        version: string,
-        pair?: string
-    ): Promise<object | null>;
+    initCrypto( params: TInitParams ): Promise<TTokenDetails | null>;
 
     /**
      * @description Connect the user's wallet to the website.
@@ -32,6 +26,17 @@ export interface ICryptoModule {
      * @see CHAINS - for supported chains
      */
     connect(chain: string, providerDetail: TProviderDetail | null = null): Promise<string> | null;
+
+    /**
+     * @description Disconnect the user's wallet from the website.
+     */
+    disconnect(): void;
+
+    /**
+     * @description Onboard the user if they have no wallet.
+     * @see TProviderDetail
+     */
+    onboard(providerDetail: TProviderDetail): void;
 
     /**
      * @description Connection status.
@@ -148,16 +153,40 @@ export interface ICryptoModule {
     /**
      * @description Initialize the discovery of all installed wallets.
      */
-    initProviderSearch(): void;
+    async initProviderSearch(): void;
 
     /**
      * @description Get the provider for the current wallet connection.
      * @returns {any} The provider for the current wallet connection
      */
     getProvider(): any;
+
+    /**
+     * @description Get the connected wallet address.
+     * @returns {string | null} The connected wallet address or `null` if no wallet is connected
+     */
+    getConnected(): string | null;
 }
 
 // #region TOKEN
+/**
+ * @description The parameters to initialize the CryptoModule
+ * @typedef {object} TInitParams
+ * @property {string} chain - The target chain to get the price from. Connected wallet must be on a supported chain
+ * @property {string} contractAddress - The CA for the token
+ * @property {string} poolAddress - The LP address for the token
+ * @property {string} version - The target Uniswap version (V2 or V3)
+ * @property {string} pair - The paired asset to get the price in (default: "eth")
+ * @property {TProviderDetail} detail - The provider details for the wallet
+ */
+export type TInitParams = {
+    chain: string;
+    contractAddress: string;
+    poolAddress: string;
+    version: string;
+    pair?: string;
+    detail?: TProviderDetail
+}
 /**
  * @description Raw token details fetched in the CryptoModule
  * @typedef {object} TTokenDetails
@@ -311,11 +340,30 @@ export type TProviderDetail = { info: TProviderInfo, provider: EIP1193; }
  * @property {string} name - The name of the provider
  * @property {string} rdns - The reverse DNS of the provider
  * @property {string} uuid - The UUID of the provider
+ * @property {boolean} onboard - Flag to signal if the provider is a placeholder
  */
 export type TProviderInfo = {
     icon: string,
     name: string,
     rdns: string,
-    uuid: string
+    uuid: string,
+    onboard: TOnboardInfo
+}
+/**
+ * @description Onboard info
+ * @typedef {object} TOnboardInfo
+ * @property {boolean} bool - Flag to signal if the provider is a placeholder
+ * @property {string} link - The URL to onboard the provider
+ * @property {string} deeplink - The deeplink to onboard the provider
+ * @property {object} fallbacklinks
+ */
+export type TOnboardInfo = {
+    bool: boolean,
+    link: string,
+    deeplink: string,
+    fallback: {
+        ios: string,
+        android: string
+    }
 }
 // #endregion PROVIDER

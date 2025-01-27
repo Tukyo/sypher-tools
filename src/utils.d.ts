@@ -60,4 +60,34 @@ export interface IWindowModule {
      * @returns {boolean} Whether the page is focused.
      */
     pageFocus(): boolean;
+
+    /**
+     * @description Get the current environment of the user.
+     * @returns {TUserEnvironment} The user environment details.
+     */
+    userEnvironment(): TUserEnvironment;
+}
+
+export type TUserEnvironment = {
+    isMobile: boolean;
+    isTablet: boolean;
+    isDesktop: boolean;
+    deviceType: string;
+    browser: string;
+    operatingSystem: string;
+    userAgent: string;
+    platform: string;
+    ethereum: boolean;
+    languages: readonly string[];
+    cookiesEnabled: boolean;
+    screenDetails: TScreenDetails;
+    timezone: string;
+}
+export type TScreenDetails = {
+    width: number;
+    height: number;
+    availableWidth: number;
+    availableHeight: number;
+    colorDepth: number;
+    pixelDepth: number;
 }

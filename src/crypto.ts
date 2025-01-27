@@ -1,46 +1,37 @@
 import { CHAINS, CHAINLINK_ABI, DISCOVERED_PROVIDERS, ERC20_ABI, UNISWAP_V2_POOL_ABI, UNISWAP_V3_POOL_ABI, ADDRESS_REGEXP, LP_VER } from "./constants";
-import { TCleanedDetails, ICryptoModule, TPoolV3Data, TTokenDetails, TChainParams, TEthereumProvider, TProviderDetail, EIP1193 } from "./crypto.d";
+import { TCleanedDetails, ICryptoModule, TPoolV3Data, TTokenDetails, TChainParams, TEthereumProvider, TProviderDetail, EIP1193, TInitParams } from "./crypto.d";
 import { ethers } from "ethers";
-
-
+import { TLoaderParams } from "./interface.d";
 
 export const CryptoModule: ICryptoModule = {
-    initCrypto: async function (chain, contractAddress, poolAddress, version, pair = "eth") {
-        const validInput = sypher.validateInput(
-                { chain, contractAddress, poolAddress, version, pair },
-                {
-                    chain: { type: "string", required: true },
-                    contractAddress: { type: "string", required: true, regex: ADDRESS_REGEXP },
-                    poolAddress: { type: "string", required: true, regex: ADDRESS_REGEXP },
-                    version: { type: "string", required: true, enum: LP_VER },
-                    pair: { type: "string", required: false }
-                }, "CryptoModule.initCrypto"
-            );
-        if (!validInput) { return null; }
+    initCrypto: async function (params: TInitParams): Promise<TTokenDetails | null> {
+        const defaultParams = { chain: "ethereum", contractAddress: "", poolAddress: "", version: "V2", pair: "eth" };
+        const p = { ...defaultParams, ...params };
+        if (!p) { return null; }
 
-        const chainValidation = sypher.validateChain(chain);
+        const chainValidation = sypher.validateChain(p.chain);
         if (!chainValidation) { return null; }
 
         const { chainData, chainId } = chainValidation;
         if (!chainData || !chainId) { return null; }
 
         try {
-            const account = await this.connect(chain);
+            const account = await this.connect(p.chain, p.detail);
             if (!account) { return null; }
 
-            console.log("Getting details for:", { chain, contractAddress, poolAddress, version, pair });
+            console.log("Getting details for:", p);
 
-            const tokenDetails = await this.getTokenDetails(chain, contractAddress);
+            const tokenDetails = await this.getTokenDetails(p.chain, p.contractAddress);
             if (!tokenDetails) { return null; }
             const { balance, decimals, name, symbol, totalSupply } = tokenDetails;
 
             let tokenPrice: number;
-            if (version === "V2") {
-                const priceV2 = await this.getPriceV2(chain, poolAddress, pair);
+            if (p.version === "V2") {
+                const priceV2 = await this.getPriceV2(p.chain, p.poolAddress, p.pair);
                 if (!priceV2) { return null; }
                 tokenPrice = priceV2;
-            } else if (version === "V3") {
-                const priceV3 = await this.getPriceV3(chain, contractAddress, poolAddress, pair);
+            } else if (p.version === "V3") {
+                const priceV3 = await this.getPriceV3(p.chain, p.contractAddress, p.poolAddress, p.pair);
                 if (!priceV3) { return null; }
                 tokenPrice = priceV3;
             } else { return null; }
@@ -48,24 +39,53 @@ export const CryptoModule: ICryptoModule = {
             const userValue = this.getUserValue(balance, tokenPrice);
             if (!userValue) { return null; }
 
-            const cleanedDetails = this.clean({ contractAddress, poolAddress, balance, decimals, name, symbol, totalSupply, tokenPrice, userValue });
+            const contractAddress = p.contractAddress;
+            const poolAddress = p.poolAddress;
 
-            return cleanedDetails;
+            const details = { contractAddress, poolAddress, balance, decimals, name, symbol, totalSupply, tokenPrice, userValue };
+            if (!details) { return null; }
+
+            const cleanedDetails = this.clean(details);
+            if (!cleanedDetails) { return null; }
+
+            const detailsObj: TTokenDetails = cleanedDetails as TTokenDetails;
+
+            return detailsObj;
         } catch (error: unknown) {
-            const message = error instanceof Error ? error.message : "An unknown error occurred.";
-            throw new Error(`CryptoModule.initCrypto: ${message}`);
-        }        
+            throw new Error(`CryptoModule.initCrypto: ${error instanceof Error ? error.message : JSON.stringify(error)}`);
+        }
     },
     connect: async function (chain, providerDetail: TProviderDetail | null = null) {
         const validInput = sypher.validateInput({ chain }, { chain: { type: "string", required: true } }, "CryptoModule.connect");
         if (!validInput) { return null; }
-        
+
+        const connectButton = document.getElementById("connect-button") || null;
+
         const ethereum = this.getProvider();
         if (!ethereum) { return null; }
 
-        if (this._connected) { return this._connected; }
+        if (this._connected && !providerDetail) { return this._connected; }
 
         if (providerDetail) {
+            const connectButtons = document.querySelectorAll(".connect-mi");
+            if (!connectButtons) { return; }
+            const connectBody = document.getElementById("connect-mb");
+            if (!connectBody) { return; }
+            const connectModalC = document.getElementById("connect-mc");
+            if (!connectModalC) { return; }
+            const connectModal = document.getElementById("connect-modal");
+            if (!connectModal) { return; }
+
+            connectButtons.forEach((button) => { (button as HTMLButtonElement).style.display = "none"; });
+
+            const params: TLoaderParams = {
+                element: connectBody,
+                loaderHTML: "<div class='loader'></div>",
+                isEnabled: true,
+                replace: false
+            }
+            sypher.toggleLoader(params);
+
             try {
                 const provider: EIP1193 = providerDetail.provider;
                 console.log("[EIP-6963] Using provider:", providerDetail.info.name);
@@ -83,40 +103,96 @@ export const CryptoModule: ICryptoModule = {
                 this._connected = primaryAccount;
                 console.log("Connected account:", primaryAccount);
 
+                connectBody.innerHTML = `
+                    <div class="connect-sb">
+                        <p class="connect-s">Connected to ${providerDetail.info.name}</p>
+                        <p class="connect-s">Account: <span class="sypher-a">${sypher.truncate(primaryAccount)}</span></p>
+                    </div>
+                `;
+                connectBody.classList.add("min-height-a");
+                connectModalC.classList.add("height-a");
+
+                setTimeout(() => { connectModal.style.opacity = "0%"; }, 5000);
+                setTimeout(() => { connectModal.remove(); }, 6000);
+
+                if (connectButton !== null) { connectButton.innerHTML = `${sypher.truncate(primaryAccount)}`; }
+
                 return primaryAccount;
-            } catch(error: unknown) {
-                const message = error instanceof Error ? error.message : "An unknown error occurred.";
-                throw new Error(`CryptoModule.connect: ${message}`);
+            } catch (error: unknown) {
+                const detailedError = error instanceof Error ? `${error.message}\n${error.stack}` : JSON.stringify(error, Object.getOwnPropertyNames(error));
+                if ((error as any).code === 4001) {
+                    console.log("User denied wallet access...");
+
+                    if (connectBody) {
+                        const params: TLoaderParams = {
+                            element: connectBody,
+                            isEnabled: false,
+                            newText: "sypher.revert"
+                        }
+                        sypher.toggleLoader(params);
+                    }
+                    connectButtons.forEach((button) => { (button as HTMLButtonElement).style.display = "flex"; });
+                    return;
+                }
+                throw new Error(`CryptoModule.connect: ${detailedError}`);
             }
         } else {
             try {
                 const accounts = await ethereum.request({ method: 'eth_requestAccounts' });
-                if (!Array.isArray(accounts) || accounts.length === 0) { 
+                if (!Array.isArray(accounts) || accounts.length === 0) {
                     throw new Error("CryptoModule.connect: No accounts returned by the Ethereum provider.");
                 }
-    
+
                 const primaryAccount = accounts[0];
                 if (!primaryAccount) {
                     console.warn("CryptoModule.connect: Wallet not connected.");
                     return null;
                 }
-    
+
                 await this.switchChain(chain);
-    
+
                 this._connected = primaryAccount;
                 console.log("Connected account:", primaryAccount);
-    
+
+                if (connectButton !== null) { connectButton.innerHTML = `${sypher.truncate(primaryAccount)}`; }
+
                 return primaryAccount;
             } catch (error: unknown) {
-                const message = error instanceof Error ? error.message : "An unknown error occurred.";
-                throw new Error(`CryptoModule.connect: ${message}`);
+                const detailedError = error instanceof Error ? `${error.message}\n${error.stack}` : JSON.stringify(error, Object.getOwnPropertyNames(error));
+                throw new Error(`CryptoModule.connect: ${detailedError}`);
             }
+        }
+    },
+    disconnect: async function () { this._connected = undefined; },
+    onboard: async function (providerDetail: TProviderDetail) {
+        const userEnv = sypher.userEnvironment();
+
+        const isMobile = userEnv.isMobile;
+        const isApple = userEnv.operatingSystem.toLowerCase() === "ios";
+        const isAndroid = userEnv.operatingSystem.toLowerCase() === "android";
+
+        if (!isMobile) { window.open(providerDetail.info.onboard.link, "_blank"); return; }
+
+        if (isMobile) {
+            const { deeplink, fallback } = providerDetail.info.onboard
+
+            if (isApple || isAndroid) {
+                const platform = isApple ? "ios" : "android";
+
+                const fallbackTimer = setTimeout(() => {
+                    console.log("Deeplink failed, redirecting to App Store...");
+                    window.location.href = fallback[platform];
+                }, 1000);
+
+                window.location.href = deeplink;
+                window.addEventListener("blur", () => clearTimeout(fallbackTimer), { once: true });
+            } else { return; }
         }
     },
     switchChain: async function (chain) {
         const validInput = sypher.validateInput({ chain }, { chain: { type: "string", required: true } }, "CryptoModule.switchChain");
         if (!validInput) { return; }
-        
+
         const ethereum = this.getProvider();
         if (!ethereum) { return null; }
 
@@ -149,12 +225,10 @@ export const CryptoModule: ICryptoModule = {
                     });
                     this._currentChain = targetChainId;
                 } catch (addError) {
-                    const addErrorMessage = addError instanceof Error ? addError.message : "An unknown error occurred.";
-                    throw new Error(`CryptoModule.switchChain: Unable to switch or add chain "${chain}". Details: ${addErrorMessage}`);
+                    throw new Error(`CryptoModule.switchChain: Unable to add chain "${chain}". Details: ${addError}`);
                 }
             } else {
-                const switchErrorMessage = switchError instanceof Error ? switchError.message : "An unknown error occurred.";
-                throw new Error(`CryptoModule.switchChain: Failed to switch to chain "${chain}". Details: ${switchErrorMessage}`);
+                throw new Error(`CryptoModule.switchChain: Unable to switch chain "${chain}". Details: ${switchError}`);
             }
         }
     },
@@ -175,7 +249,7 @@ export const CryptoModule: ICryptoModule = {
             if (!response.ok) throw new Error(`Chain data for ID ${chainId} not found`);
             const data = await response.json();
             console.log(`Fetched chain data:`, data);
-    
+
             const params: TChainParams = {
                 chainId: `0x${parseInt(data.chainId, 10).toString(16)}`,
                 chainName: data.name,
@@ -183,21 +257,20 @@ export const CryptoModule: ICryptoModule = {
                 rpcUrls: data.rpc,
                 blockExplorerUrls: data.explorers?.map((explorer: { url: any; }) => explorer.url) || []
             };
-    
+
             return { chainlistData: data, params };
         } catch (error: unknown) {
-            const message = error instanceof Error ? error.message : "An unknown error occurred.";
-            throw new Error(`CryptoModule.getChainData: ${message}`);
+            throw new Error(`CryptoModule.getChainData: ${error instanceof Error ? error.message : JSON.stringify(error)}`);
         }
     },
     getPriceFeed: async function (chain, pair = "eth") {
         const validInput = sypher.validateInput(
-                { chain, pair },
-                {
-                    chain: { type: "string", required: true },
-                    pair: { type: "string", required: false }
-                }, "CryptoModule.getPriceFeed"
-            );
+            { chain, pair },
+            {
+                chain: { type: "string", required: true },
+                pair: { type: "string", required: false }
+            }, "CryptoModule.getPriceFeed"
+        );
         if (!validInput) { return null; }
 
         const ethereum = this.getProvider();
@@ -210,7 +283,8 @@ export const CryptoModule: ICryptoModule = {
         if (!chainData || !chainId) { return null; }
 
         try {
-            const account = await this.connect(chain);
+            let account = this._connected;
+            if (account === null || account === undefined) { account = await this.connect(chain); }
             if (!account) { return null; }
 
             const chainlinkAddress = CHAINS[chain].priceFeeds[pair];
@@ -227,25 +301,25 @@ export const CryptoModule: ICryptoModule = {
 
             return price;
         } catch (error: unknown) {
-            const message = error instanceof Error ? error.message : "An unknown error occurred.";
-            throw new Error(`CryptoModule.getPriceFeed: ${message}`);
+            throw new Error(`CryptoModule.getPriceFeed: ${error instanceof Error ? error.message : JSON.stringify(error)}`);
         }
     },
     getTokenDetails: async function (chain, contractAddress) {
         const validInput = sypher.validateInput(
-                { chain, contractAddress },
-                {
-                    chain: { type: "string", required: true },
-                    contractAddress: { type: "string", required: true, regex: ADDRESS_REGEXP }
-                }, "CryptoModule.getTokenDetails"
-            );
+            { chain, contractAddress },
+            {
+                chain: { type: "string", required: true },
+                contractAddress: { type: "string", required: true, regex: ADDRESS_REGEXP }
+            }, "CryptoModule.getTokenDetails"
+        );
         if (!validInput) { return null; }
 
         const ethereum = this.getProvider();
         if (!ethereum) { return null; }
 
         try {
-            const account = await this.connect(chain);
+            let account = this._connected;
+            if (account === null || account === undefined) { account = await this.connect(chain); }
             if (!account) { return null; }
 
             const provider = new ethers.providers.Web3Provider(ethereum);
@@ -263,19 +337,18 @@ export const CryptoModule: ICryptoModule = {
             console.log("Token Details:", { balance, decimals, name, symbol, totalSupply });
             return { balance, decimals, name, symbol, totalSupply };
         } catch (error: unknown) {
-            const message = error instanceof Error ? error.message : "An unknown error occurred.";
-            throw new Error(`CryptoModule.getTokenDetails: ${message}`);
+            throw new Error(`CryptoModule.getTokenDetails: ${error instanceof Error ? error.message : JSON.stringify(error)}`);
         }
     },
     getPriceV2: async function (chain, poolAddress, pair) {
         const validInput = sypher.validateInput(
-                { chain, poolAddress, pair },
-                {
-                    chain: { type: "string", required: true },
-                    poolAddress: { type: "string", required: true, regex: ADDRESS_REGEXP },
-                    pair: { type: "string", required: true }
-                }, "CryptoModule.getPriceV2"
-            );
+            { chain, poolAddress, pair },
+            {
+                chain: { type: "string", required: true },
+                poolAddress: { type: "string", required: true, regex: ADDRESS_REGEXP },
+                pair: { type: "string", required: true }
+            }, "CryptoModule.getPriceV2"
+        );
         if (!validInput) { return null; }
 
         const ethereum = this.getProvider();
@@ -288,7 +361,8 @@ export const CryptoModule: ICryptoModule = {
         if (!chainData || !chainId) { return null; }
 
         try {
-            const account = await this.connect(chain);
+            let account = this._connected;
+            if (account === null || account === undefined) { account = await this.connect(chain); }
             if (!account) { return null; }
 
             const chainlinkResult = await this.getPriceFeed(chain, pair);
@@ -345,20 +419,19 @@ export const CryptoModule: ICryptoModule = {
 
             return tokenPriceUSD;
         } catch (error: unknown) {
-            const message = error instanceof Error ? error.message : "An unknown error occurred.";
-            throw new Error(`CryptoModule.getPriceV2: Error ${message}`);
+            throw new Error(`CryptoModule.getPriceV2: ${error instanceof Error ? error.message : JSON.stringify(error)}`);
         }
     },
     getPriceV3: async function (chain, contractAddress, poolAddress, pair) {
         const validInput = sypher.validateInput(
-                { chain, contractAddress, poolAddress, pair },
-                {
-                    chain: { type: "string", required: true },
-                    contractAddress: { type: "string", required: true, regex: ADDRESS_REGEXP },
-                    poolAddress: { type: "string", required: true, regex: ADDRESS_REGEXP },
-                    pair: { type: "string", required: true }
-                }, "CryptoModule.getPriceV3"
-            );
+            { chain, contractAddress, poolAddress, pair },
+            {
+                chain: { type: "string", required: true },
+                contractAddress: { type: "string", required: true, regex: ADDRESS_REGEXP },
+                poolAddress: { type: "string", required: true, regex: ADDRESS_REGEXP },
+                pair: { type: "string", required: true }
+            }, "CryptoModule.getPriceV3"
+        );
         if (!validInput) { return null; }
 
         const ethereum = this.getProvider();
@@ -371,7 +444,8 @@ export const CryptoModule: ICryptoModule = {
         if (!chainData || !chainId) { return null; }
 
         try {
-            const account = await this.connect(chain);
+            let account = this._connected;
+            if (account === null || account === undefined) { account = await this.connect(chain); }
             if (!account) { return null; }
 
             // 1: Get all pool details
@@ -419,19 +493,18 @@ export const CryptoModule: ICryptoModule = {
 
             return tokenPriceUSD;
         } catch (error: unknown) {
-            const message = error instanceof Error ? error.message : "An unknown error occurred.";
-            throw new Error(`CryptoModule.getPriceV3: ${message}`);
+            throw new Error(`CryptoModule.getPriceV3: ${error instanceof Error ? error.message : JSON.stringify(error)}`);
         }
     },
     getPoolV3: async function (chain, contractAddress, poolAddress) {
         const validInput = sypher.validateInput(
-                { chain, contractAddress, poolAddress },
-                {
-                    chain: { type: "string", required: true },
-                    contractAddress: { type: "string", required: true, regex: ADDRESS_REGEXP },
-                    poolAddress: { type: "string", required: true, regex: ADDRESS_REGEXP }
-                }, "CryptoModule.getPoolV3"
-            );
+            { chain, contractAddress, poolAddress },
+            {
+                chain: { type: "string", required: true },
+                contractAddress: { type: "string", required: true, regex: ADDRESS_REGEXP },
+                poolAddress: { type: "string", required: true, regex: ADDRESS_REGEXP }
+            }, "CryptoModule.getPoolV3"
+        );
         if (!validInput) { return null; }
 
         const ethereum = this.getProvider();
@@ -444,7 +517,8 @@ export const CryptoModule: ICryptoModule = {
         if (!chainData || !chainId) { return null; }
 
         try {
-            const account = await this.connect(chain);
+            let account = this._connected;
+            if (account === null || account === undefined) { account = await this.connect(chain); }
             if (!account) { return null; }
 
             const provider = new ethers.providers.Web3Provider(ethereum);
@@ -476,34 +550,32 @@ export const CryptoModule: ICryptoModule = {
 
             return poolData;
         } catch (error: unknown) {
-            const message = error instanceof Error ? error.message : "An unknown error occurred.";
-            throw new Error(`CryptoModule.getPoolV3: ${message}`);
+            throw new Error(`CryptoModule.getPoolV3: ${error instanceof Error ? error.message : JSON.stringify(error)}`);
         }
     },
     getUserValue: function (balance, price) {
         const validInput = sypher.validateInput(
-                { balance, price },
-                {
-                    balance: { type: "object", required: true },
-                    price: { type: "number", required: true }
-                }, "CryptoModule.getUserValue"
-            );
+            { balance, price },
+            {
+                balance: { type: "object", required: true },
+                price: { type: "number", required: true }
+            }, "CryptoModule.getUserValue"
+        );
         if (!validInput) { return null; }
-        
+
         try {
             const value = parseFloat(balance.toString()) * parseFloat(price.toString());
             console.log(`User Value: ${value}`);
             return value;
         } catch (error: unknown) {
-            const message = error instanceof Error ? error.message : "An unknown error occurred.";
-            throw new Error(`CryptoModule.getUserValue: ${message}`);
+            throw new Error(`CryptoModule.getUserValue: ${error instanceof Error ? error.message : JSON.stringify(error)}`);
         }
     },
     clean: function (tokenDetails: TTokenDetails) {
         const validInput = sypher.validateInput(
-                { tokenDetails },
-                { tokenDetails: { type: "object", required: true } }, "CryptoModule.clean"
-            );
+            { tokenDetails },
+            { tokenDetails: { type: "object", required: true } }, "CryptoModule.clean"
+        );
         if (!validInput) { return null; }
 
         const { contractAddress, poolAddress, balance, decimals, name, symbol, totalSupply, tokenPrice, userValue } = tokenDetails;
@@ -529,19 +601,13 @@ export const CryptoModule: ICryptoModule = {
 
             DISCOVERED_PROVIDERS.push(customEvent.detail);
 
-            console.log(
-                "[EIP-6963] Wallet announced:",
-                customEvent.detail.info.name,
-                customEvent.detail.info.rdns,
-                customEvent.detail.info.uuid
-            );
+            // TODO: Create isLogging check - console.log("[EIP-6963]:", (customEvent.detail));
         });
         window.dispatchEvent(new Event("eip6963:requestProvider"));
     },
     getProvider: function () {
-        if (!("ethereum" in window)) { throw new Error("CryptoModule.getProvider: No Ethereum provider found."); }
-
-        const ethereum = (window.ethereum as unknown) as TEthereumProvider;
-        return ethereum;
-    }
+        if (typeof window === "undefined" || !window.ethereum) { throw new Error("CryptoModule.getProvider: No Ethereum provider found."); }
+        return window.ethereum as any;
+    },
+    getConnected(): string | null { return this._connected ?? null; }
 };

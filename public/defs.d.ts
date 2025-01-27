@@ -146,15 +146,16 @@ declare namespace sypher {
         pair?: string
     ): Promise<object | null>;
 
-    /**
+   /**
      * @description Connect the user's wallet to the website.
      * @param {string} chain - The target chain to connect to
+     * @param {TProviderDetail} providerDetail - The provider details for the wallet
      * @returns {Promise<string>} The connected wallet address
      * @see CHAINS - for supported chains
      * 
      * @interface ICryptoModule
      */
-    declare function connect(chain: string): Promise<string> | null;
+   declare function connect(chain: string, providerDetail: TProviderDetail | null = null): Promise<string> | null;
 
     /**
      * @description Switch the connected wallet to a specified chain.
@@ -273,6 +274,11 @@ declare namespace sypher {
     declare function clean(tokenDetails: TTokenDetails): object | null;
 
     /**
+     * @description — Initialize the discovery of all installed wallets.
+     */
+    declare function initProviderSearch(): void;
+
+    /**
      * @description Get the provider for the current wallet connection.
      * @returns {any} The provider for the current wallet connection
      * 
@@ -298,20 +304,24 @@ declare namespace sypher {
         params: { type: string, theme: string }
     ): void;
 
-    /**
-     * @description Creates a button to connect the wallet.
-     * @param {HTMLElement} element - The target HTML element where the button will be created [Default: document.body]
-     * @param {function} onClick - The function to call when the button is clicked [Default: sypher.connect("ethereum")]
-     * @param {object} params - The parameters to customize the button [Default: { type:, "connect", text: "Connect Wallet", modal: false }]
+   /**
+     * @description Creates a button on the page with the given parameters.
+     * @param {object} params - The parameters to customize the button
+     * @returns {HTMLButtonElement | HTMLDivElement | null} The created button element, or null if the type is invalid.
      * 
-     * @interface IInterfaceModule
+     * @see TButtonParams
      */
-    declare function createButton(
-        element?: HTMLElement,
+    declare function createButton(params: TButtonParams): HTMLButtonElement | HTMLDivElement | null;
+    declare type TButtonParams = {
+        type?: string,
+        text: string,
+        icon?: string,
+        modal?: boolean,
+        theme?: string,
+        chain?: string,
+        append?: HTMLElement,
         onClick?: () => void,
-        params?: { type: string, text: string, options: { modal: boolean, theme: string } }
-    ): HTMLButtonElement | null;
-
+    }
     /**
      * @description Creates a modal on the page with the given params
      * @param {object} params - The parameters to customize the modal
@@ -319,8 +329,8 @@ declare namespace sypher {
      * @interface IInterfaceModule
      */
     declare function createModal(
-        params: { append: HTMLElement, type: string, theme: string }
-    ): HTMLElement | null;
+        params: { append: HTMLElement, type: string, theme: string, chain: string }
+    ): TLogModal | TConnectModal | null;
 
     /**
      * @description Toggles the loader on a given element by updating its inner HTML.
