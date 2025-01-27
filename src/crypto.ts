@@ -1,5 +1,5 @@
-import { CHAINS, CHAINLINK_ABI, DISCOVERED_PROVIDERS, ERC20_ABI, UNISWAP_V2_POOL_ABI, UNISWAP_V3_POOL_ABI, ADDRESS_REGEXP, LP_VER } from "./constants";
-import { TCleanedDetails, ICryptoModule, TPoolV3Data, TTokenDetails, TChainParams, TEthereumProvider, TProviderDetail, EIP1193, TInitParams } from "./crypto.d";
+import { CHAINS, CHAINLINK_ABI, DISCOVERED_PROVIDERS, ERC20_ABI, UNISWAP_V2_POOL_ABI, UNISWAP_V3_POOL_ABI, ADDRESS_REGEXP } from "./constants";
+import { TCleanedDetails, ICryptoModule, TPoolV3Data, TTokenDetails, TChainParams, TProviderDetail, EIP1193, TInitParams } from "./crypto.d";
 import { ethers } from "ethers";
 import { TLoaderParams } from "./interface.d";
 
@@ -163,27 +163,43 @@ export const CryptoModule: ICryptoModule = {
             }
         }
     },
-    disconnect: async function () { this._connected = undefined; },
+    disconnect: async function () {
+        this._connected = undefined;
+    },
     onboard: async function (providerDetail: TProviderDetail) {
         const userEnv = sypher.userEnvironment();
-
+    
         const isMobile = userEnv.isMobile;
-        const isApple = userEnv.operatingSystem.toLowerCase() === "ios";
+        const isApple = userEnv.operatingSystem.toLowerCase() === "macos";
         const isAndroid = userEnv.operatingSystem.toLowerCase() === "android";
-
+    
         if (!isMobile) { window.open(providerDetail.info.onboard.link, "_blank"); return; }
-
+    
         if (isMobile) {
-            const { deeplink, fallback } = providerDetail.info.onboard
-
+            const { deeplink, fallback } = providerDetail.info.onboard;
+    
             if (isApple || isAndroid) {
                 const platform = isApple ? "ios" : "android";
-
+    
                 const fallbackTimer = setTimeout(() => {
-                    console.log("Deeplink failed, redirecting to App Store...");
-                    window.location.href = fallback[platform];
+                    console.log("Deeplink failed, prompting user for App Store redirection...");
+    
+                    if (platform === "ios") {
+                        const userConfirmed = confirm( "Unable to open the app. Please click confirm to download from the app store." );
+    
+                        if (userConfirmed) { window.location.href = fallback[platform];
+                        } else { console.log("User canceled App Store redirection."); }
+                    } else {
+                        const link = document.createElement("a");
+                        link.href = fallback[platform];
+                        link.target = "_self";
+                        link.rel = "noopener";
+                        document.body.appendChild(link);
+                        link.click();
+                        document.body.removeChild(link);
+                    }
                 }, 1000);
-
+    
                 window.location.href = deeplink;
                 window.addEventListener("blur", () => clearTimeout(fallbackTimer), { once: true });
             } else { return; }
@@ -609,5 +625,7 @@ export const CryptoModule: ICryptoModule = {
         if (typeof window === "undefined" || !window.ethereum) { throw new Error("CryptoModule.getProvider: No Ethereum provider found."); }
         return window.ethereum as any;
     },
-    getConnected(): string | null { return this._connected ?? null; }
+    getConnected(): string | null {
+        return this._connected ?? null;
+    }
 };

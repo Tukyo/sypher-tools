@@ -74,7 +74,6 @@
     overflow-y: auto;
     align-items: center;
     flex-direction: column;
-    gap: 10px;
     min-height: 400px;
     background: var(--sypher-color-quaternary);
     border-radius: 0 0 calc(var(--sypher-border-radius) * 4) calc(var(--sypher-border-radius) * 4);
@@ -86,6 +85,7 @@
     align-items: center;
     gap: 10px;
     padding: 10px 10px;
+    margin-top: 10px;
     width: 90%;
     min-height: 75px;
     background: var(--sypher-color-secondary);

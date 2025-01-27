@@ -811,13 +811,13 @@
                                                 innerHTML: "Change Wallet"
                                             }
                                         ],
-                                    },
-                                    {
-                                        type: "div",
-                                        id: "av-b-history",
-                                        classes: ["av-b-b"],
-                                        innerHTML: "Recent Activity"
                                     }
+                                    // {
+                                    //     type: "div",
+                                    //     id: "av-b-history",
+                                    //     classes: ["av-b-b"],
+                                    //     innerHTML: "Recent Activity"
+                                    // }
                                 ]
                             },
                             {
@@ -1234,11 +1234,13 @@
                 }
             }
         },
-        disconnect: async function () { this._connected = undefined; },
+        disconnect: async function () {
+            this._connected = undefined;
+        },
         onboard: async function (providerDetail) {
             const userEnv = sypher.userEnvironment();
             const isMobile = userEnv.isMobile;
-            const isApple = userEnv.operatingSystem.toLowerCase() === "ios";
+            const isApple = userEnv.operatingSystem.toLowerCase() === "macos";
             const isAndroid = userEnv.operatingSystem.toLowerCase() === "android";
             if (!isMobile) {
                 window.open(providerDetail.info.onboard.link, "_blank");
@@ -1249,8 +1251,25 @@
                 if (isApple || isAndroid) {
                     const platform = isApple ? "ios" : "android";
                     const fallbackTimer = setTimeout(() => {
-                        console.log("Deeplink failed, redirecting to App Store...");
-                        window.location.href = fallback[platform];
+                        console.log("Deeplink failed, prompting user for App Store redirection...");
+                        if (platform === "ios") {
+                            const userConfirmed = confirm("Unable to open the app. Please click confirm to download from the app store.");
+                            if (userConfirmed) {
+                                window.location.href = fallback[platform];
+                            }
+                            else {
+                                console.log("User canceled App Store redirection.");
+                            }
+                        }
+                        else {
+                            const link = document.createElement("a");
+                            link.href = fallback[platform];
+                            link.target = "_self";
+                            link.rel = "noopener";
+                            document.body.appendChild(link);
+                            link.click();
+                            document.body.removeChild(link);
+                        }
                     }, 1000);
                     window.location.href = deeplink;
                     window.addEventListener("blur", () => clearTimeout(fallbackTimer), { once: true });
@@ -1685,7 +1704,9 @@
             }
             return window.ethereum;
         },
-        getConnected() { return this._connected ?? null; }
+        getConnected() {
+            return this._connected ?? null;
+        }
     };
 
     (function (global) {

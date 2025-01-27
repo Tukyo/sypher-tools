@@ -318,9 +318,9 @@ declare namespace sypher {
         icon?: string,
         modal?: boolean,
         theme?: string,
-        chain?: string,
         append?: HTMLElement,
         onClick?: () => void,
+        initCrypto?: TInitParams
     }
     /**
      * @description Creates a modal on the page with the given params

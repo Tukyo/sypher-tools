@@ -285,7 +285,7 @@ export const InterfaceModule: IInterfaceModule = {
                                         classes: ["av-b-b"],
                                         events: { click: () => { 
                                             if (accountView) { accountView.style.display = "none"; }
-                                            
+
                                             const buttons = document.querySelectorAll('.connect-mi');
                                             if (buttons) { buttons.forEach((button) => { (button as HTMLDivElement).style.display = "flex"; }); }
         
@@ -318,13 +318,13 @@ export const InterfaceModule: IInterfaceModule = {
                                                 innerHTML: "Change Wallet"
                                             }
                                         ],
-                                    },
-                                    {
-                                        type: "div",
-                                        id: "av-b-history",
-                                        classes: ["av-b-b"],
-                                        innerHTML: "Recent Activity"
                                     }
+                                    // {
+                                    //     type: "div",
+                                    //     id: "av-b-history",
+                                    //     classes: ["av-b-b"],
+                                    //     innerHTML: "Recent Activity"
+                                    // }
                                 ]
                             },
                             {// Disconnect
@@ -352,7 +352,6 @@ export const InterfaceModule: IInterfaceModule = {
                 );
                 if (!accountView) { return null; }
             }
-
             return modalObj;
         } else { return null; } //TODO: Throw error
     },

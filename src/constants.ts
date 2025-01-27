@@ -1,5 +1,4 @@
 import { IChainConfig, TProviderDetail, TOnboardInfo } from "./crypto.d";
-import { TElementParams } from "./interface.d";
 
 export const ADDRESS_REGEXP: RegExp = /^0x[a-fA-F0-9]{40}$/;
 export const LP_VER: string[] = ["V2", "V3"];
