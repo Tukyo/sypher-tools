@@ -158,6 +158,18 @@ declare namespace sypher {
    declare function connect(chain: string, providerDetail: TProviderDetail | null = null): Promise<string> | null;
 
     /**
+     * @description Detect when the connected account changes.
+     * @param {boolean} active - Add or remove the event listener
+     */
+    declare function accountChange(active: boolean): void;
+
+    /**
+     * @description Onboard the user if they have no wallet.
+     * @see TProviderDetail
+     */
+    declare function onboard(providerDetail: TProviderDetail): void;
+
+    /**
      * @description Switch the connected wallet to a specified chain.
      * @param {string} chain - The target chain to switch to
      * @see CHAINS - for supported chains
@@ -285,6 +297,12 @@ declare namespace sypher {
      * @interface ICryptoModule
      */
     declare function getProvider(): any;
+
+    /**
+     * @description Get the connected wallet address.
+     * @returns {string | null} The connected wallet address or `null` if no wallet is connected
+     */
+    declare function getConnected(): string | null;
 
     /**
      * @description Initializes a theme by adding a stylesheet to the head of the document.

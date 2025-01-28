@@ -1,5 +1,5 @@
 import { BUTTON_TYPES, DISCOVERED_PROVIDERS, MODAL_TYPES, PLACEHOLDER_PROVIDERS, THEMES } from "./constants";
-import { TInitParams, TProviderDetail } from "./crypto.d";
+import { TInitParams, TEIP6963, TCleanedDetails } from "./crypto.d";
 import { IInterfaceModule, TButtonParams, TConnectModal, TElementParams, TLoaderParams, TLogModal } from "./interface.d";
 
 export const InterfaceModule: IInterfaceModule = {
@@ -42,7 +42,7 @@ export const InterfaceModule: IInterfaceModule = {
         if (theme === "none") { theme = "custom"; }
         if (!this._theme) { this.initTheme(theme); }
 
-        const typeStylesheetId = `sypher-${type}-style`;
+        const typeStylesheetId = `sypher-${type}`;
         if (!document.getElementById(typeStylesheetId)) {
             const typeLink = document.createElement('link');
             typeLink.id = typeStylesheetId;
@@ -63,7 +63,6 @@ export const InterfaceModule: IInterfaceModule = {
             initCrypto: {} as TInitParams
         }
         const mergedParams = { ...defaultParams, ...params };
-
         const { type, text, icon, modal, theme, append, onClick, initCrypto } = mergedParams;
 
         if (!BUTTON_TYPES.includes(type)) { throw new Error(`InterfaceModule.createModal: Type '${type}' not found.`); }
@@ -85,11 +84,17 @@ export const InterfaceModule: IInterfaceModule = {
             const themeName = `${appliedTheme}-button`;
             const buttonId = `${appliedType}-button`;
 
-            const button: HTMLButtonElement = document.createElement('button');
-            button.id = buttonId;
+            let button = document.getElementById(buttonId) as HTMLButtonElement;
+
+            if (!button) {
+                button = document.createElement('button') as HTMLButtonElement;
+                button.id = buttonId;
+                append.appendChild(button);
+            }
+
             button.classList.add(className, themeName);
             button.textContent = text;
-            
+
             this._connectText = text;
 
             const finalOnClick = onClick === defaultParams.onClick
@@ -104,7 +109,6 @@ export const InterfaceModule: IInterfaceModule = {
 
             this.applyStyle([button], themeParams);
 
-            append.appendChild(button);
             return button
         } else if (appliedType === "provider") {
             if (initCrypto.chain === "none") { throw new Error(`InterfaceModule.createButton: Chain is required for type 'provider'.`); }
@@ -176,16 +180,16 @@ export const InterfaceModule: IInterfaceModule = {
             modalObj.head.appendChild(modalObj.title);
             modalObj.head.appendChild(modalObj.toggle);
             modalObj.container.appendChild(modalObj.body);
-            
+
             // TODO: Create isLogging check - console.log(PLACEHOLDER_PROVIDERS);
 
-            const mergedProviders: TProviderDetail[] = [
+            const mergedProviders: TEIP6963[] = [
                 ...PLACEHOLDER_PROVIDERS.map((placeholder) => {
                     const match = DISCOVERED_PROVIDERS.find(
                         (discovered) => discovered.info.name === placeholder.info.name
                     );
                     const merged = match || placeholder;
-            
+
                     if (match) {
                         if (!merged.info.onboard) {
                             merged.info.onboard = {
@@ -200,7 +204,7 @@ export const InterfaceModule: IInterfaceModule = {
                         }
                         merged.info.onboard.bool = false;
                     }
-            
+
                     return merged;
                 }),
                 ...DISCOVERED_PROVIDERS.filter(
@@ -210,27 +214,28 @@ export const InterfaceModule: IInterfaceModule = {
                         )
                 ),
             ];
-            
+
             // TODO: Create isLogging check - console.log(mergedProviders);
 
             const account = sypher.getConnected();
 
-            mergedProviders.forEach((providerDetail: TProviderDetail) => {
+            mergedProviders.forEach((providerDetail: TEIP6963) => {
                 const { name, icon } = providerDetail.info;
 
                 const onClick = providerDetail.info.onboard?.bool
-                ? () => { sypher.onboard(providerDetail); }
-                : () => { 
-                    if (initCrypto.chain !== "none") {
-                        sypher.initCrypto({
-                            chain: initCrypto.chain,
-                            contractAddress: initCrypto.contractAddress,
-                            poolAddress: initCrypto.poolAddress,
-                            version: initCrypto.version, //TODO: Check how to make this work with non eth pairs
-                            detail: providerDetail
-                        });
-                    } else { sypher.connect(initCrypto.chain, providerDetail); }
-                }
+                    ? () => { sypher.onboard(providerDetail); }
+                    : () => {
+                        if (initCrypto.chain !== "none") {
+                            sypher.initCrypto({
+                                chain: initCrypto.chain,
+                                contractAddress: initCrypto.contractAddress,
+                                poolAddress: initCrypto.poolAddress,
+                                version: initCrypto.version, //TODO: Check how to make this work with non eth pairs
+                                detail: providerDetail,
+                                icon: initCrypto.icon
+                            });
+                        } else { sypher.connect(initCrypto.chain, providerDetail); }
+                    }
 
                 const button: HTMLDivElement | HTMLButtonElement | null = this.createButton({
                     append: modalObj.body,
@@ -246,13 +251,37 @@ export const InterfaceModule: IInterfaceModule = {
                 if (button !== null) { if (account !== null && account !== undefined) { button.style.display = "none"; } }
             });
 
-            if (account !== null && account !== undefined)  {
+            if (account !== null && account !== undefined) {
                 modalObj.title.innerHTML = "Account";
 
-                const provider = new ethers.providers.Web3Provider(window.ethereum);
-                const signer = provider.getSigner();
+                const provider = sypher.getProvider();
+                const web3 = new ethers.providers.Web3Provider(provider);
+                const signer = web3.getSigner();
                 const balance = await signer.getBalance();
+                const eth = ethers.utils.formatEther(balance);
+
+                const tokenDetails = sypher.getCleaned() as TCleanedDetails | null;
+
+                let showTokenDetails = false;
+                let tokenDetailClass = "av-b-c-hide";
+                let icon = "";
+                let tokenName = "";
+                let userBalance = 0;
+                let userValue = "";
+                let tokenPrice = 0;
+                let tokenDecimals = 0;
                 
+                if (tokenDetails) {
+                    showTokenDetails = true;
+                    tokenDetailClass = "av-b-c";
+                    icon = tokenDetails.icon || "";
+                    tokenName = tokenDetails.name || "";
+                    userBalance = tokenDetails.balance || 0;
+                    userValue = tokenDetails.userValue || "";
+                    tokenPrice = tokenDetails.tokenPrice || 0;
+                    tokenDecimals = tokenDetails.decimals || 0;
+                }
+
                 const accountView: HTMLElement | null = this.createElement(
                     {
                         append: modalObj.body,
@@ -271,7 +300,7 @@ export const InterfaceModule: IInterfaceModule = {
                                     {
                                         type: "h3",
                                         classes: ["av-h-ba"],
-                                        innerHTML: `${sypher.truncateBalance(parseFloat(balance.toString()))} ETH` // TODO: Update 'ETH' to native token of chain
+                                        innerHTML: `${sypher.truncateBalance(parseFloat(eth.toString()))} ETH` // TODO: Update 'ETH' to native token of chain
                                     }
                                 ]
                             },
@@ -281,16 +310,60 @@ export const InterfaceModule: IInterfaceModule = {
                                 children: [
                                     {
                                         type: "div",
+                                        id: "av-b-td",
+                                        classes: [tokenDetailClass],
+                                        children: [
+                                            {
+                                                type: "div",
+                                                classes: ["av-b-td-ic"],
+                                                children: [
+                                                    {
+                                                        type: "img",
+                                                        classes: ["av-b-td-i"],
+                                                        attributes: {
+                                                            src: icon
+                                                        }
+                                                    },
+                                                    {
+                                                        type: "div",
+                                                        classes: ["av-b-td-n"],
+                                                        innerHTML: showTokenDetails
+                                                            ? `$${sypher.truncateBalance(parseFloat(tokenPrice.toString()))}`
+                                                            : ""
+                                                    }
+                                                ]
+
+                                            },
+                                            {
+                                                type: "div",
+                                                classes: ["av-b-td-bal"],
+                                                innerHTML: showTokenDetails
+                                                    ? `${sypher.truncateBalance(parseFloat(userBalance.toString()), tokenDecimals)} ${tokenName}`
+                                                    : ""
+                                            },
+                                            {
+                                                type: "div",
+                                                classes: ["av-b-td-val"],
+                                                innerHTML: showTokenDetails
+                                                    ? `$${sypher.truncateBalance(parseFloat(userValue.toString()))}`
+                                                    : ""
+                                            }
+                                        ]
+                                    },
+                                    {
+                                        type: "div",
                                         id: "av-b-provider",
                                         classes: ["av-b-b"],
-                                        events: { click: () => { 
-                                            if (accountView) { accountView.style.display = "none"; }
+                                        events: {
+                                            click: () => {
+                                                if (accountView) { accountView.style.display = "none"; }
 
-                                            const buttons = document.querySelectorAll('.connect-mi');
-                                            if (buttons) { buttons.forEach((button) => { (button as HTMLDivElement).style.display = "flex"; }); }
-        
-                                            modalObj.title.innerHTML = "Change Wallet";
-                                        }},
+                                                const buttons = document.querySelectorAll('.connect-mi');
+                                                if (buttons) { buttons.forEach((button) => { (button as HTMLDivElement).style.display = "flex"; }); }
+
+                                                modalObj.title.innerHTML = "Change Wallet";
+                                            }
+                                        },
                                         children: [
                                             {
                                                 type: "div",
@@ -330,21 +403,23 @@ export const InterfaceModule: IInterfaceModule = {
                             {// Disconnect
                                 type: "div",
                                 classes: ["av-x"],
-                                events: { click: () => { 
-                                    sypher.disconnect(); 
+                                events: {
+                                    click: () => {
+                                        sypher.disconnect();
 
-                                    if (accountView && accountView.parentNode) {
-                                        accountView.parentNode.removeChild(accountView);
+                                        if (accountView && accountView.parentNode) {
+                                            accountView.parentNode.removeChild(accountView);
+                                        }
+
+                                        const buttons = document.querySelectorAll('.connect-mi');
+                                        if (buttons) { buttons.forEach((button) => { (button as HTMLDivElement).style.display = "flex"; }); }
+
+                                        const connectButton = document.getElementById('connect-button');
+                                        if (connectButton && this._connectText) { connectButton.innerHTML = this._connectText; }
+
+                                        modalObj.title.innerHTML = "Connect Wallet";
                                     }
-                                    
-                                    const buttons = document.querySelectorAll('.connect-mi');
-                                    if (buttons) { buttons.forEach((button) => { (button as HTMLDivElement).style.display = "flex"; }); }
-
-                                    const connectButton = document.getElementById('connect-button');
-                                    if (connectButton && this._connectText) { connectButton.innerHTML = this._connectText; }
-
-                                    modalObj.title.innerHTML = "Connect Wallet";
-                                }},
+                                },
                                 innerHTML: "Disconnect"
                             }
                         ]
@@ -448,13 +523,13 @@ export const InterfaceModule: IInterfaceModule = {
         if (theme === "none") { appliedTheme = "custom"; }
 
         const element = document.createElement(type);
-        if (id && id !== "" ) { element.id = id; }
+        if (id && id !== "") { element.id = id; }
         element.classList.add(`sypher-${appliedTheme}-element`);
 
         if (classes) { classes.forEach((className) => { element.classList.add(className); }); }
         if (attributes) { for (const [key, value] of Object.entries(attributes)) { element.setAttribute(key, value); } }
         if (events) { for (const [key, value] of Object.entries(events)) { element.addEventListener(key, value); } }
-        if (innerHTML && innerHTML !== "" ) { element.innerHTML = innerHTML; }
+        if (innerHTML && innerHTML !== "") { element.innerHTML = innerHTML; }
         if (children) {
             children.forEach((childParams) => {
                 const childElement = this.createElement(childParams);

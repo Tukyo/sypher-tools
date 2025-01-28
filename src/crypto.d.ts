@@ -11,21 +11,22 @@ export interface ICryptoModule {
      * @param {string} poolAddress - The LP address for the token
      * @param {string} version - The target Uniswap version (V2 or V3)
      * @param {string} pair - The paired asset to get the price in (default: "eth")
+     * @param {string} icon - The icon of the token
      * @returns {Promise<object | null>}
      * { contractAddress, poolAddress, balance, decimals, name, symbol, totalSupply, tokenPrice, userValue }
      * 
      * -------> Call this function to get started! <-------
      */
-    initCrypto( params: TInitParams ): Promise<TTokenDetails | null>;
+    initCrypto(params: TInitParams): Promise<TCleanedDetails | null>;
 
     /**
      * @description Connect the user's wallet to the website.
      * @param {string} chain - The target chain to connect to
-     * @param {TProviderDetail} providerDetail - The provider details for the wallet
+     * @param {TEIP6963} providerDetail - The provider details for the wallet
      * @returns {Promise<string>} The connected wallet address
      * @see CHAINS - for supported chains
      */
-    connect(chain: string, providerDetail: TProviderDetail | null = null): Promise<string> | null;
+    connect(chain: string, providerDetail: TEIP6963 | null = null): Promise<string> | null;
 
     /**
      * @description Disconnect the user's wallet from the website.
@@ -33,10 +34,16 @@ export interface ICryptoModule {
     disconnect(): void;
 
     /**
-     * @description Onboard the user if they have no wallet.
-     * @see TProviderDetail
+     * @description Detect when the connected account changes.
+     * @param {boolean} active - Add or remove the event listener
      */
-    onboard(providerDetail: TProviderDetail): void;
+    accountChange(active: boolean): void;
+
+    /**
+     * @description Onboard the user if they have no wallet.
+     * @see TEIP6963
+     */
+    onboard(providerDetail: TEIP6963): void;
 
     /**
      * @description Connection status.
@@ -55,9 +62,9 @@ export interface ICryptoModule {
     /**
      * @description The chain the wallet is currently connected to.
      * 
-     * @type {string | null}
+     * @type {TChainParams | null}
      */
-    _currentChain?: string | null;
+    _chain?: TChainParams | null;
 
     /**
      * @description Get the data for a specific chain from chainlist
@@ -148,7 +155,20 @@ export interface ICryptoModule {
      * @param {object} tokenDetails - The raw token details object
      * @returns {object} The cleaned token details object
      */
-    clean(tokenDetails: TTokenDetails): object | null;
+    clean(tokenDetails: TTokenDetails): TCleanedDetails | null;
+
+    /**
+     * @description Get the cleaned token details.
+     * @returns {object | null} The cleaned token details
+     */
+    getCleaned(): TCleanedDetails | null;
+
+    /**
+     * @description The stored token details.
+     * 
+     * @type {TTokenDetails | null}
+     */
+    _token?: TCleanedDetails | null;
 
     /**
      * @description Initialize the discovery of all installed wallets.
@@ -159,13 +179,23 @@ export interface ICryptoModule {
      * @description Get the provider for the current wallet connection.
      * @returns {any} The provider for the current wallet connection
      */
-    getProvider(): any;
+    getProvider(): EIP1193Provider;
+
+    /**
+     * @description The stored provider.
+     */
+    _EIP6963?: TEIP6963 | null;
 
     /**
      * @description Get the connected wallet address.
      * @returns {string | null} The connected wallet address or `null` if no wallet is connected
      */
     getConnected(): string | null;
+
+    /**
+     * @description Clear the internal memory of the CryptoModule.
+     */
+    flush(): void;
 }
 
 // #region TOKEN
@@ -177,7 +207,7 @@ export interface ICryptoModule {
  * @property {string} poolAddress - The LP address for the token
  * @property {string} version - The target Uniswap version (V2 or V3)
  * @property {string} pair - The paired asset to get the price in (default: "eth")
- * @property {TProviderDetail} detail - The provider details for the wallet
+ * @property {TEIP6963} detail - The provider details for the wallet
  */
 export type TInitParams = {
     chain: string;
@@ -185,7 +215,8 @@ export type TInitParams = {
     poolAddress: string;
     version: string;
     pair?: string;
-    detail?: TProviderDetail
+    detail?: TEIP6963
+    icon?: string
 }
 /**
  * @description Raw token details fetched in the CryptoModule
@@ -196,9 +227,12 @@ export type TInitParams = {
  * @property {number} decimals - The decimals of the token
  * @property {string} name - The name of the token
  * @property {string} symbol - The symbol of the token
+ * @property {string} icon - The icon of the token
  * @property {string} totalSupply - The total supply of the token
  * @property {number} tokenPrice - The price of the token
  * @property {number} userValue - The value of the user's holdings
+ * @property {string} version - The version of the uniswap pool
+ * @property {string} pair - The paired asset to get the price in
  * @see TCleanedDetails
  */
 export type TTokenDetails = {
@@ -208,9 +242,12 @@ export type TTokenDetails = {
     decimals: number;
     name: string;
     symbol: string;
+    icon: string;
     totalSupply: string;
     tokenPrice: number;
     userValue: number;
+    version: string;
+    pair: string;
 }
 /**
  * @description The final cleaned token details
@@ -221,9 +258,12 @@ export type TTokenDetails = {
  * @property {number} decimals - The decimals of the token
  * @property {string} name - The name of the token
  * @property {string} symbol - The symbol of the token
+ * @property {string} icon - The icon of the token
  * @property {number} totalSupply - The total supply of the token
  * @property {number} tokenPrice - The price of the token
  * @property {string} userValue - The value of the user's holdings
+ * @property {string} version - The version of the uniswap pool
+ * @property {string} pair - The paired asset to get the price in
  * 
  * @see TTokenDetails
  */
@@ -234,9 +274,12 @@ export type TCleanedDetails = {
     decimals: number;
     name: string;
     symbol: string;
+    icon: string;
     totalSupply: number;
     tokenPrice: number;
     userValue: string;
+    version: string;
+    pair: string;
 }
 /**
  * @description The data for a Uniswap V3 pool
@@ -310,13 +353,9 @@ export type TChainParams = {
 // #endregion CHAIN
 ////
 // #region PROVIDER
-/**
- * @description EIP-1193 interface
- */
-export interface EIP1193 {
-    request(args: RequestArguments): Promise<unknown>;
-    on?(event: string, listener: (...args: unknown[]) => void): void;
-    removeListener?(event: string, listener: (...args: unknown[]) => void): void;
+interface ProviderRpcError extends Error {
+    code: number;
+    data?: unknown;
 }
 interface RequestArguments {
     readonly method: string;
@@ -328,11 +367,10 @@ interface RequestArguments {
 export type TEthereumProvider = { request: (args: { method: string; params?: any[] }) => Promise<any>; };
 /**
  * @description Discovered providers
- * @typedef {object} TProviderDetail
+ * @typedef {object} TEIP6963
  * @property {TProviderInfo} info - The provider info
- * @property {EIP1193} provider - The provider object
  */
-export type TProviderDetail = { info: TProviderInfo, provider: EIP1193; }
+export type TEIP6963 = { info: TProviderInfo, provider: any; }
 /**
  * @description Provider info
  * @typedef {object} TProviderInfo
@@ -348,6 +386,23 @@ export type TProviderInfo = {
     rdns: string,
     uuid: string,
     onboard: TOnboardInfo
+}
+export interface EIP1193Provider {
+    isStatus?: boolean
+    host?: string
+    path?: string
+    sendAsync?: (
+        request: { method: string; params?: Array<unknown> },
+        callback: (error: Error | null, response: unknown) => void
+    ) => void
+    send?: (
+        request: { method: string; params?: Array<unknown> },
+        callback: (error: Error | null, response: unknown) => void
+    ) => void
+    request: (request: {
+        method: string
+        params?: Array<unknown>
+    }) => Promise<unknown>
 }
 /**
  * @description Onboard info

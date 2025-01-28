@@ -1,4 +1,4 @@
-import { IChainConfig, TProviderDetail, TOnboardInfo } from "./crypto.d";
+import { IChainConfig, TEIP6963, TOnboardInfo } from "./crypto.d";
 
 export const ADDRESS_REGEXP: RegExp = /^0x[a-fA-F0-9]{40}$/;
 export const LP_VER: string[] = ["V2", "V3"];
@@ -79,9 +79,9 @@ export const CHAINS: Record<string, IChainConfig> = {
     }
 };
 
-export const DISCOVERED_PROVIDERS: TProviderDetail[] = [];
+export const DISCOVERED_PROVIDERS: TEIP6963[] = [];
 
-export const PLACEHOLDER_PROVIDERS: TProviderDetail[] = [
+export const PLACEHOLDER_PROVIDERS: TEIP6963[] = [
     {
         info: {
             icon: "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNTYiIGhlaWdodD0iNTYiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHBhdGggZD0iTTI4IDU2YzE1LjQ2NCAwIDI4LTEyLjUzNiAyOC0yOFM0My40NjQgMCAyOCAwIDAgMTIuNTM2IDAgMjhzMTIuNTM2IDI4IDI4IDI4WiIgZmlsbD0iIzFCNTNFNCIvPjxwYXRoIGZpbGwtcnVsZT0iZXZlbm9kZCIgY2xpcC1ydWxlPSJldmVub2RkIiBkPSJNNyAyOGMwIDExLjU5OCA5LjQwMiAyMSAyMSAyMXMyMS05LjQwMiAyMS0yMVMzOS41OTggNyAyOCA3IDcgMTYuNDAyIDcgMjhabTE3LjIzNC02Ljc2NmEzIDMgMCAwIDAtMyAzdjcuNTMzYTMgMyAwIDAgMCAzIDNoNy41MzNhMyAzIDAgMCAwIDMtM3YtNy41MzNhMyAzIDAgMCAwLTMtM2gtNy41MzNaIiBmaWxsPSIjZmZmIi8+PC9zdmc+",
@@ -98,12 +98,7 @@ export const PLACEHOLDER_PROVIDERS: TProviderDetail[] = [
                 } 
             } as TOnboardInfo            
         },
-        provider: {
-            request: async () => {
-                console.log(`Placeholder Coinbase Wallet clicked.`);
-                return Promise.resolve("Placeholder Coinbase Wallet Response");
-            }
-        }
+        provider: {} as any
     },
     {
         info: {
@@ -121,12 +116,7 @@ export const PLACEHOLDER_PROVIDERS: TProviderDetail[] = [
                 } 
             } as TOnboardInfo
         },
-        provider: {
-            request: async () => {
-                console.log(`Placeholder MetaMask clicked.`);
-                return Promise.resolve("Placeholder MetaMask Response");
-            }
-        }
+        provider: {} as any
     }
 ];
 
