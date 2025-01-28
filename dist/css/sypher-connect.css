@@ -78,6 +78,9 @@
     background: var(--sypher-color-quaternary);
     border-radius: 0 0 calc(var(--sypher-border-radius) * 4) calc(var(--sypher-border-radius) * 4);
 }
+#connect-mb .connect-mi:last-child {
+    margin-bottom: 10px;
+}
 
 .connect-mi {
     display: flex;
@@ -180,7 +183,8 @@
     margin: 10px;
 }
 
-.av-h-ti, .av-h-ba {
+.av-h-ti,
+.av-h-ba {
     margin: 10px auto;
 }
 
@@ -231,6 +235,45 @@
 .av-b-bn-t {
     user-select: none;
     pointer-events: none;
+}
+
+.av-b-c {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    width: 70%;
+    background-color: var(--sypher-color-tertiary);
+    border-radius: var(--sypher-border-radius);
+    padding: 10px;
+    margin-bottom: 20px;
+}
+
+.av-b-td-ic {
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+    background-color: var(--sypher-color-secondary);
+    border-radius: calc(var(--sypher-border-radius)* 1) calc(var(--sypher-border-radius)* 1) 0 0;
+    margin-bottom: 10px;
+    height: 45px;
+}
+
+.av-b-td-i {
+    width: 30px;
+    height: 30px;
+}
+
+.av-b-td-val,
+.av-b-td-bal {
+    display: flex;
+    justify-content: center;
+}
+
+.av-b-td-n {
+    font-size: larger;
+    font-weight: bold;
 }
 
 .av-x {

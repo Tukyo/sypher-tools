@@ -19,7 +19,7 @@ document.addEventListener('DOMContentLoaded', function () {
             contractAddress: "0xf83cde146AC35E99dd61b6448f7aD9a4534133cc",
             poolAddress: "0x1a02A0cc19d703CCD40C2Fc63684dFf89B52eEEE",
             version: "V3",
-            icon: "https://raw.githubusercontent.com/Tukyo/ebert-rebuild-priv/refs/heads/main/assets/img/swap/ebert-icon.png?token=GHSAT0AAAAAACY3RKW36NBOYE5TOLXWFNL2Z4YSCPQ"
+            icon: "https://cryptologos.cc/logos/shiba-inu-shib-logo.png"
         }
     })
     cbut.addEventListener('click', async () => {

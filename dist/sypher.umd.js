@@ -668,6 +668,11 @@
             }
             else if (modalObj.type === "connect") {
                 this.applyStyle([modalObj.parent, modalObj.container, modalObj.toggle, modalObj.head, modalObj.title, modalObj.body], mergedParams);
+                modalObj.parent.addEventListener('click', (e) => {
+                    if (e.target === modalObj.parent) {
+                        modalObj.parent.remove();
+                    }
+                });
                 append.appendChild(modalObj.parent);
                 modalObj.parent.appendChild(modalObj.container);
                 modalObj.container.appendChild(modalObj.head);
@@ -749,7 +754,6 @@
                     let userBalance = 0;
                     let userValue = "";
                     let tokenPrice = 0;
-                    let tokenDecimals = 0;
                     if (tokenDetails) {
                         showTokenDetails = true;
                         tokenDetailClass = "av-b-c";
@@ -758,7 +762,7 @@
                         userBalance = tokenDetails.balance || 0;
                         userValue = tokenDetails.userValue || "";
                         tokenPrice = tokenDetails.tokenPrice || 0;
-                        tokenDecimals = tokenDetails.decimals || 0;
+                        tokenDetails.decimals || 0;
                     }
                     const accountView = this.createElement({
                         append: modalObj.body,
@@ -814,7 +818,7 @@
                                                 type: "div",
                                                 classes: ["av-b-td-bal"],
                                                 innerHTML: showTokenDetails
-                                                    ? `${sypher.truncateBalance(parseFloat(userBalance.toString()), tokenDecimals)} ${tokenName}`
+                                                    ? `${sypher.truncateBalance(parseFloat(userBalance.toString()))} ${tokenName}`
                                                     : ""
                                             },
                                             {
@@ -1118,6 +1122,12 @@
                 });
             }, { threshold: 0.1 });
             elements.forEach(el => observer.observe(el));
+        },
+        getUI: function () {
+            return {
+                theme: this._theme || '',
+                connectText: this._connectText || ''
+            };
         }
     };
 
@@ -1323,10 +1333,14 @@
                 provider.on("accountsChanged", (accounts) => {
                     if (!accounts.length) {
                         this.disconnect();
+                        return;
                     }
                     this._connected = accounts[0];
                     window.dispatchEvent(new CustomEvent("sypher:accountChange", { detail: this.getConnected() }));
-                    provider.removeAllListeners("accountsChanged");
+                    const modal = document.getElementById("connect-modal");
+                    if (modal) {
+                        modal.remove();
+                    }
                     this._connected = undefined; // Refefine as null to allow for reconnection
                     if (this._chain) {
                         if (this._token) {
@@ -1353,6 +1367,10 @@
             }
             else {
                 provider.removeAllListeners("accountsChanged");
+                const modal = document.getElementById("connect-modal");
+                if (modal) {
+                    modal.remove();
+                }
             }
         },
         onboard: async function (providerDetail) {
@@ -1863,6 +1881,16 @@
         flush: function () {
             this._connected = undefined;
             this._token = undefined;
+            let provider = this._EIP6963?.provider;
+            if (!provider) {
+                provider = this.getProvider();
+            }
+            provider.removeAllListeners("accountsChanged");
+            const button = document.getElementById("connect-button");
+            const txt = sypher.getUI().connectText;
+            if (button) {
+                button.innerHTML = txt;
+            }
         }
     };
 

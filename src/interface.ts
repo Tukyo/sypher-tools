@@ -174,6 +174,10 @@ export const InterfaceModule: IInterfaceModule = {
         } else if (modalObj.type === "connect") {
             this.applyStyle([modalObj.parent, modalObj.container, modalObj.toggle, modalObj.head, modalObj.title, modalObj.body], mergedParams);
 
+            modalObj.parent.addEventListener('click', (e: MouseEvent) => {
+                if (e.target === modalObj.parent) { modalObj.parent.remove(); }
+            });
+
             append.appendChild(modalObj.parent);
             modalObj.parent.appendChild(modalObj.container);
             modalObj.container.appendChild(modalObj.head);
@@ -338,7 +342,7 @@ export const InterfaceModule: IInterfaceModule = {
                                                 type: "div",
                                                 classes: ["av-b-td-bal"],
                                                 innerHTML: showTokenDetails
-                                                    ? `${sypher.truncateBalance(parseFloat(userBalance.toString()), tokenDecimals)} ${tokenName}`
+                                                    ? `${sypher.truncateBalance(parseFloat(userBalance.toString()))} ${tokenName}`
                                                     : ""
                                             },
                                             {
@@ -629,5 +633,11 @@ export const InterfaceModule: IInterfaceModule = {
         }, { threshold: 0.1 });
 
         elements.forEach(el => observer.observe(el));
+    },
+    getUI: function () {
+        return {
+            theme: this._theme || '',
+            connectText: this._connectText || ''
+        }
     }
 };

@@ -195,11 +195,12 @@ export const CryptoModule: ICryptoModule = {
         if (active) {
             console.log("Listening for account changes...");
             provider.on("accountsChanged", (accounts: string[]) => {
-                if (!accounts.length) { this.disconnect(); }
+                if (!accounts.length) { this.disconnect(); return; }
                 this._connected = accounts[0];
                 window.dispatchEvent(new CustomEvent("sypher:accountChange", { detail: this.getConnected() }));
 
-                provider.removeAllListeners("accountsChanged");
+                const modal = document.getElementById("connect-modal");
+                if (modal) { modal.remove(); }
                 
                 this._connected = undefined; // Refefine as null to allow for reconnection
                 if (this._chain) {
@@ -218,7 +219,11 @@ export const CryptoModule: ICryptoModule = {
                     } else { this.connect(this._chain.chainId, this._EIP6963); }
                 }
             });
-        } else { provider.removeAllListeners("accountsChanged"); }
+        } else { 
+            provider.removeAllListeners("accountsChanged");
+            const modal = document.getElementById("connect-modal");
+            if (modal) { modal.remove(); }
+        }
     },
     onboard: async function (providerDetail: TEIP6963) {
         const userEnv = sypher.userEnvironment();
@@ -710,5 +715,15 @@ export const CryptoModule: ICryptoModule = {
     flush: function () {
         this._connected = undefined;
         this._token = undefined;
+
+        let provider = this._EIP6963?.provider
+        if (!provider) { provider = this.getProvider(); }
+
+        provider.removeAllListeners("accountsChanged");
+
+        const button = document.getElementById("connect-button");
+
+        const txt = sypher.getUI().connectText;
+        if (button) { button.innerHTML = txt; }
     }
 };

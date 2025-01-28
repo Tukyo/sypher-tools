@@ -100,6 +100,14 @@ export interface IInterfaceModule {
         distance?: string,
         length?: string
     ): void;
+
+    /**
+     * @description Fetches UI details
+     */
+    getUI(): {
+        theme: string,
+        connectText: string
+    };
 }
 
 /**
