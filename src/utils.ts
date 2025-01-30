@@ -2,90 +2,8 @@ import { CHAINS } from "./constants";
 import { IHelperModule, ILogModule, ITruncationModule, IWindowModule, TScreenDetails, TUserEnvironment } from "./utils.d";
 
 export const HelperModule: IHelperModule = {
-    validateInput: function (inputs: { [key: string]: any }, rules, context = "validateInput") {
-        if (typeof inputs !== 'object') {
-            throw new TypeError(`${context}: "inputs" must be a valid object.`);
-        }
-        if (typeof rules !== 'object') {
-            throw new TypeError(`${context}: "rules" must be a valid object.`);
-        }
-        if (typeof context !== 'string') {
-            throw new TypeError(`${context}: "context" must be a valid string.`);
-        }
-
-        Object.entries(rules).forEach(([key, rule]) => {
-            const value = inputs[key];
-            if (rule.required && (value === undefined || value === null)) { // Required field validation
-                throw new Error(`${context}: "${key}" is required.`);
-            }
-            if (!rule.required && (value === undefined || value === null)) return; // Skip optional fields
-            if (rule.type === "array") { // Array validation
-                if (!Array.isArray(value)) {
-                    throw new TypeError(`${context}: Validation failed: "${key}" must be an array.`);
-                }
-                
-                if (rule.items) { // Validate each item in the array
-                    value.forEach((item, index) => {
-                        if (rule.items.type && typeof item !== rule.items.type) {
-                            throw new TypeError(`${context}: Validation failed: "${key}[${index}]" must be of type "${rule.items.type}", but received type "${typeof item}".`);
-                        }
-                        if (rule.items.regex && !rule.items.regex.test(item)) {
-                            throw new Error(`${context}: Validation failed: "${key}[${index}]" must match the pattern "${rule.items.regex}".`);
-                        }
-                        if (rule.items.values && !rule.items.values.includes(item)) {
-                            throw new Error(`${context}: Validation failed: "${key}[${index}]" must be one of [${rule.items.values}].`);
-                        }
-                    });
-                }
-    
-                if (rule.length) { // Validate array length
-                    if (rule.length.min !== undefined && value.length < rule.length.min) {
-                        throw new Error(`${context}: Validation failed: "${key}" must have a minimum length of ${rule.length.min}, but got ${value.length}.`);
-                    }
-                    if (rule.length.max !== undefined && value.length > rule.length.max) {
-                        throw new Error(`${context}: Validation failed: "${key}" must have a maximum length of ${rule.length.max}, but got ${value.length}.`);
-                    }
-                }
-            } else if (rule.type && typeof value !== rule.type) { // Type validation for non-arrays
-                throw new TypeError(`${context}: Validation failed: "${key}" must be of type "${rule.type}", but received type "${typeof value}".`);
-            }
-            if (rule.regex && !rule.regex.test(value)) { // Regex validation
-                throw new Error(`${context}: Validation failed: "${key}" must match the pattern "${rule.regex}".`);
-            }
-            if (rule.values && !rule.values.includes(value)) { // Values validation
-                throw new Error(`${context}: Validation failed: "${key}" must be one of [${rule.values}].`);
-            }
-            if (rule.enum && !rule.enum.includes(value)) { // Enum validation
-                throw new Error(`${context}: Validation failed: "${key}" must be one of [${rule.enum}].`);
-            }
-            if (rule.range && (value < rule.range.min || value > rule.range.max)) { // Range validation
-                throw new RangeError(`${context}: Validation failed: "${key}" must be within the range [${rule.range.min}, ${rule.range.max}].`);
-            }
-            if (rule.length) { // Length validation
-                const length = value.length;
-                if (typeof length !== "number") {
-                    throw new TypeError(`${context}: "${key}" must have a valid length property.`);
-                }
-    
-                if (typeof rule.length === "number" && length !== rule.length) { // Exact length
-                    throw new Error(`${context}: "${key}" must have a length of ${rule.length}, but got ${length}.`);
-                }
-    
-                if (typeof rule.length === "object") { // Min and max length
-                    if (rule.length.min !== undefined && length < rule.length.min) {
-                        throw new Error(`${context}: "${key}" must have a minimum length of ${rule.length.min}, but got ${length}.`);
-                    }
-                    if (rule.length.max !== undefined && length > rule.length.max) {
-                        throw new Error(`${context}: "${key}" must have a maximum length of ${rule.length.max}, but got ${length}.`);
-                    }
-                }
-            }
-        });
-        return true;
-    },
     validateChain: function (chain) {
-        const validInput = this.validateInput({ chain }, { chain: { required: true, type: "string" } }, "CryptoModule.validateChain");
-        if (!validInput) { return null; }
+        if (!chain) { throw new Error("CryptoModule.validateChain: Please provide a chain to validate."); }
 
         const chainData = CHAINS[chain];
         if (!chainData) {
@@ -231,29 +149,13 @@ export const LogModule: ILogModule = { // TODO: Add error throwing
 }
 export const TruncationModule: ITruncationModule = {
     truncate: function (string, startLength = 6, endLength = 4) {
-        const validInput = sypher.validateInput(
-                { string, startLength, endLength },
-                {
-                    string: { type: "string", required: true },
-                    startLength: { type: "number", required: false },
-                    endLength: { type: "number", required: false }
-                }, "TruncationModule.truncate"
-            );
-        if (!validInput) { return null; }
+        if (!string) { throw new Error("TruncationModule.truncate: Please provide a string to truncate."); }
 
         if (string.length <= startLength + endLength + 3) { return string; }
         return `${string.slice(0, startLength)}...${string.slice(-endLength)}`;
     },
     truncateBalance: function (balance, decimals = 2, maxLength = 8) {
-        const validInput = sypher.validateInput(
-                { balance, decimals, maxLength },
-                {
-                    balance: { type: "number", required: true },
-                    decimals: { type: "number", required: false },
-                    maxLength: { type: "number", required: false }
-                }, "TruncationModule.truncateBalance"
-            );
-        if (!validInput) { return null; }
+        if (!balance) { throw new Error("TruncationModule.truncateBalance: Please provide a number to truncate."); }
 
         const num = parseFloat(balance.toString());
 

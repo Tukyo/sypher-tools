@@ -263,6 +263,7 @@
 .av-b-td-i {
     width: 30px;
     height: 30px;
+    border-radius: 50px;
 }
 
 .av-b-td-val,

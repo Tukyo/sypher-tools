@@ -62,8 +62,7 @@ export const CryptoModule: ICryptoModule = {
         }
     },
     connect: async function (chain, providerDetail: TEIP6963 | null = null) {
-        const validInput = sypher.validateInput({ chain }, { chain: { type: "string", required: true } }, "CryptoModule.connect");
-        if (!validInput) { return null; }
+        if (!chain) { throw new Error("CryptoModule.connect: Chain is required"); }
 
         console.log("Chain: ", chain, "Detail: ", providerDetail);
 
@@ -137,6 +136,7 @@ export const CryptoModule: ICryptoModule = {
                 const detailedError = error instanceof Error ? `${error.message}\n${error.stack}` : JSON.stringify(error, Object.getOwnPropertyNames(error));
                 if ((error as any).code === 4001) {
                     console.log("User denied wallet access...");
+                    window.dispatchEvent(new CustomEvent("sypher:connectFail", { detail: "User denied wallet access" }));
 
                     if (connectBody) {
                         const params: TLoaderParams = {
@@ -264,10 +264,12 @@ export const CryptoModule: ICryptoModule = {
             } else { return; }
         }
     },
-    // getChain: function () { console.log(this.chain); return this._chain; },
+    getChain: function () {
+        // console.log(this._chain);
+        return this._chain;
+    },
     switchChain: async function (chain) {
-        const validInput = sypher.validateInput({ chain }, { chain: { type: "string", required: true } }, "CryptoModule.switchChain");
-        if (!validInput) { return; }
+        if (!chain) { throw new Error("CryptoModule.switchChain: Chain is required"); }
 
         let provider = this._EIP6963?.provider as EIP1193Provider
         if (!provider) { provider = this.getProvider(); }
@@ -314,8 +316,7 @@ export const CryptoModule: ICryptoModule = {
         }
     },
     getChainData: async function (chain) {
-        const validInput = sypher.validateInput({ chain }, { chain: { type: "string", required: true } }, "CryptoModule.getChainData");
-        if (!validInput) { return null; }
+        if (!chain) { throw new Error("CryptoModule.getChainData: Chain is required"); }
 
         const chainValidation = sypher.validateChain(chain);
         if (!chainValidation) { return null; }
@@ -345,14 +346,11 @@ export const CryptoModule: ICryptoModule = {
         }
     },
     getPriceFeed: async function (chain, pair = "eth") {
-        const validInput = sypher.validateInput(
-            { chain, pair },
-            {
-                chain: { type: "string", required: true },
-                pair: { type: "string", required: false }
-            }, "CryptoModule.getPriceFeed"
-        );
-        if (!validInput) { return null; }
+        if (!chain) { throw new Error("CryptoModule.getPriceFeed: Chain is required"); }
+
+        if (this._ethPrice && this._ethPrice.value && this._ethPrice.timestamp && (Date.now() - this._ethPrice.timestamp) < 60000) {
+            return this._ethPrice.value;
+        }
 
         const ethereum = this.getProvider();
         if (!ethereum) { return null; }
@@ -382,20 +380,17 @@ export const CryptoModule: ICryptoModule = {
             const price = ethers.utils.formatUnits(roundData.answer, 8);
             console.log(`ETH Price on ${chain}: $${price}`);
 
+            this._ethPrice = { value: price, timestamp: Date.now() };
+
             return price;
         } catch (error: unknown) {
             throw new Error(`CryptoModule.getPriceFeed: ${error instanceof Error ? error.message : JSON.stringify(error)}`);
         }
     },
     getTokenDetails: async function (chain, contractAddress) {
-        const validInput = sypher.validateInput(
-            { chain, contractAddress },
-            {
-                chain: { type: "string", required: true },
-                contractAddress: { type: "string", required: true, regex: ADDRESS_REGEXP }
-            }, "CryptoModule.getTokenDetails"
-        );
-        if (!validInput) { return null; }
+        if (!chain) { throw new Error("CryptoModule.getTokenDetails: Chain is required"); }
+        if (!contractAddress) { throw new Error("CryptoModule.getTokenDetails: Contract address is required"); }
+        if (!contractAddress.match(ADDRESS_REGEXP)) { throw new Error("CryptoModule.getTokenDetails: Invalid contract address"); }
 
         try {
             let account = this._connected;
@@ -422,15 +417,10 @@ export const CryptoModule: ICryptoModule = {
         }
     },
     getPriceV2: async function (chain, poolAddress, pair) {
-        const validInput = sypher.validateInput(
-            { chain, poolAddress, pair },
-            {
-                chain: { type: "string", required: true },
-                poolAddress: { type: "string", required: true, regex: ADDRESS_REGEXP },
-                pair: { type: "string", required: true }
-            }, "CryptoModule.getPriceV2"
-        );
-        if (!validInput) { return null; }
+        if (!chain) { throw new Error("CryptoModule.getPriceV2: Chain is required"); }
+        if (!poolAddress) { throw new Error("CryptoModule.getPriceV2: Pool address is required"); }
+        if (!poolAddress.match(ADDRESS_REGEXP)) { throw new Error("CryptoModule.getPriceV2: Invalid pool address"); }
+        if (!pair) { throw new Error("CryptoModule.getPriceV2: Pair is required"); }
 
         const ethereum = this.getProvider();
         if (!ethereum) { return null; }
@@ -506,16 +496,12 @@ export const CryptoModule: ICryptoModule = {
         }
     },
     getPriceV3: async function (chain, contractAddress, poolAddress, pair) {
-        const validInput = sypher.validateInput(
-            { chain, contractAddress, poolAddress, pair },
-            {
-                chain: { type: "string", required: true },
-                contractAddress: { type: "string", required: true, regex: ADDRESS_REGEXP },
-                poolAddress: { type: "string", required: true, regex: ADDRESS_REGEXP },
-                pair: { type: "string", required: true }
-            }, "CryptoModule.getPriceV3"
-        );
-        if (!validInput) { return null; }
+        if (!chain) { throw new Error("CryptoModule.getPriceV3: Chain is required"); }
+        if (!contractAddress) { throw new Error("CryptoModule.getPriceV3: Contract address is required"); }
+        if (!contractAddress.match(ADDRESS_REGEXP)) { throw new Error("CryptoModule.getPriceV3: Invalid contract address"); }
+        if (!poolAddress) { throw new Error("CryptoModule.getPriceV3: Pool address is required"); }
+        if (!poolAddress.match(ADDRESS_REGEXP)) { throw new Error("CryptoModule.getPriceV3: Invalid pool address"); }
+        if (!pair) { throw new Error("CryptoModule.getPriceV3: Pair is required"); }
 
         const ethereum = this.getProvider();
         if (!ethereum) { return null; }
@@ -580,15 +566,11 @@ export const CryptoModule: ICryptoModule = {
         }
     },
     getPoolV3: async function (chain, contractAddress, poolAddress) {
-        const validInput = sypher.validateInput(
-            { chain, contractAddress, poolAddress },
-            {
-                chain: { type: "string", required: true },
-                contractAddress: { type: "string", required: true, regex: ADDRESS_REGEXP },
-                poolAddress: { type: "string", required: true, regex: ADDRESS_REGEXP }
-            }, "CryptoModule.getPoolV3"
-        );
-        if (!validInput) { return null; }
+        if (!chain) { throw new Error("CryptoModule.getPoolV3: Chain is required"); }
+        if (!contractAddress) { throw new Error("CryptoModule.getPoolV3: Contract address is required"); }
+        if (!contractAddress.match(ADDRESS_REGEXP)) { throw new Error("CryptoModule.getPoolV3: Invalid contract address"); }
+        if (!poolAddress) { throw new Error("CryptoModule.getPoolV3: Pool address is required"); }
+        if (!poolAddress.match(ADDRESS_REGEXP)) { throw new Error("CryptoModule.getPoolV3: Invalid pool address"); }
 
         const ethereum = this.getProvider();
         if (!ethereum) { return null; }
@@ -639,14 +621,10 @@ export const CryptoModule: ICryptoModule = {
         }
     },
     getUserValue: function (balance, price) {
-        const validInput = sypher.validateInput(
-            { balance, price },
-            {
-                balance: { type: "object", required: true },
-                price: { type: "number", required: true }
-            }, "CryptoModule.getUserValue"
-        );
-        if (!validInput) { return null; }
+        if (!balance) { throw new Error("CryptoModule.getUserValue: Balance is required"); }
+        if (!price) { throw new Error("CryptoModule.getUserValue: Price is required"); }
+        if (typeof balance !== "object") { throw new Error("CryptoModule.getUserValue: Invalid balance"); }
+        if (typeof price !== "number") { throw new Error("CryptoModule.getUserValue: Invalid price"); }
 
         try {
             const value = parseFloat(balance.toString()) * parseFloat(price.toString());
@@ -657,11 +635,7 @@ export const CryptoModule: ICryptoModule = {
         }
     },
     clean: function (tokenDetails: TTokenDetails) {
-        const validInput = sypher.validateInput(
-            { tokenDetails },
-            { tokenDetails: { type: "object", required: true } }, "CryptoModule.clean"
-        );
-        if (!validInput) { return null; }
+        if (!tokenDetails) { throw new Error("CryptoModule.clean: Token details are required"); }
 
         const { contractAddress, poolAddress, balance, decimals, name, symbol, icon, totalSupply, tokenPrice, userValue, version, pair } = tokenDetails;
 

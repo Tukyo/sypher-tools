@@ -4,13 +4,7 @@ import { IInterfaceModule, TButtonParams, TConnectModal, TElementParams, TLoader
 
 export const InterfaceModule: IInterfaceModule = {
     initTheme: function (theme = "default") {
-        const validInput = sypher.validateInput(
-            { theme },
-            {
-                theme: { type: "string", required: true }
-            }, "InterfaceModule.initTheme"
-        );
-        if (!validInput) { return; }
+        if (typeof theme !== "string") { throw new Error(`InterfaceModule.initTheme: Theme must be a string.`); }
         if (this._theme) { return; }
 
         if (theme === "none") { theme = "custom"; }
@@ -26,15 +20,8 @@ export const InterfaceModule: IInterfaceModule = {
         }
     },
     applyStyle: function (elements, params) {
-        const validInput = sypher.validateInput(
-            { elements, ...params },
-            {
-                elements: { type: "array", required: true },
-                type: { type: "string", required: true },
-                theme: { type: "string", required: true }
-            }, "InterfaceModule.applyStyle"
-        );
-        if (!validInput) { return; }
+        if (!elements || elements.length === 0) { throw new Error(`InterfaceModule.applyStyle: Elements are required.`); }
+        if (!params || typeof params !== "object") { throw new Error(`InterfaceModule.applyStyle: Params object is required.`); }
 
         const type = params.type;
 
@@ -138,17 +125,6 @@ export const InterfaceModule: IInterfaceModule = {
     createModal: async function (params) {
         const defaultParams = { append: document.body, type: "none", theme: "none", initCrypto: {} as TInitParams };
         const mergedParams = { ...defaultParams, ...params };
-
-        const validInput = sypher.validateInput(
-            { ...mergedParams },
-            {
-                append: { type: "object", required: false },
-                type: { type: "string", required: true },
-                theme: { type: "string", required: false }
-            }, "InterfaceModule.createModal"
-        );
-        if (!validInput) { return null; }
-
         const { append, type, theme, initCrypto } = mergedParams;
 
         if (!MODAL_TYPES.includes(type)) { throw new Error(`InterfaceModule.createModal: Type '${type}' not found.`); }
@@ -435,14 +411,8 @@ export const InterfaceModule: IInterfaceModule = {
         } else { return null; } //TODO: Throw error
     },
     initModal: function (type, theme = "custom") {
-        const validInput = sypher.validateInput(
-            { type },
-            {
-                type: { type: "string", required: true },
-                theme: { type: "string", required: false }
-            }, "InterfaceModule.initModal"
-        );
-        if (!validInput) { return null; }
+        if (!type || typeof type !== "string") { throw new Error(`InterfaceModule.initModal: Type is required.`); }
+        if (!MODAL_TYPES.includes(type)) { throw new Error(`InterfaceModule.initModal: Type '${type}' not found.`); }
 
         if (type === "none" || type === "custom") { return null; } //TODO: Enable custom modals
 
@@ -596,14 +566,7 @@ export const InterfaceModule: IInterfaceModule = {
         applyParallax();
     },
     fade: function (distance = '20px', length = '0.5s') {
-        const validInput = sypher.validateInput(
-            { distance, length },
-            {
-                distance: { type: "string", required: false },
-                length: { type: "string", required: false }
-            }, "InterfaceModule.fade"
-        );
-        if (!validInput) { return; }
+        if (typeof distance !== "string" || typeof length !== "string") { throw new Error(`InterfaceModule.fade: Params must be strings.`); }
 
         const elements = document.querySelectorAll('[data-fade]') as NodeListOf<HTMLElement>;;
         if (elements.length === 0) {

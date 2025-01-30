@@ -1,5 +1,6 @@
 import { TInitParams } from "./crypto.d";
 
+// #region INTERFACE
 export interface IInterfaceModule {
     /**
      * @description Initializes a theme by adding a stylesheet to the head of the document.
@@ -109,31 +110,15 @@ export interface IInterfaceModule {
         connectText: string
     };
 }
-
-/**
- * @description Type declaration for the Log Modal
- * @typedef {object} LogModal
- * @property {HTMLElement} parent - The parent element to append the modal
- * @property {HTMLElement} container - The container element for the modal
- * @property {HTMLElement} toggle - The toggle button for the modal
- */
+// #endregion INTERFACE
+////
+// #region TYPES
 export type TLogModal = {
     type: "log";
     parent: HTMLElement;
     container: HTMLElement;
     toggle: HTMLElement;
 }
-
-/**
- * @description Type declaration for the Connect Modal
- * @typedef {object} ConnectModal
- * @property {HTMLElement} parent - The parent element to append the modal
- * @property {HTMLElement} container - The container element for the modal
- * @property {HTMLElement} toggle - The toggle button for the modal
- * @property {HTMLElement} head - The header element for the modal
- * @property {HTMLElement} title - The title element for the modal
- * @property {HTMLElement} body - The body element for the modal
- */
 export type TConnectModal = {
     type: "connect";
     parent: HTMLElement;
@@ -143,31 +128,11 @@ export type TConnectModal = {
     title: HTMLElement;
     body: HTMLElement;
 }
-
-/**
- * @description Type declaration for connect modal items
- * @typedef {object} CModalItem
- * @property {HTMLElement} container - The container element for the item
- * @property {HTMLElement} icon - The icon element for the item
- * @property {HTMLElement} name - The name element for the item
- */
 export type TCModalItem = {
     container: HTMLElement;
     icon: HTMLElement;
     name: HTMLElement;
 }
-
-/**
- * @description Type declaration for the button parameters
- * @typedef {object} ButtonParams
- * @property {string} type - The type of button to create
- * @property {string} text - The text to display on the button
- * @property {string} icon - The icon to display on the button
- * @property {boolean} modal - Whether the button should open a modal
- * @property {string} theme - The theme to apply to the button
- * @property {HTMLElement} append - The element to append the button
- * @property {function} onClick - The function to execute when the button is clicked
- */
 export type TButtonParams = {
     type?: string,
     text: string,
@@ -178,16 +143,6 @@ export type TButtonParams = {
     onClick?: () => void,
     initCrypto?: TInitParams
 }
-
-/**
- * @description Type declaration for the loader parameters
- * @typedef {object} LoaderParams
- * @property {HTMLElement} element - The target HTML element where the loader or text will be shown
- * @property {string} loaderHTML - The HTML content to use for the loader. Example: `<div class="loader"></div>`
- * @property {boolean} isEnabled - Whether to show the loader (true) or the new text (false)
- * @property {string} newText - The new text to display when the loader is disabled
- * @property {boolean} replace - Whether to replace the existing content or append to it
- */
 export type TLoaderParams = {
     element: HTMLElement,
     loaderHTML?: string,
@@ -195,20 +150,6 @@ export type TLoaderParams = {
     newText?: string
     replace?: boolean
 }
-
-/**
- * @description Type declaration for the element parameters
- * @typedef {object} ElementParams
- * @property {HTMLElement} append
- * @property {string} type
- * @property {string} id
- * @property {string} theme
- * @property {object} attributes
- * @property {object} styles
- * @property {object} events
- * @property {string} innerHTML
- * @property {ElementParams[]} children - The children elements to append to the element
- */
 export type TElementParams = {
     append?: HTMLElement;
     type: string;
@@ -220,3 +161,4 @@ export type TElementParams = {
     innerHTML?: string;
     children?: TElementParams[];
 };
+// #endregion TYPES

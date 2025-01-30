@@ -1,93 +1,82 @@
-export interface IChainConfig {
-    params: { chainId: string }[];
-    priceFeeds: Record<string, string>;
-    pairAddresses: Record<string, string>;
-}
+// #region INTERFACE
 export interface ICryptoModule {
     /**
-     * @description Initialize the Crypto Module by fetching the token balance, price, and user value.
-     * @param {string} chain - The target chain to get the price from. Connected wallet must be on a supported chain
-     * @param {string} contractAddress - The CA for the token
-     * @param {string} poolAddress - The LP address for the token
-     * @param {string} version - The target Uniswap version (V2 or V3)
-     * @param {string} pair - The paired asset to get the price in (default: "eth")
-     * @param {string} icon - The icon of the token
-     * @returns {Promise<object | null>}
-     * { contractAddress, poolAddress, balance, decimals, name, symbol, totalSupply, tokenPrice, userValue }
-     * 
+     * Initialize the Crypto Module by fetching TCleanedDetails.
      * -------> Call this function to get started! <-------
      */
     initCrypto(params: TInitParams): Promise<TCleanedDetails | null>;
 
     /**
-     * @description Connect the user's wallet to the website.
-     * @param {string} chain - The target chain to connect to
-     * @param {TEIP6963} providerDetail - The provider details for the wallet
+     * Connect the user's wallet to the website.
      * @returns {Promise<string>} The connected wallet address
-     * @see CHAINS - for supported chains
+     * @see CHAINS
+     * @see TEIP6963
      */
     connect(chain: string, providerDetail: TEIP6963 | null = null): Promise<string> | null;
 
     /**
-     * @description Disconnect the user's wallet from the website.
+     * Disconnect the user's wallet from the website.
      */
     disconnect(): void;
 
     /**
-     * @description Detect when the connected account changes.
+     * Detect when the connected account changes.
      * @param {boolean} active - Add or remove the event listener
      */
     accountChange(active: boolean): void;
 
     /**
-     * @description Onboard the user if they have no wallet.
+     * Onboard the user if they have no wallet.
      * @see TEIP6963
      */
     onboard(providerDetail: TEIP6963): void;
 
     /**
-     * @description Connection status.
-     * 
-     * @type {string | null}
+     * Connection status.
      */
     _connected?: string | null;
 
     /**
-     * @description Switch the connected wallet to a specified chain.
+     * Get the chain the wallet is connected to.
+     */
+    getChain(): TChainParams | null | undefined;
+
+    /**
+     * Switch the connected wallet to a specified chain.
      * @param {string} chain - The target chain to switch to
-     * @see CHAINS - for supported chains
+     * @see CHAINS
      */
     switchChain(chain: string): void;
 
     /**
-     * @description The chain the wallet is currently connected to.
-     * 
-     * @type {TChainParams | null}
+     * The chain the wallet is currently connected to.
      */
     _chain?: TChainParams | null;
 
     /**
-     * @description Get the data for a specific chain from chainlist
+     * Get the data for a specific chain from chainlist
      * @param {string} chain - The target chain to get the data for
      * @returns {Promise<IChainlistData | null>} The chainlist data for the specified chain
-     * @see CHAINS - for supported chains
+     * @see CHAINS
      */
     getChainData(chain: string): Promise<IChainlistData | null>;
 
     /**
-     * @description Get the current price of Ethereum on a specified chain
+     * Get the current price of Ethereum on a specified chain
      * @param {string} chain - The target chain to get the price from. Connected wallet must be on a supported chain
      * @param {string} pair - The paired asset to get the price in (default: "eth")
      * @returns {Promise<string | null>} The current price of Ethereum on the specified chain
-     * @see CHAINS - for supported chains
+     * @see CHAINS
      */
     getPriceFeed(
         chain: string,
         pair?: string
     ): Promise<string | null>;
 
+    _ethPrice?: {value: string, timestamp: number} | null;
+
     /**
-     * @description Get the details of a specified ERC20 token.
+     * Get the details of a specified ERC20 token.
      * @param {string} chain - The chain to fetch the token details on
      * @param {string} contractAddress - The target ERC20 contract address
      * @returns {Promise<{ balance: any; decimals: any; name: any; symbol: any; totalSupply: any } | null>} The details of the specified ERC20 token
@@ -98,7 +87,7 @@ export interface ICryptoModule {
     ): Promise<{ balance: any; decimals: any; name: any; symbol: any; totalSupply: any } | null>;
 
     /**
-     * @description Get the price of a token in a Uniswap V2 pool.
+     * Get the price of a token in a Uniswap V2 pool.
      * @param {string} chain - The target chain to get the price from. Connected wallet must be on a supported chain
      * @param {string} poolAddress - The target Uniswap V2 pool address
      * @param {string} pair - The pair token to calculate price against
@@ -111,7 +100,7 @@ export interface ICryptoModule {
     ): Promise<number | null>;
 
     /**
-     * @description Get the price of a token in a Uniswap V3 pool.
+     * Get the price of a token in a Uniswap V3 pool.
      * @param {string} chain - The target chain to get the price from - Connected wallet must be on a supported chain
      * @param {string} contractAddress - The CA for the token
      * @param {string} poolAddress - The LP address for the token
@@ -127,7 +116,7 @@ export interface ICryptoModule {
     ): Promise<number | null>;
 
     /**
-     * @description Get the pool details of a Uniswap V3 pool.
+     * Get the pool details of a Uniswap V3 pool.
      * @param {string} contractAddress - The CA for the token
      * @param {string} poolAddress - The LP address for the token
      * @returns {Promise<TPoolV3Data | null>} The pool details of the specified Uniswap V3 pool
@@ -140,7 +129,7 @@ export interface ICryptoModule {
     ): Promise<TPoolV3Data | null>;
 
     /**
-     * @description Calculate the value of a user's token holdings.
+     * Calculate the value of a user's token holdings.
      * @param {object} balance - The user's token balance (BN)
      * @param {number} price - The current price of the token
      * @returns {number} The value of the user's token holdings
@@ -151,241 +140,58 @@ export interface ICryptoModule {
     ): number | null;
 
     /**
-     * @description Clean up the token details for easier readability.
+     * Clean up the token details for easier readability.
      * @param {object} tokenDetails - The raw token details object
      * @returns {object} The cleaned token details object
      */
     clean(tokenDetails: TTokenDetails): TCleanedDetails | null;
 
     /**
-     * @description Get the cleaned token details.
+     * Get the cleaned token details.
      * @returns {object | null} The cleaned token details
      */
     getCleaned(): TCleanedDetails | null;
 
     /**
-     * @description The stored token details.
-     * 
-     * @type {TTokenDetails | null}
+     * The stored token details.
      */
     _token?: TCleanedDetails | null;
 
     /**
-     * @description Initialize the discovery of all installed wallets.
+     * Initialize the discovery of all installed wallets.
      */
     async initProviderSearch(): void;
 
     /**
-     * @description Get the provider for the current wallet connection.
-     * @returns {any} The provider for the current wallet connection
+     * Get the provider for the current wallet connection.
+     * @returns Either the EIP6963 provider or the EIP1193 window.ethereum provider
      */
-    getProvider(): EIP1193Provider;
+    getProvider(): EIP1193Provider | any;
 
     /**
-     * @description The stored provider.
+     * The stored provider.
      */
     _EIP6963?: TEIP6963 | null;
 
     /**
-     * @description Get the connected wallet address.
+     * Get the connected wallet address.
      * @returns {string | null} The connected wallet address or `null` if no wallet is connected
      */
     getConnected(): string | null;
 
     /**
-     * @description Clear the internal memory of the CryptoModule.
+     * Clear the internal memory of the CryptoModule.
      */
     flush(): void;
 }
-
-// #region TOKEN
-/**
- * @description The parameters to initialize the CryptoModule
- * @typedef {object} TInitParams
- * @property {string} chain - The target chain to get the price from. Connected wallet must be on a supported chain
- * @property {string} contractAddress - The CA for the token
- * @property {string} poolAddress - The LP address for the token
- * @property {string} version - The target Uniswap version (V2 or V3)
- * @property {string} pair - The paired asset to get the price in (default: "eth")
- * @property {TEIP6963} detail - The provider details for the wallet
- */
-export type TInitParams = {
-    chain: string;
-    contractAddress: string;
-    poolAddress: string;
-    version: string;
-    pair?: string;
-    detail?: TEIP6963
-    icon?: string
+export interface IChainConfig {
+    params: { chainId: string }[];
+    priceFeeds: Record<string, string>;
+    pairAddresses: Record<string, string>;
 }
-/**
- * @description Raw token details fetched in the CryptoModule
- * @typedef {object} TTokenDetails
- * @property {string} contractAddress - The contract address of the token
- * @property {string} poolAddress - The pool address of the token
- * @property {string} balance - The balance of the token
- * @property {number} decimals - The decimals of the token
- * @property {string} name - The name of the token
- * @property {string} symbol - The symbol of the token
- * @property {string} icon - The icon of the token
- * @property {string} totalSupply - The total supply of the token
- * @property {number} tokenPrice - The price of the token
- * @property {number} userValue - The value of the user's holdings
- * @property {string} version - The version of the uniswap pool
- * @property {string} pair - The paired asset to get the price in
- * @see TCleanedDetails
- */
-export type TTokenDetails = {
-    contractAddress: string;
-    poolAddress: string;
-    balance: string;
-    decimals: number;
-    name: string;
-    symbol: string;
-    icon: string;
-    totalSupply: string;
-    tokenPrice: number;
-    userValue: number;
-    version: string;
-    pair: string;
-}
-/**
- * @description The final cleaned token details
- * @typedef {object} TCleanedDetails
- * @property {string} contractAddress - The contract address of the token
- * @property {string} poolAddress - The pool address of the token
- * @property {number} balance - The balance of the token
- * @property {number} decimals - The decimals of the token
- * @property {string} name - The name of the token
- * @property {string} symbol - The symbol of the token
- * @property {string} icon - The icon of the token
- * @property {number} totalSupply - The total supply of the token
- * @property {number} tokenPrice - The price of the token
- * @property {string} userValue - The value of the user's holdings
- * @property {string} version - The version of the uniswap pool
- * @property {string} pair - The paired asset to get the price in
- * 
- * @see TTokenDetails
- */
-export type TCleanedDetails = {
-    contractAddress: string;
-    poolAddress: string;
-    balance: number;
-    decimals: number;
-    name: string;
-    symbol: string;
-    icon: string;
-    totalSupply: number;
-    tokenPrice: number;
-    userValue: string;
-    version: string;
-    pair: string;
-}
-/**
- * @description The data for a Uniswap V3 pool
- * @typedef {object} TPoolV3Data
- * @property {ethers.BigNumber} sqrtPriceX96 - The square root price of the pool
- * @property {string} token0 - The address of token0
- * @property {string} token1 - The address of token1
- * @property {number} decimals0 - The decimals of token0
- * @property {number} decimals1 - The decimals of token1
- * @property {ethers.BigNumber} liquidity - The liquidity of the pool
- */
-export type TPoolV3Data = {
-    sqrtPriceX96: ethers.BigNumber;
-    token0: string;
-    token1: string;
-    decimals0: number;
-    decimals1: number;
-    liquidity: ethers.BigNumber;
-}
-// #endregion TOKEN
-////
-// #region CHAIN
 export interface IChainlistData {
     chainlistData: TChainlistData;
     params: TChainParams;
-}
-/**
- * @description The pricefeed data for a chain from chainlist
- * @typedef {object} IChainlistData
- * @property {string} name - The name of the chain
- * @property {number} chainId - The chainId of the chain
- * @property {object} nativeCurrency - The native currency of the chain
- * @property {string} nativeCurrency.name - The name of the native currency
- * @property {string} nativeCurrency.symbol - The symbol of the native currency
- * @property {number} nativeCurrency.decimals - The decimals of the native currency
- * @property {string[]} rpc - The RPC URLs for the chain
- * @property {object[]} explorers - The explorers for the chain
- * @property {string} explorers.url - The URL of the explorer
- * @property {string} explorers.name - The name of the explorer
- * @property {string} explorers.standard - The standard of the explorer
- * 
- * @see TChainParams
- * @see CHAINS
- */
-export type TChainlistData = {
-    name: string;
-    chainId: number;
-    nativeCurrency: {
-        name: string;
-        symbol: string;
-        decimals: number;
-    };
-    rpc: string[];
-    explorers?: {
-        url: string;
-        name?: string;
-        standard?: string;
-    }[];
-};
-export type TChainParams = {
-    chainId: string;
-    chainName: string;
-    nativeCurrency: {
-        name: string;
-        symbol: string;
-        decimals: number;
-    };
-    rpcUrls: string[];
-    blockExplorerUrls: string[];
-}
-// #endregion CHAIN
-////
-// #region PROVIDER
-interface ProviderRpcError extends Error {
-    code: number;
-    data?: unknown;
-}
-interface RequestArguments {
-    readonly method: string;
-    readonly params?: readonly unknown[] | object;
-}
-/**
- * @description The Ethereum provider
- */
-export type TEthereumProvider = { request: (args: { method: string; params?: any[] }) => Promise<any>; };
-/**
- * @description Discovered providers
- * @typedef {object} TEIP6963
- * @property {TProviderInfo} info - The provider info
- */
-export type TEIP6963 = { info: TProviderInfo, provider: any; }
-/**
- * @description Provider info
- * @typedef {object} TProviderInfo
- * @property {string} icon - The icon encoded in base64
- * @property {string} name - The name of the provider
- * @property {string} rdns - The reverse DNS of the provider
- * @property {string} uuid - The UUID of the provider
- * @property {boolean} onboard - Flag to signal if the provider is a placeholder
- */
-export type TProviderInfo = {
-    icon: string,
-    name: string,
-    rdns: string,
-    uuid: string,
-    onboard: TOnboardInfo
 }
 export interface EIP1193Provider {
     isStatus?: boolean
@@ -404,21 +210,143 @@ export interface EIP1193Provider {
         params?: Array<unknown>
     }) => Promise<unknown>
 }
-/**
- * @description Onboard info
- * @typedef {object} TOnboardInfo
- * @property {boolean} bool - Flag to signal if the provider is a placeholder
- * @property {string} link - The URL to onboard the provider
- * @property {string} deeplink - The deeplink to onboard the provider
- * @property {object} fallbacklinks
- */
-export type TOnboardInfo = {
-    bool: boolean,
-    link: string,
-    deeplink: string,
-    fallback: {
-        ios: string,
-        android: string
-    }
+interface ProviderRpcError extends Error {
+    code: number;
+    data?: unknown;
 }
-// #endregion PROVIDER
+interface RequestArguments {
+    readonly method: string;
+    readonly params?: readonly unknown[] | object;
+}
+// #endregion INTERFACE
+////
+// #region TYPES
+////
+    // #region PROVIDER
+    /**
+     * Discovered EIP6963 providers
+     * @property {TProviderInfo} - Custom EIP6963 Info Object containing onboarding properties : { icon, name, rdns, uuid, onboard }
+     * @property {any} - EIP1193Provider 'any' used for type ignorance
+     */
+    export type TEIP6963 = { 
+        info: TProviderInfo,
+        provider: any;
+    }
+    /**
+     * Custom EIP6963 Provider Info containing onboarding properties
+     */
+    export type TProviderInfo = {
+        icon: string,
+        name: string,
+        rdns: string,
+        uuid: string,
+        onboard: TOnboardInfo
+    }
+    export type TOnboardInfo = {
+        bool: boolean,
+        link: string,
+        deeplink: string,
+        fallback: {
+            ios: string,
+            android: string
+        }
+    }
+    // #endregion PROVIDER
+////
+    // #region TOKEN
+    /**
+     * Parameters to initialize the CryptoModule
+     */
+    export type TInitParams = {
+        chain: string;
+        contractAddress: string;
+        poolAddress: string;
+        version: string;
+        pair?: string;
+        detail?: TEIP6963
+        icon?: string
+    }
+    /**
+     * Raw token details fetched pre-cleaning in the CryptoModule
+     * @see TCleanedDetails
+     */
+    export type TTokenDetails = {
+        contractAddress: string;
+        poolAddress: string;
+        balance: string;
+        decimals: number;
+        name: string;
+        symbol: string;
+        icon: string;
+        totalSupply: string;
+        tokenPrice: number;
+        userValue: number;
+        version: string;
+        pair: string;
+    }
+    /**
+     * Cleaned token details stored in the CryptoModule
+     * @see TTokenDetails
+     */
+    export type TCleanedDetails = {
+        contractAddress: string;
+        poolAddress: string;
+        balance: number;
+        decimals: number;
+        name: string;
+        symbol: string;
+        icon: string;
+        totalSupply: number;
+        tokenPrice: number;
+        userValue: string;
+        version: string;
+        pair: string;
+    }
+    /**
+     * Uniswap V3 pool
+     */
+    export type TPoolV3Data = {
+        sqrtPriceX96: ethers.BigNumber;
+        token0: string;
+        token1: string;
+        decimals0: number;
+        decimals1: number;
+        liquidity: ethers.BigNumber;
+    }
+    // #endregion TOKEN
+////
+    // #region CHAIN
+    /**
+     * Pricefeed data for a chain from chainlist
+     * @see TChainParams
+     * @see CHAINS
+     */
+    export type TChainlistData = {
+        name: string;
+        chainId: number;
+        nativeCurrency: {
+            name: string;
+            symbol: string;
+            decimals: number;
+        };
+        rpc: string[];
+        explorers?: {
+            url: string;
+            name?: string;
+            standard?: string;
+        }[];
+    };
+    export type TChainParams = {
+        chainId: string;
+        chainName: string;
+        nativeCurrency: {
+            name: string;
+            symbol: string;
+            decimals: number;
+        };
+        rpcUrls: string[];
+        blockExplorerUrls: string[];
+    }
+    // #endregion CHAIN
+////
+// #endregion TYPES

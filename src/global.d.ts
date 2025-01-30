@@ -1,4 +1,3 @@
-import { TEthereumProvider } from "./crypto.d";
 import { SypherNamespace } from "./index";
 
 declare global {

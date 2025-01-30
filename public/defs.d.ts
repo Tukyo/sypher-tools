@@ -403,21 +403,6 @@ declare namespace sypher {
     ): void;
 
     /**
-     * @description Validate the inputs based on the rules provided.
-     * @param {object} inputs - The inputs to validate
-     * @param {object} rules - The rules to validate the inputs against
-     * @param {string} [context="validateInput"] - The context of the validation
-     * @returns {boolean} The validation status
-     * 
-     * @interface IHelperModule
-     */
-    declare function validateInput(
-        inputs: object,
-        rules: object,
-        context ?: string
-    ): boolean;
-
-    /**
      * @description Validate the chain for methods that require support.
      * @param {string} chain - The chain to validate
      * @returns {{ chainData: object, chainId: string }} The chain data and chainId for the specified chain

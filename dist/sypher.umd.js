@@ -1273,6 +1273,7 @@
                     const detailedError = error instanceof Error ? `${error.message}\n${error.stack}` : JSON.stringify(error, Object.getOwnPropertyNames(error));
                     if (error.code === 4001) {
                         console.log("User denied wallet access...");
+                        window.dispatchEvent(new CustomEvent("sypher:connectFail", { detail: "User denied wallet access" }));
                         if (connectBody) {
                             const params = {
                                 element: connectBody,
@@ -1520,6 +1521,9 @@
             if (!validInput) {
                 return null;
             }
+            if (this._ethPrice && this._ethPrice.value && this._ethPrice.timestamp && (Date.now() - this._ethPrice.timestamp) < 60000) {
+                return this._ethPrice.value;
+            }
             const ethereum = this.getProvider();
             if (!ethereum) {
                 return null;
@@ -1554,6 +1558,7 @@
                 const roundData = await contract.latestRoundData();
                 const price = ethers$1.ethers.utils.formatUnits(roundData.answer, 8);
                 console.log(`ETH Price on ${chain}: $${price}`);
+                this._ethPrice = { value: price, timestamp: Date.now() };
                 return price;
             }
             catch (error) {
