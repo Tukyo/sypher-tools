@@ -2,12 +2,10 @@
 export interface IHelperModule {
     /**
      * Validate the chain for methods that require support.
-     * @param {string} chain - The chain to validate
-     * @returns {{ chainData: object, chainId: string }} The chain data and chainId for the specified chain
      */
     validateChain(
         chain: string
-    ): { chainData: object, chainId: string } | null;
+    ): Promise<string | null>;
 }
 export interface ILogModule {
     /**

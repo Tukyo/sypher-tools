@@ -1,250 +1,27 @@
-import { ethers as ethers$1 } from 'ethers';
-
-const ADDRESS_REGEXP = /^0x[a-fA-F0-9]{40}$/;
-const CHAINS = {
-    ethereum: {
-        params: [{ chainId: "0x1" }],
-        priceFeeds: {
-            eth: "0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419"
-        },
-        pairAddresses: {
-            eth: "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"
-        }
-    },
-    arbitrum: {
-        params: [{ chainId: "0xa4b1" }],
-        priceFeeds: {
-            eth: "0x639Fe6ab55C921f74e7fac1ee960C0B6293ba612",
-            arb: "0xb2A824043730FE05F3DA2efaFa1CBbe83fa548D6"
-        },
-        pairAddresses: {
-            eth: "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
-            arb: "0xB50721BCf8d664c30412Cfbc6cf7a15145234ad1"
-        }
-    },
-    optimism: {
-        params: [{ chainId: "0xa" }],
-        priceFeeds: {
-            eth: "0xb7B9A39CC63f856b90B364911CC324dC46aC1770",
-            op: "0x0D276FC14719f9292D5C1eA2198673d1f4269246"
-        },
-        pairAddresses: {
-            eth: "0x4200000000000000000000000000000000000006",
-            op: "0x4200000000000000000000000000000000000042"
-        }
-    },
-    base: {
-        params: [{ chainId: "0x2105" }],
-        priceFeeds: {
-            eth: "0x71041dddad3595F9CEd3DcCFBe3D1F4b0a16Bb70"
-        },
-        pairAddresses: {
-            eth: "0x4200000000000000000000000000000000000006"
-        }
-    },
-    polygon: {
-        params: [{ chainId: "0x89" }],
-        priceFeeds: {
-            eth: "0xF9680D99D6C9589e2a93a78A04A279e509205945",
-            matic: "0xAB594600376Ec9fD91F8e885dADF0CE036862dE0"
-        },
-        pairAddresses: {
-            eth: "0x11CD37bb86F65419713f30673A480EA33c826872",
-            matic: "0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270"
-        }
-    },
-    avalanche: {
-        params: [{ chainId: "0xa86a" }],
-        priceFeeds: {
-            eth: "0x976B3D034E162d8bD72D6b9C989d545b839003b0",
-            avax: "0x0A77230d17318075983913bC2145DB16C7366156"
-        },
-        pairAddresses: {
-            eth: "",
-            avax: ""
-        }
-    },
-    fantom: {
-        params: [{ chainId: "0xfa" }],
-        priceFeeds: {
-            eth: "0x11DdD3d147E5b83D01cee7070027092397d63658",
-            ftm: "0xf4766552D15AE4d256Ad41B6cf2933482B0680dc"
-        },
-        pairAddresses: {
-            eth: "",
-            ftm: ""
-        }
-    }
-};
-const DISCOVERED_PROVIDERS = [];
-const PLACEHOLDER_PROVIDERS = [
-    {
-        info: {
-            icon: "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNTYiIGhlaWdodD0iNTYiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHBhdGggZD0iTTI4IDU2YzE1LjQ2NCAwIDI4LTEyLjUzNiAyOC0yOFM0My40NjQgMCAyOCAwIDAgMTIuNTM2IDAgMjhzMTIuNTM2IDI4IDI4IDI4WiIgZmlsbD0iIzFCNTNFNCIvPjxwYXRoIGZpbGwtcnVsZT0iZXZlbm9kZCIgY2xpcC1ydWxlPSJldmVub2RkIiBkPSJNNyAyOGMwIDExLjU5OCA5LjQwMiAyMSAyMSAyMXMyMS05LjQwMiAyMS0yMVMzOS41OTggNyAyOCA3IDcgMTYuNDAyIDcgMjhabTE3LjIzNC02Ljc2NmEzIDMgMCAwIDAtMyAzdjcuNTMzYTMgMyAwIDAgMCAzIDNoNy41MzNhMyAzIDAgMCAwIDMtM3YtNy41MzNhMyAzIDAgMCAwLTMtM2gtNy41MzNaIiBmaWxsPSIjZmZmIi8+PC9zdmc+",
-            name: "Coinbase Wallet",
-            rdns: "com.coinbase.wallet",
-            uuid: "96b79a0d-c5cd-48de-924b-af5c7bb68b7e",
-            onboard: {
-                bool: true,
-                link: "https://www.coinbase.com/wallet",
-                deeplink: "cbwallet://",
-                fallback: {
-                    ios: "https://apps.apple.com/us/app/coinbase-wallet-nfts-crypto/id1278383455",
-                    android: "https://play.google.com/store/apps/details?id=org.toshi"
-                }
-            }
-        },
-        provider: {}
-    },
-    {
-        info: {
-            icon: "data:image/svg+xml;base64,PHN2ZyBmaWxsPSJub25lIiBoZWlnaHQ9IjMzIiB2aWV3Qm94PSIwIDAgMzUgMzMiIHdpZHRoPSIzNSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIHN0cm9rZS13aWR0aD0iLjI1Ij48cGF0aCBkPSJtMzIuOTU4MiAxLTEzLjEzNDEgOS43MTgzIDIuNDQyNC01LjcyNzMxeiIgZmlsbD0iI2UxNzcyNiIgc3Ryb2tlPSIjZTE3NzI2Ii8+PGcgZmlsbD0iI2UyNzYyNSIgc3Ryb2tlPSIjZTI3NjI1Ij48cGF0aCBkPSJtMi42NjI5NiAxIDEzLjAxNzE0IDkuODA5LTIuMzI1NC01LjgxODAyeiIvPjxwYXRoIGQ9Im0yOC4yMjk1IDIzLjUzMzUtMy40OTQ3IDUuMzM4NiA3LjQ4MjkgMi4wNjAzIDIuMTQzNi03LjI4MjN6Ii8+PHBhdGggZD0ibTEuMjcyODEgMjMuNjUwMSAyLjEzMDU1IDcuMjgyMyA3LjQ2OTk0LTIuMDYwMy0zLjQ4MTY2LTUuMzM4NnoiLz48cGF0aCBkPSJtMTAuNDcwNiAxNC41MTQ5LTIuMDc4NiAzLjEzNTggNy40MDUuMzM2OS0uMjQ2OS03Ljk2OXoiLz48cGF0aCBkPSJtMjUuMTUwNSAxNC41MTQ5LTUuMTU3NS00LjU4NzA0LS4xNjg4IDguMDU5NzQgNy40MDQ5LS4zMzY5eiIvPjxwYXRoIGQ9Im0xMC44NzMzIDI4Ljg3MjEgNC40ODE5LTIuMTYzOS0zLjg1ODMtMy4wMDYyeiIvPjxwYXRoIGQ9Im0yMC4yNjU5IDI2LjcwODIgNC40Njg5IDIuMTYzOS0uNjEwNS01LjE3MDF6Ii8+PC9nPjxwYXRoIGQ9Im0yNC43MzQ4IDI4Ljg3MjEtNC40NjktMi4xNjM5LjM2MzggMi45MDI1LS4wMzkgMS4yMzF6IiBmaWxsPSIjZDViZmIyIiBzdHJva2U9IiNkNWJmYjIiLz48cGF0aCBkPSJtMTAuODczMiAyOC44NzIxIDQuMTU3MiAxLjk2OTYtLjAyNi0xLjIzMS4zNTA4LTIuOTAyNXoiIGZpbGw9IiNkNWJmYjIiIHN0cm9rZT0iI2Q1YmZiMiIvPjxwYXRoIGQ9Im0xNS4xMDg0IDIxLjc4NDItMy43MTU1LTEuMDg4NCAyLjYyNDMtMS4yMDUxeiIgZmlsbD0iIzIzMzQ0NyIgc3Ryb2tlPSIjMjMzNDQ3Ii8+PHBhdGggZD0ibTIwLjUxMjYgMjEuNzg0MiAxLjA5MTMtMi4yOTM1IDIuNjM3MiAxLjIwNTF6IiBmaWxsPSIjMjMzNDQ3IiBzdHJva2U9IiMyMzM0NDciLz48cGF0aCBkPSJtMTAuODczMyAyOC44NzIxLjY0OTUtNS4zMzg2LTQuMTMxMTcuMTE2N3oiIGZpbGw9IiNjYzYyMjgiIHN0cm9rZT0iI2NjNjIyOCIvPjxwYXRoIGQ9Im0yNC4wOTgyIDIzLjUzMzUuNjM2NiA1LjMzODYgMy40OTQ2LTUuMjIxOXoiIGZpbGw9IiNjYzYyMjgiIHN0cm9rZT0iI2NjNjIyOCIvPjxwYXRoIGQ9Im0yNy4yMjkxIDE3LjY1MDctNy40MDUuMzM2OS42ODg1IDMuNzk2NiAxLjA5MTMtMi4yOTM1IDIuNjM3MiAxLjIwNTF6IiBmaWxsPSIjY2M2MjI4IiBzdHJva2U9IiNjYzYyMjgiLz48cGF0aCBkPSJtMTEuMzkyOSAyMC42OTU4IDIuNjI0Mi0xLjIwNTEgMS4wOTEzIDIuMjkzNS42ODg1LTMuNzk2Ni03LjQwNDk1LS4zMzY5eiIgZmlsbD0iI2NjNjIyOCIgc3Ryb2tlPSIjY2M2MjI4Ii8+PHBhdGggZD0ibTguMzkyIDE3LjY1MDcgMy4xMDQ5IDYuMDUxMy0uMTAzOS0zLjAwNjJ6IiBmaWxsPSIjZTI3NTI1IiBzdHJva2U9IiNlMjc1MjUiLz48cGF0aCBkPSJtMjQuMjQxMiAyMC42OTU4LS4xMTY5IDMuMDA2MiAzLjEwNDktNi4wNTEzeiIgZmlsbD0iI2UyNzUyNSIgc3Ryb2tlPSIjZTI3NTI1Ii8+PHBhdGggZD0ibTE1Ljc5NyAxNy45ODc2LS42ODg2IDMuNzk2Ny44NzA0IDQuNDgzMy4xOTQ5LTUuOTA4N3oiIGZpbGw9IiNlMjc1MjUiIHN0cm9rZT0iI2UyNzUyNSIvPjxwYXRoIGQ9Im0xOS44MjQyIDE3Ljk4NzYtLjM2MzggMi4zNTg0LjE4MTkgNS45MjE2Ljg3MDQtNC40ODMzeiIgZmlsbD0iI2UyNzUyNSIgc3Ryb2tlPSIjZTI3NTI1Ii8+PHBhdGggZD0ibTIwLjUxMjcgMjEuNzg0Mi0uODcwNCA0LjQ4MzQuNjIzNi40NDA2IDMuODU4NC0zLjAwNjIuMTE2OS0zLjAwNjJ6IiBmaWxsPSIjZjU4NDFmIiBzdHJva2U9IiNmNTg0MWYiLz48cGF0aCBkPSJtMTEuMzkyOSAyMC42OTU4LjEwNCAzLjAwNjIgMy44NTgzIDMuMDA2Mi42MjM2LS40NDA2LS44NzA0LTQuNDgzNHoiIGZpbGw9IiNmNTg0MWYiIHN0cm9rZT0iI2Y1ODQxZiIvPjxwYXRoIGQ9Im0yMC41OTA2IDMwLjg0MTcuMDM5LTEuMjMxLS4zMzc4LS4yODUxaC00Ljk2MjZsLS4zMjQ4LjI4NTEuMDI2IDEuMjMxLTQuMTU3Mi0xLjk2OTYgMS40NTUxIDEuMTkyMSAyLjk0ODkgMi4wMzQ0aDUuMDUzNmwyLjk2Mi0yLjAzNDQgMS40NDItMS4xOTIxeiIgZmlsbD0iI2MwYWM5ZCIgc3Ryb2tlPSIjYzBhYzlkIi8+PHBhdGggZD0ibTIwLjI2NTkgMjYuNzA4Mi0uNjIzNi0uNDQwNmgtMy42NjM1bC0uNjIzNi40NDA2LS4zNTA4IDIuOTAyNS4zMjQ4LS4yODUxaDQuOTYyNmwuMzM3OC4yODUxeiIgZmlsbD0iIzE2MTYxNiIgc3Ryb2tlPSIjMTYxNjE2Ii8+PHBhdGggZD0ibTMzLjUxNjggMTEuMzUzMiAxLjEwNDMtNS4zNjQ0Ny0xLjY2MjktNC45ODg3My0xMi42OTIzIDkuMzk0NCA0Ljg4NDYgNC4xMjA1IDYuODk4MyAyLjAwODUgMS41Mi0xLjc3NTItLjY2MjYtLjQ3OTUgMS4wNTIzLS45NTg4LS44MDU0LS42MjIgMS4wNTIzLS44MDM0eiIgZmlsbD0iIzc2M2UxYSIgc3Ryb2tlPSIjNzYzZTFhIi8+PHBhdGggZD0ibTEgNS45ODg3MyAxLjExNzI0IDUuMzY0NDctLjcxNDUxLjUzMTMgMS4wNjUyNy44MDM0LS44MDU0NS42MjIgMS4wNTIyOC45NTg4LS42NjI1NS40Nzk1IDEuNTE5OTcgMS43NzUyIDYuODk4MzUtMi4wMDg1IDQuODg0Ni00LjEyMDUtMTIuNjkyMzMtOS4zOTQ0eiIgZmlsbD0iIzc2M2UxYSIgc3Ryb2tlPSIjNzYzZTFhIi8+PHBhdGggZD0ibTMyLjA0ODkgMTYuNTIzNC02Ljg5ODMtMi4wMDg1IDIuMDc4NiAzLjEzNTgtMy4xMDQ5IDYuMDUxMyA0LjEwNTItLjA1MTloNi4xMzE4eiIgZmlsbD0iI2Y1ODQxZiIgc3Ryb2tlPSIjZjU4NDFmIi8+PHBhdGggZD0ibTEwLjQ3MDUgMTQuNTE0OS02Ljg5ODI4IDIuMDA4NS0yLjI5OTQ0IDcuMTI2N2g2LjExODgzbDQuMTA1MTkuMDUxOS0zLjEwNDg3LTYuMDUxM3oiIGZpbGw9IiNmNTg0MWYiIHN0cm9rZT0iI2Y1ODQxZiIvPjxwYXRoIGQ9Im0xOS44MjQxIDE3Ljk4NzYuNDQxNy03LjU5MzIgMi4wMDA3LTUuNDAzNGgtOC45MTE5bDIuMDAwNiA1LjQwMzQuNDQxNyA3LjU5MzIuMTY4OSAyLjM4NDIuMDEzIDUuODk1OGgzLjY2MzVsLjAxMy01Ljg5NTh6IiBmaWxsPSIjZjU4NDFmIiBzdHJva2U9IiNmNTg0MWYiLz48L2c+PC9zdmc+",
-            name: "MetaMask",
-            rdns: "io.metamask",
-            uuid: "974b295e-a371-4e37-a428-b82abf69ec3c",
-            onboard: {
-                bool: true,
-                link: "https://metamask.io/",
-                deeplink: "metamask://",
-                fallback: {
-                    ios: "https://apps.apple.com/us/app/metamask-blockchain-wallet/id1438144202",
-                    android: "https://play.google.com/store/apps/details?id=io.metamask&pli=1"
-                }
-            }
-        },
-        provider: {}
-    }
-];
-const CHAINLINK_ABI = [
-    "function latestRoundData() view returns (uint80 roundId, int256 answer, uint256 startedAt, uint256 updatedAt, uint80 answeredInRound)"
-];
-const ERC20_ABI = [
-    "function allowance(address owner, address spender) view returns (uint256)",
-    "function approve(address spender, uint256 amount) returns (bool)",
-    "function balanceOf(address account) view returns (uint256)",
-    "function decimals() view returns (uint8)",
-    "function name() view returns (string)",
-    "function symbol() view returns (string)",
-    "function totalSupply() view returns (uint256)",
-    "function transfer(address to, uint256 amount) returns (bool)",
-];
-const UNISWAP_V2_POOL_ABI = [
-    "function getReserves() view returns (uint112 _reserve0, uint112 _reserve1, uint32 _blockTimestampLast)",
-    "function token0() view returns (address)",
-    "function token1() view returns (address)",
-    "function totalSupply() view returns (uint256)",
-    "function balanceOf(address owner) view returns (uint256)",
-    "function allowance(address owner, address spender) view returns (uint256)",
-    "function approve(address spender, uint256 value) returns (bool)",
-    "function transfer(address to, uint256 value) returns (bool)",
-    "function transferFrom(address from, address to, uint256 value) returns (bool)"
-];
-const UNISWAP_V3_POOL_ABI = [
-    "function slot0() view returns (uint160 sqrtPriceX96, int24 tick, uint16 observationIndex, uint16 observationCardinality, uint16 observationCardinalityNext, uint8 feeProtocol, bool unlocked)",
-    "function token0() view returns (address)",
-    "function token1() view returns (address)",
-    "function fee() view returns (uint24)",
-    "function decimals() view returns (uint8)",
-    "function liquidity() view returns (uint128)"
-];
-const THEMES = ["none", "custom", "default", "light"];
-const BUTTON_TYPES = ["none", "custom", "connect", "provider"];
-const MODAL_TYPES = ["none", "custom", "log", "connect"];
+import { ethers } from 'ethers';
 
 const HelperModule = {
-    validateInput: function (inputs, rules, context = "validateInput") {
-        if (typeof inputs !== 'object') {
-            throw new TypeError(`${context}: "inputs" must be a valid object.`);
+    validateChain: async function (chain) {
+        if (!chain) {
+            throw new Error("CryptoModule.validateChain: Please provide a chain to validate.");
         }
-        if (typeof rules !== 'object') {
-            throw new TypeError(`${context}: "rules" must be a valid object.`);
+        try {
+            console.log("Validating chain...");
+            const response = await fetch("https://raw.githubusercontent.com/Tukyo/sypher-tools/refs/heads/main/config/chains.min.json");
+            if (!response.ok) {
+                throw new Error("CryptoModule.validateChain: Failed to fetch chain data.");
+            }
+            const chainMap = await response.json();
+            const chainData = chainMap[chain.toLowerCase()];
+            if (!chainData || !chainData.id) {
+                throw new Error(`CryptoModule.validateChain: Chain "${chain}" is not supported. Supported Chains: https://github.com/Tukyo/sypher-tools/blob/main/config/chains.json`);
+            }
+            return `0x${chainData.id.toString(16)}`;
         }
-        if (typeof context !== 'string') {
-            throw new TypeError(`${context}: "context" must be a valid string.`);
+        catch (error) {
+            throw new Error(`CryptoModule.validateChain: ${error instanceof Error ? error.message : JSON.stringify(error)}`);
         }
-        Object.entries(rules).forEach(([key, rule]) => {
-            const value = inputs[key];
-            if (rule.required && (value === undefined || value === null)) { // Required field validation
-                throw new Error(`${context}: "${key}" is required.`);
-            }
-            if (!rule.required && (value === undefined || value === null))
-                return; // Skip optional fields
-            if (rule.type === "array") { // Array validation
-                if (!Array.isArray(value)) {
-                    throw new TypeError(`${context}: Validation failed: "${key}" must be an array.`);
-                }
-                if (rule.items) { // Validate each item in the array
-                    value.forEach((item, index) => {
-                        if (rule.items.type && typeof item !== rule.items.type) {
-                            throw new TypeError(`${context}: Validation failed: "${key}[${index}]" must be of type "${rule.items.type}", but received type "${typeof item}".`);
-                        }
-                        if (rule.items.regex && !rule.items.regex.test(item)) {
-                            throw new Error(`${context}: Validation failed: "${key}[${index}]" must match the pattern "${rule.items.regex}".`);
-                        }
-                        if (rule.items.values && !rule.items.values.includes(item)) {
-                            throw new Error(`${context}: Validation failed: "${key}[${index}]" must be one of [${rule.items.values}].`);
-                        }
-                    });
-                }
-                if (rule.length) { // Validate array length
-                    if (rule.length.min !== undefined && value.length < rule.length.min) {
-                        throw new Error(`${context}: Validation failed: "${key}" must have a minimum length of ${rule.length.min}, but got ${value.length}.`);
-                    }
-                    if (rule.length.max !== undefined && value.length > rule.length.max) {
-                        throw new Error(`${context}: Validation failed: "${key}" must have a maximum length of ${rule.length.max}, but got ${value.length}.`);
-                    }
-                }
-            }
-            else if (rule.type && typeof value !== rule.type) { // Type validation for non-arrays
-                throw new TypeError(`${context}: Validation failed: "${key}" must be of type "${rule.type}", but received type "${typeof value}".`);
-            }
-            if (rule.regex && !rule.regex.test(value)) { // Regex validation
-                throw new Error(`${context}: Validation failed: "${key}" must match the pattern "${rule.regex}".`);
-            }
-            if (rule.values && !rule.values.includes(value)) { // Values validation
-                throw new Error(`${context}: Validation failed: "${key}" must be one of [${rule.values}].`);
-            }
-            if (rule.enum && !rule.enum.includes(value)) { // Enum validation
-                throw new Error(`${context}: Validation failed: "${key}" must be one of [${rule.enum}].`);
-            }
-            if (rule.range && (value < rule.range.min || value > rule.range.max)) { // Range validation
-                throw new RangeError(`${context}: Validation failed: "${key}" must be within the range [${rule.range.min}, ${rule.range.max}].`);
-            }
-            if (rule.length) { // Length validation
-                const length = value.length;
-                if (typeof length !== "number") {
-                    throw new TypeError(`${context}: "${key}" must have a valid length property.`);
-                }
-                if (typeof rule.length === "number" && length !== rule.length) { // Exact length
-                    throw new Error(`${context}: "${key}" must have a length of ${rule.length}, but got ${length}.`);
-                }
-                if (typeof rule.length === "object") { // Min and max length
-                    if (rule.length.min !== undefined && length < rule.length.min) {
-                        throw new Error(`${context}: "${key}" must have a minimum length of ${rule.length.min}, but got ${length}.`);
-                    }
-                    if (rule.length.max !== undefined && length > rule.length.max) {
-                        throw new Error(`${context}: "${key}" must have a maximum length of ${rule.length.max}, but got ${length}.`);
-                    }
-                }
-            }
-        });
-        return true;
-    },
-    validateChain: function (chain) {
-        const validInput = this.validateInput({ chain }, { chain: { required: true, type: "string" } }, "CryptoModule.validateChain");
-        if (!validInput) {
-            return null;
-        }
-        const chainData = CHAINS[chain];
-        if (!chainData) {
-            throw new Error(`CryptoModule.validateChain: Chain "${chain}" is not supported.`);
-        }
-        const chainId = chainData.params[0]?.chainId;
-        if (!chainId) {
-            throw new Error(`CryptoModule.validateChain: Missing chainId for chain "${chain}".`);
-        }
-        return { chainData, chainId };
-    },
+    }
 };
 const LogModule = {
     initLogger: function () {
@@ -376,13 +153,8 @@ const LogModule = {
 };
 const TruncationModule = {
     truncate: function (string, startLength = 6, endLength = 4) {
-        const validInput = sypher.validateInput({ string, startLength, endLength }, {
-            string: { type: "string", required: true },
-            startLength: { type: "number", required: false },
-            endLength: { type: "number", required: false }
-        }, "TruncationModule.truncate");
-        if (!validInput) {
-            return null;
+        if (!string) {
+            throw new Error("TruncationModule.truncate: Please provide a string to truncate.");
         }
         if (string.length <= startLength + endLength + 3) {
             return string;
@@ -390,13 +162,8 @@ const TruncationModule = {
         return `${string.slice(0, startLength)}...${string.slice(-endLength)}`;
     },
     truncateBalance: function (balance, decimals = 2, maxLength = 8) {
-        const validInput = sypher.validateInput({ balance, decimals, maxLength }, {
-            balance: { type: "number", required: true },
-            decimals: { type: "number", required: false },
-            maxLength: { type: "number", required: false }
-        }, "TruncationModule.truncateBalance");
-        if (!validInput) {
-            return null;
+        if (balance === null || balance === undefined) {
+            throw new Error("TruncationModule.truncateBalance: Please provide a number to truncate.");
         }
         const num = parseFloat(balance.toString());
         if (num >= 1e15)
@@ -490,13 +257,94 @@ const WindowModule = {
     }
 };
 
+const THEMES = ["none", "custom", "default", "light"];
+const BUTTON_TYPES = ["none", "custom", "connect", "provider"];
+const MODAL_TYPES = ["none", "custom", "log", "connect"];
+const ADDRESS_REGEXP = /^0x[a-fA-F0-9]{40}$/;
+const DISCOVERED_PROVIDERS = [];
+const PLACEHOLDER_PROVIDERS = [
+    {
+        info: {
+            icon: "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNTYiIGhlaWdodD0iNTYiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHBhdGggZD0iTTI4IDU2YzE1LjQ2NCAwIDI4LTEyLjUzNiAyOC0yOFM0My40NjQgMCAyOCAwIDAgMTIuNTM2IDAgMjhzMTIuNTM2IDI4IDI4IDI4WiIgZmlsbD0iIzFCNTNFNCIvPjxwYXRoIGZpbGwtcnVsZT0iZXZlbm9kZCIgY2xpcC1ydWxlPSJldmVub2RkIiBkPSJNNyAyOGMwIDExLjU5OCA5LjQwMiAyMSAyMSAyMXMyMS05LjQwMiAyMS0yMVMzOS41OTggNyAyOCA3IDcgMTYuNDAyIDcgMjhabTE3LjIzNC02Ljc2NmEzIDMgMCAwIDAtMyAzdjcuNTMzYTMgMyAwIDAgMCAzIDNoNy41MzNhMyAzIDAgMCAwIDMtM3YtNy41MzNhMyAzIDAgMCAwLTMtM2gtNy41MzNaIiBmaWxsPSIjZmZmIi8+PC9zdmc+",
+            name: "Coinbase Wallet",
+            rdns: "com.coinbase.wallet",
+            uuid: "96b79a0d-c5cd-48de-924b-af5c7bb68b7e",
+            onboard: {
+                bool: true,
+                link: "https://www.coinbase.com/wallet",
+                deeplink: "cbwallet://",
+                fallback: {
+                    ios: "https://apps.apple.com/us/app/coinbase-wallet-nfts-crypto/id1278383455",
+                    android: "https://play.google.com/store/apps/details?id=org.toshi"
+                }
+            }
+        },
+        provider: {}
+    },
+    {
+        info: {
+            icon: "data:image/svg+xml;base64,PHN2ZyBmaWxsPSJub25lIiBoZWlnaHQ9IjMzIiB2aWV3Qm94PSIwIDAgMzUgMzMiIHdpZHRoPSIzNSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIHN0cm9rZS13aWR0aD0iLjI1Ij48cGF0aCBkPSJtMzIuOTU4MiAxLTEzLjEzNDEgOS43MTgzIDIuNDQyNC01LjcyNzMxeiIgZmlsbD0iI2UxNzcyNiIgc3Ryb2tlPSIjZTE3NzI2Ii8+PGcgZmlsbD0iI2UyNzYyNSIgc3Ryb2tlPSIjZTI3NjI1Ij48cGF0aCBkPSJtMi42NjI5NiAxIDEzLjAxNzE0IDkuODA5LTIuMzI1NC01LjgxODAyeiIvPjxwYXRoIGQ9Im0yOC4yMjk1IDIzLjUzMzUtMy40OTQ3IDUuMzM4NiA3LjQ4MjkgMi4wNjAzIDIuMTQzNi03LjI4MjN6Ii8+PHBhdGggZD0ibTEuMjcyODEgMjMuNjUwMSAyLjEzMDU1IDcuMjgyMyA3LjQ2OTk0LTIuMDYwMy0zLjQ4MTY2LTUuMzM4NnoiLz48cGF0aCBkPSJtMTAuNDcwNiAxNC41MTQ5LTIuMDc4NiAzLjEzNTggNy40MDUuMzM2OS0uMjQ2OS03Ljk2OXoiLz48cGF0aCBkPSJtMjUuMTUwNSAxNC41MTQ5LTUuMTU3NS00LjU4NzA0LS4xNjg4IDguMDU5NzQgNy40MDQ5LS4zMzY5eiIvPjxwYXRoIGQ9Im0xMC44NzMzIDI4Ljg3MjEgNC40ODE5LTIuMTYzOS0zLjg1ODMtMy4wMDYyeiIvPjxwYXRoIGQ9Im0yMC4yNjU5IDI2LjcwODIgNC40Njg5IDIuMTYzOS0uNjEwNS01LjE3MDF6Ii8+PC9nPjxwYXRoIGQ9Im0yNC43MzQ4IDI4Ljg3MjEtNC40NjktMi4xNjM5LjM2MzggMi45MDI1LS4wMzkgMS4yMzF6IiBmaWxsPSIjZDViZmIyIiBzdHJva2U9IiNkNWJmYjIiLz48cGF0aCBkPSJtMTAuODczMiAyOC44NzIxIDQuMTU3MiAxLjk2OTYtLjAyNi0xLjIzMS4zNTA4LTIuOTAyNXoiIGZpbGw9IiNkNWJmYjIiIHN0cm9rZT0iI2Q1YmZiMiIvPjxwYXRoIGQ9Im0xNS4xMDg0IDIxLjc4NDItMy43MTU1LTEuMDg4NCAyLjYyNDMtMS4yMDUxeiIgZmlsbD0iIzIzMzQ0NyIgc3Ryb2tlPSIjMjMzNDQ3Ii8+PHBhdGggZD0ibTIwLjUxMjYgMjEuNzg0MiAxLjA5MTMtMi4yOTM1IDIuNjM3MiAxLjIwNTF6IiBmaWxsPSIjMjMzNDQ3IiBzdHJva2U9IiMyMzM0NDciLz48cGF0aCBkPSJtMTAuODczMyAyOC44NzIxLjY0OTUtNS4zMzg2LTQuMTMxMTcuMTE2N3oiIGZpbGw9IiNjYzYyMjgiIHN0cm9rZT0iI2NjNjIyOCIvPjxwYXRoIGQ9Im0yNC4wOTgyIDIzLjUzMzUuNjM2NiA1LjMzODYgMy40OTQ2LTUuMjIxOXoiIGZpbGw9IiNjYzYyMjgiIHN0cm9rZT0iI2NjNjIyOCIvPjxwYXRoIGQ9Im0yNy4yMjkxIDE3LjY1MDctNy40MDUuMzM2OS42ODg1IDMuNzk2NiAxLjA5MTMtMi4yOTM1IDIuNjM3MiAxLjIwNTF6IiBmaWxsPSIjY2M2MjI4IiBzdHJva2U9IiNjYzYyMjgiLz48cGF0aCBkPSJtMTEuMzkyOSAyMC42OTU4IDIuNjI0Mi0xLjIwNTEgMS4wOTEzIDIuMjkzNS42ODg1LTMuNzk2Ni03LjQwNDk1LS4zMzY5eiIgZmlsbD0iI2NjNjIyOCIgc3Ryb2tlPSIjY2M2MjI4Ii8+PHBhdGggZD0ibTguMzkyIDE3LjY1MDcgMy4xMDQ5IDYuMDUxMy0uMTAzOS0zLjAwNjJ6IiBmaWxsPSIjZTI3NTI1IiBzdHJva2U9IiNlMjc1MjUiLz48cGF0aCBkPSJtMjQuMjQxMiAyMC42OTU4LS4xMTY5IDMuMDA2MiAzLjEwNDktNi4wNTEzeiIgZmlsbD0iI2UyNzUyNSIgc3Ryb2tlPSIjZTI3NTI1Ii8+PHBhdGggZD0ibTE1Ljc5NyAxNy45ODc2LS42ODg2IDMuNzk2Ny44NzA0IDQuNDgzMy4xOTQ5LTUuOTA4N3oiIGZpbGw9IiNlMjc1MjUiIHN0cm9rZT0iI2UyNzUyNSIvPjxwYXRoIGQ9Im0xOS44MjQyIDE3Ljk4NzYtLjM2MzggMi4zNTg0LjE4MTkgNS45MjE2Ljg3MDQtNC40ODMzeiIgZmlsbD0iI2UyNzUyNSIgc3Ryb2tlPSIjZTI3NTI1Ii8+PHBhdGggZD0ibTIwLjUxMjcgMjEuNzg0Mi0uODcwNCA0LjQ4MzQuNjIzNi40NDA2IDMuODU4NC0zLjAwNjIuMTE2OS0zLjAwNjJ6IiBmaWxsPSIjZjU4NDFmIiBzdHJva2U9IiNmNTg0MWYiLz48cGF0aCBkPSJtMTEuMzkyOSAyMC42OTU4LjEwNCAzLjAwNjIgMy44NTgzIDMuMDA2Mi42MjM2LS40NDA2LS44NzA0LTQuNDgzNHoiIGZpbGw9IiNmNTg0MWYiIHN0cm9rZT0iI2Y1ODQxZiIvPjxwYXRoIGQ9Im0yMC41OTA2IDMwLjg0MTcuMDM5LTEuMjMxLS4zMzc4LS4yODUxaC00Ljk2MjZsLS4zMjQ4LjI4NTEuMDI2IDEuMjMxLTQuMTU3Mi0xLjk2OTYgMS40NTUxIDEuMTkyMSAyLjk0ODkgMi4wMzQ0aDUuMDUzNmwyLjk2Mi0yLjAzNDQgMS40NDItMS4xOTIxeiIgZmlsbD0iI2MwYWM5ZCIgc3Ryb2tlPSIjYzBhYzlkIi8+PHBhdGggZD0ibTIwLjI2NTkgMjYuNzA4Mi0uNjIzNi0uNDQwNmgtMy42NjM1bC0uNjIzNi40NDA2LS4zNTA4IDIuOTAyNS4zMjQ4LS4yODUxaDQuOTYyNmwuMzM3OC4yODUxeiIgZmlsbD0iIzE2MTYxNiIgc3Ryb2tlPSIjMTYxNjE2Ii8+PHBhdGggZD0ibTMzLjUxNjggMTEuMzUzMiAxLjEwNDMtNS4zNjQ0Ny0xLjY2MjktNC45ODg3My0xMi42OTIzIDkuMzk0NCA0Ljg4NDYgNC4xMjA1IDYuODk4MyAyLjAwODUgMS41Mi0xLjc3NTItLjY2MjYtLjQ3OTUgMS4wNTIzLS45NTg4LS44MDU0LS42MjIgMS4wNTIzLS44MDM0eiIgZmlsbD0iIzc2M2UxYSIgc3Ryb2tlPSIjNzYzZTFhIi8+PHBhdGggZD0ibTEgNS45ODg3MyAxLjExNzI0IDUuMzY0NDctLjcxNDUxLjUzMTMgMS4wNjUyNy44MDM0LS44MDU0NS42MjIgMS4wNTIyOC45NTg4LS42NjI1NS40Nzk1IDEuNTE5OTcgMS43NzUyIDYuODk4MzUtMi4wMDg1IDQuODg0Ni00LjEyMDUtMTIuNjkyMzMtOS4zOTQ0eiIgZmlsbD0iIzc2M2UxYSIgc3Ryb2tlPSIjNzYzZTFhIi8+PHBhdGggZD0ibTMyLjA0ODkgMTYuNTIzNC02Ljg5ODMtMi4wMDg1IDIuMDc4NiAzLjEzNTgtMy4xMDQ5IDYuMDUxMyA0LjEwNTItLjA1MTloNi4xMzE4eiIgZmlsbD0iI2Y1ODQxZiIgc3Ryb2tlPSIjZjU4NDFmIi8+PHBhdGggZD0ibTEwLjQ3MDUgMTQuNTE0OS02Ljg5ODI4IDIuMDA4NS0yLjI5OTQ0IDcuMTI2N2g2LjExODgzbDQuMTA1MTkuMDUxOS0zLjEwNDg3LTYuMDUxM3oiIGZpbGw9IiNmNTg0MWYiIHN0cm9rZT0iI2Y1ODQxZiIvPjxwYXRoIGQ9Im0xOS44MjQxIDE3Ljk4NzYuNDQxNy03LjU5MzIgMi4wMDA3LTUuNDAzNGgtOC45MTE5bDIuMDAwNiA1LjQwMzQuNDQxNyA3LjU5MzIuMTY4OSAyLjM4NDIuMDEzIDUuODk1OGgzLjY2MzVsLjAxMy01Ljg5NTh6IiBmaWxsPSIjZjU4NDFmIiBzdHJva2U9IiNmNTg0MWYiLz48L2c+PC9zdmc+",
+            name: "MetaMask",
+            rdns: "io.metamask",
+            uuid: "974b295e-a371-4e37-a428-b82abf69ec3c",
+            onboard: {
+                bool: true,
+                link: "https://metamask.io/",
+                deeplink: "metamask://",
+                fallback: {
+                    ios: "https://apps.apple.com/us/app/metamask-blockchain-wallet/id1438144202",
+                    android: "https://play.google.com/store/apps/details?id=io.metamask&pli=1"
+                }
+            }
+        },
+        provider: {}
+    }
+];
+const CHAINLINK_ABI = [
+    "function latestRoundData() view returns (uint80 roundId, int256 answer, uint256 startedAt, uint256 updatedAt, uint80 answeredInRound)",
+    "function description() view returns (string)",
+];
+const ERC20_ABI = [
+    "function allowance(address owner, address spender) view returns (uint256)",
+    "function approve(address spender, uint256 amount) returns (bool)",
+    "function balanceOf(address account) view returns (uint256)",
+    "function decimals() view returns (uint8)",
+    "function name() view returns (string)",
+    "function symbol() view returns (string)",
+    "function totalSupply() view returns (uint256)",
+    "function transfer(address to, uint256 amount) returns (bool)",
+];
+const UNISWAP_V2_POOL_ABI = [
+    "function getReserves() view returns (uint112 _reserve0, uint112 _reserve1, uint32 _blockTimestampLast)",
+    "function token0() view returns (address)",
+    "function token1() view returns (address)",
+    "function totalSupply() view returns (uint256)",
+    "function balanceOf(address owner) view returns (uint256)",
+    "function allowance(address owner, address spender) view returns (uint256)",
+    "function approve(address spender, uint256 value) returns (bool)",
+    "function transfer(address to, uint256 value) returns (bool)",
+    "function transferFrom(address from, address to, uint256 value) returns (bool)"
+];
+const UNISWAP_V3_POOL_ABI = [
+    "function slot0() view returns (uint160 sqrtPriceX96, int24 tick, uint16 observationIndex, uint16 observationCardinality, uint16 observationCardinalityNext, uint8 feeProtocol, bool unlocked)",
+    "function token0() view returns (address)",
+    "function token1() view returns (address)",
+    "function fee() view returns (uint24)",
+    "function decimals() view returns (uint8)",
+    "function liquidity() view returns (uint128)"
+];
+const MAINNET_RPCS = [
+    "https://eth.llamarpc.com",
+    "https://rpc.ankr.com/eth",
+    "https://ethereum-rpc.publicnode.com",
+    "https://1rpc.io/eth",
+    "https://rpc.mevblocker.io"
+];
+
 const InterfaceModule = {
     initTheme: function (theme = "default") {
-        const validInput = sypher.validateInput({ theme }, {
-            theme: { type: "string", required: true }
-        }, "InterfaceModule.initTheme");
-        if (!validInput) {
-            return;
+        if (typeof theme !== "string") {
+            throw new Error(`InterfaceModule.initTheme: Theme must be a string.`);
         }
         if (this._theme) {
             return;
@@ -515,13 +363,11 @@ const InterfaceModule = {
         }
     },
     applyStyle: function (elements, params) {
-        const validInput = sypher.validateInput({ elements, ...params }, {
-            elements: { type: "array", required: true },
-            type: { type: "string", required: true },
-            theme: { type: "string", required: true }
-        }, "InterfaceModule.applyStyle");
-        if (!validInput) {
-            return;
+        if (!elements || elements.length === 0) {
+            throw new Error(`InterfaceModule.applyStyle: Elements are required.`);
+        }
+        if (!params || typeof params !== "object") {
+            throw new Error(`InterfaceModule.applyStyle: Params object is required.`);
         }
         const type = params.type;
         let theme = params.theme;
@@ -628,14 +474,6 @@ const InterfaceModule = {
     createModal: async function (params) {
         const defaultParams = { append: document.body, type: "none", theme: "none", initCrypto: {} };
         const mergedParams = { ...defaultParams, ...params };
-        const validInput = sypher.validateInput({ ...mergedParams }, {
-            append: { type: "object", required: false },
-            type: { type: "string", required: true },
-            theme: { type: "string", required: false }
-        }, "InterfaceModule.createModal");
-        if (!validInput) {
-            return null;
-        }
         const { append, type, theme, initCrypto } = mergedParams;
         if (!MODAL_TYPES.includes(type)) {
             throw new Error(`InterfaceModule.createModal: Type '${type}' not found.`);
@@ -710,7 +548,8 @@ const InterfaceModule = {
                                 chain: initCrypto.chain,
                                 contractAddress: initCrypto.contractAddress,
                                 poolAddress: initCrypto.poolAddress,
-                                version: initCrypto.version, //TODO: Check how to make this work with non eth pairs
+                                pairAddress: initCrypto.pairAddress,
+                                version: initCrypto.version,
                                 detail: providerDetail,
                                 icon: initCrypto.icon
                             });
@@ -737,28 +576,27 @@ const InterfaceModule = {
             });
             if (account !== null && account !== undefined) {
                 modalObj.title.innerHTML = "Account";
-                const provider = sypher.getProvider();
-                const web3 = new ethers.providers.Web3Provider(provider);
-                const signer = web3.getSigner();
-                const balance = await signer.getBalance();
-                const eth = ethers.utils.formatEther(balance);
                 const tokenDetails = sypher.getCleaned();
                 let showTokenDetails = false;
                 let tokenDetailClass = "av-b-c-hide";
+                let ens = undefined;
                 let icon = "";
                 let tokenName = "";
+                let ethBalance = 0;
                 let userBalance = 0;
                 let userValue = "";
                 let tokenPrice = 0;
                 if (tokenDetails) {
                     showTokenDetails = true;
                     tokenDetailClass = "av-b-c";
-                    icon = tokenDetails.icon || "";
-                    tokenName = tokenDetails.name || "";
-                    userBalance = tokenDetails.balance || 0;
-                    userValue = tokenDetails.userValue || "";
-                    tokenPrice = tokenDetails.tokenPrice || 0;
-                    tokenDetails.decimals || 0;
+                    ens = tokenDetails.user.ens || undefined;
+                    icon = tokenDetails.token.icon || "";
+                    tokenName = tokenDetails.token.name || "";
+                    ethBalance = tokenDetails.user.ethBalance || 0;
+                    userBalance = tokenDetails.user.tokenBalance || 0;
+                    userValue = tokenDetails.user.value || "";
+                    tokenPrice = tokenDetails.token.tokenPrice || 0;
+                    tokenDetails.token.decimals || 0;
                 }
                 const accountView = this.createElement({
                     append: modalObj.body,
@@ -772,12 +610,12 @@ const InterfaceModule = {
                                 {
                                     type: "h2",
                                     classes: ["av-h-ti"],
-                                    innerHTML: `${sypher.truncate(account)}`
+                                    innerHTML: ens ? `${sypher.truncate(ens)}` : `${sypher.truncate(account)}`
                                 },
                                 {
                                     type: "h3",
                                     classes: ["av-h-ba"],
-                                    innerHTML: `${sypher.truncateBalance(parseFloat(eth.toString()))} ETH` // TODO: Update 'ETH' to native token of chain
+                                    innerHTML: `${sypher.truncateBalance(parseFloat(ethBalance.toString()))} ETH` // TODO: Update 'ETH' to native token of chain
                                 }
                             ]
                         },
@@ -913,12 +751,11 @@ const InterfaceModule = {
         } //TODO: Throw error
     },
     initModal: function (type, theme = "custom") {
-        const validInput = sypher.validateInput({ type }, {
-            type: { type: "string", required: true },
-            theme: { type: "string", required: false }
-        }, "InterfaceModule.initModal");
-        if (!validInput) {
-            return null;
+        if (!type || typeof type !== "string") {
+            throw new Error(`InterfaceModule.initModal: Type is required.`);
+        }
+        if (!MODAL_TYPES.includes(type)) {
+            throw new Error(`InterfaceModule.initModal: Type '${type}' not found.`);
         }
         if (type === "none" || type === "custom") {
             return null;
@@ -1086,12 +923,8 @@ const InterfaceModule = {
         applyParallax();
     },
     fade: function (distance = '20px', length = '0.5s') {
-        const validInput = sypher.validateInput({ distance, length }, {
-            distance: { type: "string", required: false },
-            length: { type: "string", required: false }
-        }, "InterfaceModule.fade");
-        if (!validInput) {
-            return;
+        if (typeof distance !== "string" || typeof length !== "string") {
+            throw new Error(`InterfaceModule.fade: Params must be strings.`);
         }
         const elements = document.querySelectorAll('[data-fade]');
         if (elements.length === 0) {
@@ -1129,41 +962,46 @@ const InterfaceModule = {
 
 const CryptoModule = {
     initCrypto: async function (params) {
-        const defaultParams = { chain: "ethereum", contractAddress: "", poolAddress: "", version: "V2", pair: "eth" };
-        const p = { ...defaultParams, ...params };
-        if (!p) {
+        if (!params) {
             return null;
+        }
+        if (!params.pair) {
+            params.pair = "ethereum";
         }
         this.flush();
-        const chainValidation = sypher.validateChain(p.chain);
-        if (!chainValidation) {
-            return null;
-        }
-        const { chainData, chainId } = chainValidation;
-        if (!chainData || !chainId) {
-            return null;
-        }
         try {
-            const account = await this.connect(p.chain, p.detail);
-            if (!account) {
+            const chainId = this._chain?.chainId ?? await sypher.validateChain(params.chain);
+            if (!chainId) {
                 return null;
             }
-            console.log("Getting details for:", p);
-            const tokenDetails = await this.getTokenDetails(p.chain, p.contractAddress);
+            const connection = await this.connect(params.chain, params.detail);
+            if (!connection) {
+                return null;
+            }
+            const address = connection.primaryAccount;
+            if (!address) {
+                return null;
+            }
+            const ethBalance = connection.ethBalance;
+            if (ethBalance === null || ethBalance === undefined) {
+                return null;
+            }
+            console.log("Getting details for:", params);
+            const tokenDetails = await this.getTokenDetails(params.chain, params.contractAddress);
             if (!tokenDetails) {
                 return null;
             }
             const { balance, decimals, name, symbol, totalSupply } = tokenDetails;
             let tokenPrice;
-            if (p.version === "V2") {
-                const priceV2 = await this.getPriceV2(p.chain, p.poolAddress, p.pair);
+            if (params.version === "V2") {
+                const priceV2 = await this.getPriceV2(params.chain, params.poolAddress, params.pair, params.pairAddress);
                 if (!priceV2) {
                     return null;
                 }
                 tokenPrice = priceV2;
             }
-            else if (p.version === "V3") {
-                const priceV3 = await this.getPriceV3(p.chain, p.contractAddress, p.poolAddress, p.pair);
+            else if (params.version === "V3") {
+                const priceV3 = await this.getPriceV3(params.chain, params.contractAddress, params.poolAddress, params.pair, params.pairAddress);
                 if (!priceV3) {
                     return null;
                 }
@@ -1176,12 +1014,14 @@ const CryptoModule = {
             if (userValue === null || userValue === undefined) {
                 return null;
             }
-            const contractAddress = p.contractAddress;
-            const poolAddress = p.poolAddress;
-            const icon = p.icon ?? "";
-            const version = p.version;
-            const pair = p.pair;
-            const details = { contractAddress, poolAddress, balance, decimals, name, symbol, icon, totalSupply, tokenPrice, userValue, version, pair };
+            const contractAddress = params.contractAddress;
+            const poolAddress = params.poolAddress;
+            const pairAddress = params.pairAddress;
+            const icon = params.icon ?? "";
+            const version = params.version;
+            const pair = params.pair;
+            const ens = (await this.getENS(address)) ?? undefined;
+            const details = { address, ens, contractAddress, poolAddress, pairAddress, balance, ethBalance, decimals, name, symbol, icon, totalSupply, tokenPrice, userValue, version, pair };
             if (!details) {
                 return null;
             }
@@ -1198,19 +1038,14 @@ const CryptoModule = {
         }
     },
     connect: async function (chain, providerDetail = null) {
-        const validInput = sypher.validateInput({ chain }, { chain: { type: "string", required: true } }, "CryptoModule.connect");
-        if (!validInput) {
-            return null;
+        if (!chain) {
+            throw new Error("CryptoModule.connect: Chain is required");
         }
-        console.log("Chain: ", chain, "Detail: ", providerDetail);
+        console.log("Chain:", chain, "Detail:", providerDetail);
         const connectButton = document.getElementById("connect-button") || null;
-        const ethereum = this.getProvider();
-        if (!ethereum) {
-            return null;
-        }
         const details = providerDetail || this._EIP6963;
         if (this._connected && !details) {
-            return this._connected;
+            return { primaryAccount: this._connected, ethBalance: this._ethBalance };
         }
         if (details) {
             const connectButtons = document.querySelectorAll(".connect-mi");
@@ -1238,10 +1073,9 @@ const CryptoModule = {
                     throw new Error("No accounts returned by the chosen provider.");
                 }
                 const primaryAccount = accounts[0];
-                console.log("[EIP-6963] Connected account:", primaryAccount);
+                console.log("[EIP-6963] Connection Success!");
                 await this.switchChain(chain);
                 this._connected = primaryAccount;
-                console.log("Connected account:", primaryAccount);
                 if (connectBody) {
                     connectBody.innerHTML = `
                         <div class="connect-sb">
@@ -1263,7 +1097,14 @@ const CryptoModule = {
                 }
                 window.dispatchEvent(new CustomEvent("sypher:connect", { detail: primaryAccount }));
                 this.accountChange(true);
-                return primaryAccount;
+                const ethBalance = await this.getETH();
+                this._ethBalance = ethBalance;
+                const ens = await this.getENS(primaryAccount);
+                this._ens = ens;
+                if (ens !== null && ens !== undefined && connectButton) {
+                    connectButton.innerHTML = `${sypher.truncate(ens)}`;
+                }
+                return { primaryAccount, ethBalance };
             }
             catch (error) {
                 const detailedError = error instanceof Error ? `${error.message}\n${error.stack}` : JSON.stringify(error, Object.getOwnPropertyNames(error));
@@ -1279,13 +1120,17 @@ const CryptoModule = {
                         sypher.toggleLoader(params);
                     }
                     connectButtons.forEach((button) => { button.style.display = "flex"; });
-                    return;
+                    return null;
                 }
                 throw new Error(`CryptoModule.connect: ${detailedError}`);
             }
         }
         else {
             try {
+                const ethereum = this.getProvider();
+                if (!ethereum) {
+                    return null;
+                }
                 const accounts = await ethereum.request({ method: 'eth_requestAccounts' });
                 if (!Array.isArray(accounts) || accounts.length === 0) {
                     throw new Error("CryptoModule.connect: No accounts returned by the Ethereum provider.");
@@ -1297,13 +1142,20 @@ const CryptoModule = {
                 }
                 await this.switchChain(chain);
                 this._connected = primaryAccount;
-                console.log("Connected account:", primaryAccount);
+                console.log("[WINDOW] Connection Success!");
                 if (connectButton !== null) {
                     connectButton.innerHTML = `${sypher.truncate(primaryAccount)}`;
                 }
                 window.dispatchEvent(new CustomEvent("sypher:connect", { detail: primaryAccount }));
                 this.accountChange(true);
-                return primaryAccount;
+                const ethBalance = await this.getETH();
+                this._ethBalance = ethBalance;
+                const ens = await this.getENS(primaryAccount);
+                this._ens = ens;
+                if (ens !== null && ens !== undefined && connectButton) {
+                    connectButton.innerHTML = `${sypher.truncate(ens)}`;
+                }
+                return { primaryAccount, ethBalance };
             }
             catch (error) {
                 const detailedError = error instanceof Error ? `${error.message}\n${error.stack}` : JSON.stringify(error, Object.getOwnPropertyNames(error));
@@ -1313,7 +1165,7 @@ const CryptoModule = {
     },
     disconnect: async function () {
         this._connected = undefined;
-        this._token = undefined;
+        this._details = undefined;
         window.dispatchEvent(new CustomEvent("sypher:disconnect", { detail: this._connected }));
         this.accountChange(false);
     },
@@ -1338,17 +1190,17 @@ const CryptoModule = {
                 if (modal) {
                     modal.remove();
                 }
-                this._connected = undefined; // Refefine as null to allow for reconnection
                 if (this._chain) {
-                    if (this._token) {
+                    if (this._details) {
                         if (this._EIP6963) {
                             this.initCrypto({
-                                chain: this._chain.chainName.toLowerCase(),
-                                contractAddress: this._token.contractAddress,
-                                poolAddress: this._token.poolAddress,
-                                version: this._token.version,
-                                pair: this._token.pair,
-                                icon: this._token.icon,
+                                chain: this._chain.shortName.toLowerCase(),
+                                contractAddress: this._details.token.contractAddress,
+                                poolAddress: this._details.token.poolAddress,
+                                pairAddress: this._details.token.pairAddress,
+                                version: this._details.token.version,
+                                pair: this._details.token.pair,
+                                icon: this._details.token.icon,
                                 detail: this._EIP6963
                             });
                         }
@@ -1412,11 +1264,46 @@ const CryptoModule = {
             }
         }
     },
-    // getChain: function () { console.log(this.chain); return this._chain; },
+    getETH: async function () {
+        let provider = this._EIP6963?.provider;
+        if (!provider) {
+            provider = this.getProvider();
+        }
+        const web3 = new ethers.providers.Web3Provider(provider);
+        const signer = web3.getSigner();
+        const balance = await signer.getBalance();
+        const eth = parseFloat(ethers.utils.formatEther(balance));
+        console.log("ETH Balance:", eth);
+        return eth;
+    },
+    getENS: async function (address) {
+        if (!address) {
+            throw new Error("CryptoModule.getENS: Address is required");
+        }
+        if (this._ens) {
+            return this._ens;
+        }
+        try {
+            const provider = await this.getProvider(true);
+            const ens = await provider.lookupAddress(address);
+            if (!ens) {
+                return undefined;
+            }
+            console.log("ENS:", ens);
+            this._ens = ens;
+            return ens;
+        }
+        catch (error) {
+            throw new Error(`CryptoModule.getENS: ${error instanceof Error ? error.message : JSON.stringify(error)}`);
+        }
+    },
+    getChain: function () {
+        // console.log(this._chain);
+        return this._chain;
+    },
     switchChain: async function (chain) {
-        const validInput = sypher.validateInput({ chain }, { chain: { type: "string", required: true } }, "CryptoModule.switchChain");
-        if (!validInput) {
-            return;
+        if (!chain) {
+            throw new Error("CryptoModule.switchChain: Chain is required");
         }
         let provider = this._EIP6963?.provider;
         if (!provider) {
@@ -1426,16 +1313,12 @@ const CryptoModule = {
         if (!chainData) {
             return;
         }
-        const { chainlistData, params } = chainData;
-        if (!chainlistData) {
-            return;
-        }
-        const targetChainId = params.chainId;
+        const targetChainId = chainData.chainId;
         if (this._chain?.chainId === targetChainId) {
             return;
         }
-        if (params) {
-            this._chain = params;
+        if (chainData) {
+            this._chain = chainData;
         }
         try {
             const currentChainID = await provider.request({ method: 'eth_chainId' });
@@ -1460,7 +1343,7 @@ const CryptoModule = {
                 try {
                     await provider.request({
                         method: 'wallet_addEthereumChain',
-                        params: [params],
+                        params: [chainData],
                     });
                     if (this._chain) {
                         this._chain.chainId = targetChainId;
@@ -1476,19 +1359,14 @@ const CryptoModule = {
         }
     },
     getChainData: async function (chain) {
-        const validInput = sypher.validateInput({ chain }, { chain: { type: "string", required: true } }, "CryptoModule.getChainData");
-        if (!validInput) {
-            return null;
-        }
-        const chainValidation = sypher.validateChain(chain);
-        if (!chainValidation) {
-            return null;
-        }
-        const { chainData, chainId } = chainValidation;
-        if (!chainData || !chainId) {
-            return null;
+        if (!chain) {
+            throw new Error("CryptoModule.getChainData: Chain is required");
         }
         try {
+            const chainId = this._chain?.chainId ?? await sypher.validateChain(chain);
+            if (!chainId) {
+                return null;
+            }
             const chainIdDecimal = parseInt(chainId, 16);
             const url = `https://raw.githubusercontent.com/ethereum-lists/chains/refs/heads/master/_data/chains/eip155-${chainIdDecimal}.json`;
             const response = await fetch(url);
@@ -1496,83 +1374,112 @@ const CryptoModule = {
                 throw new Error(`Chain data for ID ${chainId} not found`);
             const data = await response.json();
             console.log(`Fetched chain data:`, data);
+            let iconData = undefined;
+            if (data.icon) {
+                try {
+                    const iconURL = `https://raw.githubusercontent.com/ethereum-lists/chains/refs/heads/master/_data/icons/${data.icon}.json`;
+                    const iconResponse = await fetch(iconURL);
+                    if (iconResponse.ok) {
+                        iconData = await iconResponse.json();
+                    }
+                    else {
+                        console.warn(`Icon data for ${data.icon} not found`);
+                    }
+                }
+                catch (iconError) {
+                    console.warn(`Error fetching icon data for ${data.icon}:`, iconError);
+                }
+            }
             const params = {
-                chainId: `0x${parseInt(data.chainId, 10).toString(16)}`,
-                chainName: data.name.toLowerCase(),
+                name: data.name,
+                chain: data.chain,
+                icon: iconData,
+                rpc: data.rpc,
                 nativeCurrency: data.nativeCurrency,
-                rpcUrls: data.rpc,
-                blockExplorerUrls: data.explorers?.map((explorer) => explorer.url) || []
+                infoURL: data.infoURL,
+                shortName: data.shortName,
+                chainId: `0x${parseInt(data.chainId, 10).toString(16)}`,
+                networkId: data.networkId,
+                ens: data.ens || undefined,
+                explorers: data.explorers || undefined,
             };
-            return { chainlistData: data, params };
+            return params;
         }
         catch (error) {
             throw new Error(`CryptoModule.getChainData: ${error instanceof Error ? error.message : JSON.stringify(error)}`);
         }
     },
-    getPriceFeed: async function (chain, pair = "eth") {
-        const validInput = sypher.validateInput({ chain, pair }, {
-            chain: { type: "string", required: true },
-            pair: { type: "string", required: false }
-        }, "CryptoModule.getPriceFeed");
-        if (!validInput) {
-            return null;
+    getPriceFeed: async function (pair = "ethereum") {
+        if (this._pairPrice && this._pairPrice.value && this._pairPrice.timestamp && (Date.now() - this._pairPrice.timestamp) < 60000) {
+            return this._pairPrice.value;
         }
-        if (this._ethPrice && this._ethPrice.value && this._ethPrice.timestamp && (Date.now() - this._ethPrice.timestamp) < 60000) {
-            return this._ethPrice.value;
-        }
-        const ethereum = this.getProvider();
-        if (!ethereum) {
-            return null;
-        }
-        const chainValidation = sypher.validateChain(chain);
-        if (!chainValidation) {
-            return null;
-        }
-        const { chainData, chainId } = chainValidation;
-        if (!chainData || !chainId) {
-            return null;
+        if (pair.toLowerCase().replace(/\s+/g, '') === "wrappedbitcoin") {
+            pair = "bitcoin";
         }
         try {
-            let account = this._connected;
-            if (account === null || account === undefined) {
-                account = await this.connect(chain);
+            const response = await fetch("https://raw.githubusercontent.com/Tukyo/sypher-tools/refs/heads/main/config/chainlink.min.json");
+            if (!response.ok) {
+                throw new Error("CryptoModule.getPriceFeed: Unable to fetch Chainlink data");
             }
-            if (!account) {
+            const pairMap = await response.json();
+            const pairData = pairMap[pair.toLowerCase().replace(/\s+/g, '')];
+            if (!pairData) {
+                throw new Error(`CryptoModule.getPriceFeed: No data found for ${pair}. Reference: https://github.com/Tukyo/sypher-tools/blob/main/config/chainlink.json`);
+            }
+            const availableQuotes = Object.keys(pairData);
+            console.log(`Available quotes for ${pair}:`, availableQuotes);
+            let quoteDetails = pairData["usd"] || pairData["eth"];
+            if (!quoteDetails) {
+                throw new Error(`CryptoModule.getPriceFeed: No USD, ETH, or BTC quote found for ${pair}`);
+            }
+            console.log("Chosen Quote Details:", quoteDetails);
+            const { proxy, decimals } = quoteDetails;
+            const web3 = await this.getProvider(true);
+            if (!web3) {
                 return null;
             }
-            const chainlinkAddress = CHAINS[chain].priceFeeds[pair];
-            if (!chainlinkAddress) {
-                throw new Error(`Chain ${chain} is not supported`);
-            }
-            let provider = this._EIP6963?.provider;
-            if (!provider) {
-                provider = this.getProvider();
-            }
-            const web3 = new ethers$1.providers.Web3Provider(provider);
-            const signer = web3.getSigner();
-            const contract = new ethers$1.Contract(chainlinkAddress, CHAINLINK_ABI, signer);
+            const contract = new ethers.Contract(proxy, CHAINLINK_ABI, web3);
             const roundData = await contract.latestRoundData();
-            const price = ethers$1.utils.formatUnits(roundData.answer, 8);
-            console.log(`ETH Price on ${chain}: $${price}`);
-            this._ethPrice = { value: price, timestamp: Date.now() };
-            return price;
+            const description = await contract.description();
+            const price = ethers.utils.formatUnits(roundData.answer, decimals);
+            console.log(`${description}: ${price}`);
+            if (pairData["usd"]) {
+                this._pairPrice = { value: price, timestamp: Date.now() };
+                return price;
+            }
+            else {
+                const ethUSD = "0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419";
+                const ethUSDContract = new ethers.Contract(ethUSD, CHAINLINK_ABI, web3);
+                const ethUSDRoundData = await ethUSDContract.latestRoundData();
+                const ethUSDPrice = ethers.utils.formatUnits(ethUSDRoundData.answer, 8);
+                const finalPrice = parseFloat(price) * parseFloat(ethUSDPrice);
+                console.log(`Final Price for ${pair}: $${finalPrice}`);
+                this._pairPrice = { value: finalPrice.toString(), timestamp: Date.now() };
+                return finalPrice.toString();
+            }
         }
         catch (error) {
             throw new Error(`CryptoModule.getPriceFeed: ${error instanceof Error ? error.message : JSON.stringify(error)}`);
         }
     },
     getTokenDetails: async function (chain, contractAddress) {
-        const validInput = sypher.validateInput({ chain, contractAddress }, {
-            chain: { type: "string", required: true },
-            contractAddress: { type: "string", required: true, regex: ADDRESS_REGEXP }
-        }, "CryptoModule.getTokenDetails");
-        if (!validInput) {
-            return null;
+        if (!chain) {
+            throw new Error("CryptoModule.getTokenDetails: Chain is required");
+        }
+        if (!contractAddress) {
+            throw new Error("CryptoModule.getTokenDetails: Contract address is required");
+        }
+        if (!contractAddress.match(ADDRESS_REGEXP)) {
+            throw new Error("CryptoModule.getTokenDetails: Invalid contract address");
         }
         try {
             let account = this._connected;
             if (account === null || account === undefined) {
-                account = await this.connect(chain);
+                const connection = await this.connect(chain);
+                if (!connection) {
+                    return null;
+                }
+                account = connection.primaryAccount;
             }
             if (!account) {
                 return null;
@@ -1581,9 +1488,9 @@ const CryptoModule = {
             if (!provider) {
                 provider = this.getProvider();
             }
-            const web3 = new ethers$1.providers.Web3Provider(provider);
+            const web3 = new ethers.providers.Web3Provider(provider);
             const signer = web3.getSigner();
-            const contract = new ethers$1.Contract(contractAddress, ERC20_ABI, signer);
+            const contract = new ethers.Contract(contractAddress, ERC20_ABI, signer);
             const balance = await contract.balanceOf(account);
             const decimals = await contract.decimals();
             const name = await contract.name();
@@ -1596,52 +1503,58 @@ const CryptoModule = {
             throw new Error(`CryptoModule.getTokenDetails: ${error instanceof Error ? error.message : JSON.stringify(error)}`);
         }
     },
-    getPriceV2: async function (chain, poolAddress, pair) {
-        const validInput = sypher.validateInput({ chain, poolAddress, pair }, {
-            chain: { type: "string", required: true },
-            poolAddress: { type: "string", required: true, regex: ADDRESS_REGEXP },
-            pair: { type: "string", required: true }
-        }, "CryptoModule.getPriceV2");
-        if (!validInput) {
-            return null;
+    getPriceV2: async function (chain, poolAddress, pair, pairAddress) {
+        if (!chain) {
+            throw new Error("CryptoModule.getPriceV2: Chain is required");
         }
-        const ethereum = this.getProvider();
-        if (!ethereum) {
-            return null;
+        if (!poolAddress) {
+            throw new Error("CryptoModule.getPriceV2: Pool address is required");
         }
-        const chainValidation = sypher.validateChain(chain);
-        if (!chainValidation) {
-            return null;
+        if (!poolAddress.match(ADDRESS_REGEXP)) {
+            throw new Error("CryptoModule.getPriceV2: Invalid pool address");
         }
-        const { chainData, chainId } = chainValidation;
-        if (!chainData || !chainId) {
-            return null;
+        if (!pair) {
+            throw new Error("CryptoModule.getPriceV2: Pair is required");
+        }
+        if (!pairAddress) {
+            throw new Error("CryptoModule.getPriceV2: Pair address is required");
+        }
+        if (!pairAddress.match(ADDRESS_REGEXP)) {
+            throw new Error("CryptoModule.getPriceV2: Invalid pair address");
         }
         try {
+            const chainId = this._chain?.chainId ?? await sypher.validateChain(chain);
+            if (!chainId) {
+                return null;
+            }
             let account = this._connected;
             if (account === null || account === undefined) {
-                account = await this.connect(chain);
+                const connection = await this.connect(chain);
+                if (!connection) {
+                    return null;
+                }
+                account = connection.primaryAccount;
             }
             if (!account) {
                 return null;
             }
-            const chainlinkResult = await this.getPriceFeed(chain, pair);
+            const chainlinkResult = await this.getPriceFeed(pair);
             if (!chainlinkResult)
                 return null;
             let provider = this._EIP6963?.provider;
             if (!provider) {
                 provider = this.getProvider();
             }
-            const web3 = new ethers$1.providers.Web3Provider(provider);
+            const web3 = new ethers.providers.Web3Provider(provider);
             const signer = web3.getSigner();
-            const uniswapV2 = new ethers$1.Contract(poolAddress, UNISWAP_V2_POOL_ABI, signer);
+            const uniswapV2 = new ethers.Contract(poolAddress, UNISWAP_V2_POOL_ABI, signer);
             const token0 = await uniswapV2.token0();
             const token1 = await uniswapV2.token1();
             const reserves = await uniswapV2.getReserves();
             const reserve0 = reserves._reserve0;
             const reserve1 = reserves._reserve1;
-            const token0Contract = new ethers$1.Contract(token0, ERC20_ABI, signer);
-            const token1Contract = new ethers$1.Contract(token1, ERC20_ABI, signer);
+            const token0Contract = new ethers.Contract(token0, ERC20_ABI, signer);
+            const token1Contract = new ethers.Contract(token1, ERC20_ABI, signer);
             const decimals0 = await token0Contract.decimals();
             const decimals1 = await token1Contract.decimals();
             console.log("Reserve 0:", reserve0);
@@ -1650,15 +1563,13 @@ const CryptoModule = {
             console.log("Token 1:", token1);
             console.log("Decimals 0:", decimals0);
             console.log("Decimals 1:", decimals1);
-            const reserve0BN = ethers$1.BigNumber.from(reserve0);
-            const reserve1BN = ethers$1.BigNumber.from(reserve1);
+            const reserve0BN = ethers.BigNumber.from(reserve0);
+            const reserve1BN = ethers.BigNumber.from(reserve1);
             // Convert each reserve to a normal floating-point value, adjusting by its decimals
             // e.g. if reserve0 = 123456789 (raw) and decimals0 = 6, then
             // parseFloat(ethers.utils.formatUnits(reserve0BN, 6)) => 123.456789
-            const reserve0Float = parseFloat(ethers$1.utils.formatUnits(reserve0BN, decimals0));
-            const reserve1Float = parseFloat(ethers$1.utils.formatUnits(reserve1BN, decimals1));
-            const pairAddress = CHAINS[chain].pairAddresses[pair];
-            console.log("Pair Address:", pairAddress);
+            const reserve0Float = parseFloat(ethers.utils.formatUnits(reserve0BN, decimals0));
+            const reserve1Float = parseFloat(ethers.utils.formatUnits(reserve1BN, decimals1));
             let priceRatio;
             if (token1.toLowerCase() === pairAddress.toLowerCase()) {
                 priceRatio = reserve1Float / reserve0Float; // Price in pair = (reserve1 / 10^decimals1) / (reserve0 / 10^decimals0)
@@ -1677,32 +1588,43 @@ const CryptoModule = {
             throw new Error(`CryptoModule.getPriceV2: ${error instanceof Error ? error.message : JSON.stringify(error)}`);
         }
     },
-    getPriceV3: async function (chain, contractAddress, poolAddress, pair) {
-        const validInput = sypher.validateInput({ chain, contractAddress, poolAddress, pair }, {
-            chain: { type: "string", required: true },
-            contractAddress: { type: "string", required: true, regex: ADDRESS_REGEXP },
-            poolAddress: { type: "string", required: true, regex: ADDRESS_REGEXP },
-            pair: { type: "string", required: true }
-        }, "CryptoModule.getPriceV3");
-        if (!validInput) {
-            return null;
+    getPriceV3: async function (chain, contractAddress, poolAddress, pair, pairAddress) {
+        if (!chain) {
+            throw new Error("CryptoModule.getPriceV3: Chain is required");
         }
-        const ethereum = this.getProvider();
-        if (!ethereum) {
-            return null;
+        if (!contractAddress) {
+            throw new Error("CryptoModule.getPriceV3: Contract address is required");
         }
-        const chainValidation = sypher.validateChain(chain);
-        if (!chainValidation) {
-            return null;
+        if (!contractAddress.match(ADDRESS_REGEXP)) {
+            throw new Error("CryptoModule.getPriceV3: Invalid contract address");
         }
-        const { chainData, chainId } = chainValidation;
-        if (!chainData || !chainId) {
-            return null;
+        if (!poolAddress) {
+            throw new Error("CryptoModule.getPriceV3: Pool address is required");
+        }
+        if (!poolAddress.match(ADDRESS_REGEXP)) {
+            throw new Error("CryptoModule.getPriceV3: Invalid pool address");
+        }
+        if (!pair) {
+            throw new Error("CryptoModule.getPriceV3: Pair is required");
+        }
+        if (!pairAddress) {
+            throw new Error("CryptoModule.getPriceV3: Pair address is required");
+        }
+        if (!pairAddress.match(ADDRESS_REGEXP)) {
+            throw new Error("CryptoModule.getPriceV3: Invalid pair address");
         }
         try {
+            const chainId = this._chain?.chainId ?? await sypher.validateChain(chain);
+            if (!chainId) {
+                return null;
+            }
             let account = this._connected;
             if (account === null || account === undefined) {
-                account = await this.connect(chain);
+                const connection = await this.connect(chain);
+                if (!connection) {
+                    return null;
+                }
+                account = connection.primaryAccount;
             }
             if (!account) {
                 return null;
@@ -1713,19 +1635,17 @@ const CryptoModule = {
                 return null;
             }
             const { sqrtPriceX96, token0, token1, decimals0, decimals1 } = poolV3Data;
-            const pairAddress = CHAINS[chain].pairAddresses[pair];
-            console.log("Pair Address:", pairAddress);
             // 2: Calculate the price ratio = token1/token0 using precise big-number math
-            const formattedSqrtPricex96 = ethers$1.BigNumber.from(sqrtPriceX96);
-            const Q96 = ethers$1.BigNumber.from("79228162514264337593543950336");
+            const formattedSqrtPricex96 = ethers.BigNumber.from(sqrtPriceX96);
+            const Q96 = ethers.BigNumber.from("79228162514264337593543950336");
             const numerator = formattedSqrtPricex96
                 .mul(formattedSqrtPricex96)
-                .mul(ethers$1.BigNumber.from(10).pow(decimals0));
-            const denominator = Q96.mul(Q96).mul(ethers$1.BigNumber.from(10).pow(decimals1));
+                .mul(ethers.BigNumber.from(10).pow(decimals0));
+            const denominator = Q96.mul(Q96).mul(ethers.BigNumber.from(10).pow(decimals1));
             const ratioBN = numerator.div(denominator);
             const remainder = numerator.mod(denominator);
             const decimalsWanted = 8;
-            const scaleFactor = ethers$1.BigNumber.from(10).pow(decimalsWanted);
+            const scaleFactor = ethers.BigNumber.from(10).pow(decimalsWanted);
             const remainderScaled = remainder.mul(scaleFactor).div(denominator);
             const ratioFloat = parseFloat(ratioBN.toString()) +
                 parseFloat(remainderScaled.toString()) / Math.pow(10, decimalsWanted);
@@ -1741,7 +1661,7 @@ const CryptoModule = {
                 throw new Error(`CryptoModule.getPriceV3: Neither token is ${pair}`);
             }
             // 4: Fetch the ETH price in USD
-            const chainlinkResult = await this.getPriceFeed(chain, pair);
+            const chainlinkResult = await this.getPriceFeed(pair);
             if (!chainlinkResult)
                 return null;
             // 5: Convert token price from WETH to USD
@@ -1754,30 +1674,33 @@ const CryptoModule = {
         }
     },
     getPoolV3: async function (chain, contractAddress, poolAddress) {
-        const validInput = sypher.validateInput({ chain, contractAddress, poolAddress }, {
-            chain: { type: "string", required: true },
-            contractAddress: { type: "string", required: true, regex: ADDRESS_REGEXP },
-            poolAddress: { type: "string", required: true, regex: ADDRESS_REGEXP }
-        }, "CryptoModule.getPoolV3");
-        if (!validInput) {
-            return null;
+        if (!chain) {
+            throw new Error("CryptoModule.getPoolV3: Chain is required");
         }
-        const ethereum = this.getProvider();
-        if (!ethereum) {
-            return null;
+        if (!contractAddress) {
+            throw new Error("CryptoModule.getPoolV3: Contract address is required");
         }
-        const chainValidation = sypher.validateChain(chain);
-        if (!chainValidation) {
-            return null;
+        if (!contractAddress.match(ADDRESS_REGEXP)) {
+            throw new Error("CryptoModule.getPoolV3: Invalid contract address");
         }
-        const { chainData, chainId } = chainValidation;
-        if (!chainData || !chainId) {
-            return null;
+        if (!poolAddress) {
+            throw new Error("CryptoModule.getPoolV3: Pool address is required");
+        }
+        if (!poolAddress.match(ADDRESS_REGEXP)) {
+            throw new Error("CryptoModule.getPoolV3: Invalid pool address");
         }
         try {
+            const chainId = this._chain?.chainId ?? await sypher.validateChain(chain);
+            if (!chainId) {
+                return null;
+            }
             let account = this._connected;
             if (account === null || account === undefined) {
-                account = await this.connect(chain);
+                const connection = await this.connect(chain);
+                if (!connection) {
+                    return null;
+                }
+                account = connection.primaryAccount;
             }
             if (!account) {
                 return null;
@@ -1786,9 +1709,9 @@ const CryptoModule = {
             if (!provider) {
                 provider = this.getProvider();
             }
-            const web3 = new ethers$1.providers.Web3Provider(provider);
+            const web3 = new ethers.providers.Web3Provider(provider);
             const signer = web3.getSigner();
-            const pool = new ethers$1.Contract(poolAddress, UNISWAP_V3_POOL_ABI, signer);
+            const pool = new ethers.Contract(poolAddress, UNISWAP_V3_POOL_ABI, signer);
             const slot0 = await pool.slot0();
             const sqrtPriceX96 = slot0.sqrtPriceX96;
             console.log("Sqrt Price X96:", sqrtPriceX96);
@@ -1796,8 +1719,8 @@ const CryptoModule = {
             const token1 = await pool.token1();
             console.log("Token 0:", token0);
             console.log("Token 1:", token1);
-            const token0Contract = new ethers$1.Contract(token0, ERC20_ABI, signer);
-            const token1Contract = new ethers$1.Contract(token1, ERC20_ABI, signer);
+            const token0Contract = new ethers.Contract(token0, ERC20_ABI, signer);
+            const token1Contract = new ethers.Contract(token1, ERC20_ABI, signer);
             const decimals0 = await token0Contract.decimals();
             const decimals1 = await token1Contract.decimals();
             console.log("Decimals 0:", decimals0);
@@ -1812,12 +1735,17 @@ const CryptoModule = {
         }
     },
     getUserValue: function (balance, price) {
-        const validInput = sypher.validateInput({ balance, price }, {
-            balance: { type: "object", required: true },
-            price: { type: "number", required: true }
-        }, "CryptoModule.getUserValue");
-        if (!validInput) {
-            return null;
+        if (!balance) {
+            throw new Error("CryptoModule.getUserValue: Balance is required");
+        }
+        if (!price) {
+            throw new Error("CryptoModule.getUserValue: Price is required");
+        }
+        if (typeof balance !== "object") {
+            throw new Error("CryptoModule.getUserValue: Invalid balance");
+        }
+        if (typeof price !== "number") {
+            throw new Error("CryptoModule.getUserValue: Invalid price");
         }
         try {
             const value = parseFloat(balance.toString()) * parseFloat(price.toString());
@@ -1828,34 +1756,40 @@ const CryptoModule = {
             throw new Error(`CryptoModule.getUserValue: ${error instanceof Error ? error.message : JSON.stringify(error)}`);
         }
     },
-    clean: function (tokenDetails) {
-        const validInput = sypher.validateInput({ tokenDetails }, { tokenDetails: { type: "object", required: true } }, "CryptoModule.clean");
-        if (!validInput) {
-            return null;
+    clean: function (details) {
+        if (!details) {
+            throw new Error("CryptoModule.clean: Token details are required");
         }
-        const { contractAddress, poolAddress, balance, decimals, name, symbol, icon, totalSupply, tokenPrice, userValue, version, pair } = tokenDetails;
+        const { address, ens, contractAddress, poolAddress, pairAddress, ethBalance, balance, decimals, name, symbol, icon, totalSupply, tokenPrice, userValue, version, pair } = details;
         const cleanedDetails = {
-            contractAddress,
-            poolAddress,
-            balance: parseFloat(ethers$1.utils.formatUnits(balance, decimals)),
-            decimals,
-            name,
-            symbol,
-            icon,
-            totalSupply: parseFloat(ethers$1.utils.formatUnits(totalSupply, decimals)),
-            tokenPrice: parseFloat(tokenPrice.toString()),
-            userValue: (parseFloat(userValue.toString()) / Math.pow(10, decimals)).toFixed(decimals).toString(),
-            version,
-            pair
+            user: {
+                address,
+                ens,
+                ethBalance,
+                tokenBalance: parseFloat(ethers.utils.formatUnits(balance, decimals)),
+                value: (parseFloat(userValue.toString()) / Math.pow(10, decimals)).toFixed(decimals).toString()
+            },
+            token: {
+                contractAddress,
+                poolAddress,
+                pairAddress,
+                decimals,
+                name,
+                symbol,
+                icon,
+                totalSupply: parseFloat(ethers.utils.formatUnits(totalSupply, decimals)),
+                tokenPrice: parseFloat(tokenPrice.toString()),
+                version,
+                pair
+            }
         };
-        console.log(this._token);
-        this._token = cleanedDetails;
-        console.log("Token Details:", cleanedDetails);
+        this._details = cleanedDetails;
+        console.log("Details:", cleanedDetails);
         return cleanedDetails;
     },
     getCleaned: function () {
-        console.log(this._token);
-        return this._token ?? null;
+        console.log(this._details);
+        return this._details ?? null;
     },
     initProviderSearch: function () {
         window.addEventListener("eip6963:announceProvider", (event) => {
@@ -1865,23 +1799,46 @@ const CryptoModule = {
         });
         window.dispatchEvent(new Event("eip6963:requestProvider"));
     },
-    getProvider: function () {
-        if (this._EIP6963) {
-            // console.log(this._EIP6963.provider);
-            return this._EIP6963.provider;
+    getProvider: async function (isPublic = false) {
+        if (isPublic) {
+            for (const rpc of MAINNET_RPCS) {
+                try {
+                    const provider = new ethers.providers.JsonRpcProvider(rpc);
+                    await provider.getBlockNumber(); // Quick test to see if the provider is working
+                    console.log(`[Public RPC]: ${rpc}`);
+                    return provider;
+                }
+                catch (error) {
+                    const errorMessage = error instanceof Error ? error.message : String(error);
+                    throw new Error(`CryptoModule.getProvider: ${rpc} - ${errorMessage}`);
+                }
+            }
         }
-        if (typeof window === "undefined" || !window.ethereum) {
-            throw new Error("CryptoModule.getProvider: No Ethereum provider found.");
+        else {
+            if (this._EIP6963) {
+                console.log("[EIP6963]: ", this._EIP6963.provider);
+                return this._EIP6963.provider;
+            }
+            if (typeof window === "undefined" || !window.ethereum) {
+                throw new Error("CryptoModule.getProvider: No Ethereum provider found.");
+            }
+            console.log("[WINDOW]:", window.ethereum);
+            return window.ethereum;
         }
-        // console.log(window.ethereum);
-        return window.ethereum;
     },
     getConnected() {
         return this._connected ?? null;
     },
     flush: function () {
+        if (this._connected === null || this._connected === undefined) {
+            console.log("Nothing to flush...");
+            return;
+        }
         this._connected = undefined;
-        this._token = undefined;
+        this._details = undefined;
+        this._pairPrice = undefined;
+        this._ethBalance = undefined;
+        this._ens = undefined;
         let provider = this._EIP6963?.provider;
         if (!provider) {
             provider = this.getProvider();

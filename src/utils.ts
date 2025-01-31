@@ -1,21 +1,31 @@
-import { CHAINS } from "./constants";
 import { IHelperModule, ILogModule, ITruncationModule, IWindowModule, TScreenDetails, TUserEnvironment } from "./utils.d";
 
 export const HelperModule: IHelperModule = {
-    validateChain: function (chain) {
-        if (!chain) { throw new Error("CryptoModule.validateChain: Please provide a chain to validate."); }
-
-        const chainData = CHAINS[chain];
-        if (!chainData) {
-            throw new Error(`CryptoModule.validateChain: Chain "${chain}" is not supported.`);
+    validateChain: async function (chain: string): Promise<string | null> {
+        if (!chain) { 
+            throw new Error("CryptoModule.validateChain: Please provide a chain to validate."); 
         }
-        const chainId = chainData.params[0]?.chainId;
-        if (!chainId) {
-            throw new Error(`CryptoModule.validateChain: Missing chainId for chain "${chain}".`);
-        }
+    
+        try {
+            console.log("Validating chain...");
 
-        return { chainData, chainId };
-    },
+            const response = await fetch("https://raw.githubusercontent.com/Tukyo/sypher-tools/refs/heads/main/config/chains.min.json");
+            if (!response.ok) {
+                throw new Error("CryptoModule.validateChain: Failed to fetch chain data.");
+            }
+    
+            const chainMap = await response.json();
+            const chainData = chainMap[chain.toLowerCase()];
+    
+            if (!chainData || !chainData.id) {
+                throw new Error(`CryptoModule.validateChain: Chain "${chain}" is not supported. Supported Chains: https://github.com/Tukyo/sypher-tools/blob/main/config/chains.json`);
+            }
+    
+            return `0x${chainData.id.toString(16)}`;
+        } catch (error: unknown) {
+            throw new Error(`CryptoModule.validateChain: ${error instanceof Error ? error.message : JSON.stringify(error)}`);
+        }
+    }    
 }
 export const LogModule: ILogModule = { // TODO: Add error throwing
     initLogger: function () {
@@ -155,7 +165,9 @@ export const TruncationModule: ITruncationModule = {
         return `${string.slice(0, startLength)}...${string.slice(-endLength)}`;
     },
     truncateBalance: function (balance, decimals = 2, maxLength = 8) {
-        if (!balance) { throw new Error("TruncationModule.truncateBalance: Please provide a number to truncate."); }
+        if (balance === null || balance === undefined) { 
+            throw new Error("TruncationModule.truncateBalance: Please provide a number to truncate."); 
+        }
 
         const num = parseFloat(balance.toString());
 

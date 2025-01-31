@@ -3,6 +3,17 @@ import { TInitParams } from "./crypto.d";
 // #region INTERFACE
 export interface IInterfaceModule {
     /**
+     * @description Currently applied theme.
+     * @type {string | null}
+     */
+    _theme?: string | null;
+
+    /**
+     * @description The text to display on the connect button.
+     */
+    _connectText?: string | null;
+
+    /**
      * @description Initializes a theme by adding a stylesheet to the head of the document.
      * @param {string} [theme="default"] - The theme to apply [Default: "default"]
      */
@@ -12,12 +23,6 @@ export interface IInterfaceModule {
      * @param {HTMLElement[]} elements - The target HTML elements to apply the theme
      * @param {object} params - The parameters to customize the theme
      */
-
-    /**
-     * @description Currently applied theme.
-     * @type {string | null}
-     */
-    _theme?: string | null;
 
     applyStyle(
         elements: HTMLElement[],
@@ -32,11 +37,6 @@ export interface IInterfaceModule {
      * @see TButtonParams
      */
     createButton(params: TButtonParams): HTMLButtonElement | HTMLDivElement | null;
-
-    /**
-     * @description The text to display on the connect button.
-     */
-    _connectText?: string | null;
 
     /**
      * @description Creates a modal on the page with the given params

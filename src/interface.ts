@@ -210,7 +210,8 @@ export const InterfaceModule: IInterfaceModule = {
                                 chain: initCrypto.chain,
                                 contractAddress: initCrypto.contractAddress,
                                 poolAddress: initCrypto.poolAddress,
-                                version: initCrypto.version, //TODO: Check how to make this work with non eth pairs
+                                pairAddress: initCrypto.pairAddress,
+                                version: initCrypto.version,
                                 detail: providerDetail,
                                 icon: initCrypto.icon
                             });
@@ -234,18 +235,14 @@ export const InterfaceModule: IInterfaceModule = {
             if (account !== null && account !== undefined) {
                 modalObj.title.innerHTML = "Account";
 
-                const provider = sypher.getProvider();
-                const web3 = new ethers.providers.Web3Provider(provider);
-                const signer = web3.getSigner();
-                const balance = await signer.getBalance();
-                const eth = ethers.utils.formatEther(balance);
-
                 const tokenDetails = sypher.getCleaned() as TCleanedDetails | null;
 
                 let showTokenDetails = false;
                 let tokenDetailClass = "av-b-c-hide";
+                let ens = undefined;
                 let icon = "";
                 let tokenName = "";
+                let ethBalance = 0;
                 let userBalance = 0;
                 let userValue = "";
                 let tokenPrice = 0;
@@ -254,12 +251,14 @@ export const InterfaceModule: IInterfaceModule = {
                 if (tokenDetails) {
                     showTokenDetails = true;
                     tokenDetailClass = "av-b-c";
-                    icon = tokenDetails.icon || "";
-                    tokenName = tokenDetails.name || "";
-                    userBalance = tokenDetails.balance || 0;
-                    userValue = tokenDetails.userValue || "";
-                    tokenPrice = tokenDetails.tokenPrice || 0;
-                    tokenDecimals = tokenDetails.decimals || 0;
+                    ens = tokenDetails.user.ens || undefined;
+                    icon = tokenDetails.token.icon || "";
+                    tokenName = tokenDetails.token.name || "";
+                    ethBalance = tokenDetails.user.ethBalance || 0;
+                    userBalance = tokenDetails.user.tokenBalance || 0;
+                    userValue = tokenDetails.user.value || "";
+                    tokenPrice = tokenDetails.token.tokenPrice || 0;
+                    tokenDecimals = tokenDetails.token.decimals || 0;
                 }
 
                 const accountView: HTMLElement | null = this.createElement(
@@ -275,12 +274,12 @@ export const InterfaceModule: IInterfaceModule = {
                                     {
                                         type: "h2",
                                         classes: ["av-h-ti"],
-                                        innerHTML: `${sypher.truncate(account)}`
+                                        innerHTML: ens ? `${sypher.truncate(ens)}` : `${sypher.truncate(account)}`
                                     },
                                     {
                                         type: "h3",
                                         classes: ["av-h-ba"],
-                                        innerHTML: `${sypher.truncateBalance(parseFloat(eth.toString()))} ETH` // TODO: Update 'ETH' to native token of chain
+                                        innerHTML: `${sypher.truncateBalance(parseFloat(ethBalance.toString()))} ETH` // TODO: Update 'ETH' to native token of chain
                                     }
                                 ]
                             },
