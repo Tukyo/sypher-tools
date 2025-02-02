@@ -13,6 +13,12 @@ export interface ILogModule {
      * @returns {void}
      */
     initLogger(): void;
+
+    /**
+     * Log a message to the console.
+     * @see TLogParams
+     */
+    log(message: string, params?: TLogParams): void;
 }
 export interface ITruncationModule {
     /**
@@ -72,4 +78,23 @@ export type TScreenDetails = {
     colorDepth: number;
     pixelDepth: number;
 }
+export type TLogType = 'log' | 'warn' | 'error';
+
+export type TLogParams = {
+    type?: TLogType;
+    styles?: Partial<{
+        color: string;
+        background: string;
+        fontSize: string;
+        fontWeight: string;
+        fontStyle: string;
+        textDecoration: string;
+        textTransform: string;
+        padding: string;
+        margin: string;
+        border: string;
+        borderRadius: string;
+        textShadow: string;
+    }>;
+};
 // #endregion TYPES

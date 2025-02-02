@@ -1,6 +1,8 @@
 import { BUTTON_TYPES, DISCOVERED_PROVIDERS, MODAL_TYPES, PLACEHOLDER_PROVIDERS, THEMES } from "./constants";
 import { TInitParams, TEIP6963, TCleanedDetails } from "./crypto.d";
 import { IInterfaceModule, TButtonParams, TConnectModal, TElementParams, TLoaderParams, TLogModal } from "./interface.d";
+import { TPAccountView } from "./prefabs.d";
+import { PAccountView } from "./prefabs";
 
 export const InterfaceModule: IInterfaceModule = {
     initTheme: function (theme = "default") {
@@ -81,8 +83,12 @@ export const InterfaceModule: IInterfaceModule = {
 
             button.classList.add(className, themeName);
             button.textContent = text;
-
             this._connectText = text;
+
+            window.addEventListener('sypher:ens', (e) => {
+                const ens = (e as CustomEvent).detail;
+                button.textContent = ens;
+            });
 
             const finalOnClick = onClick === defaultParams.onClick
                 ? () => sypher.connect(initCrypto.chain !== "none" ? initCrypto.chain : "ethereum")
@@ -237,173 +243,30 @@ export const InterfaceModule: IInterfaceModule = {
 
                 const tokenDetails = sypher.getCleaned() as TCleanedDetails | null;
 
-                let showTokenDetails = false;
-                let tokenDetailClass = "av-b-c-hide";
-                let ens = undefined;
-                let icon = "";
-                let tokenName = "";
-                let ethBalance = 0;
-                let userBalance = 0;
-                let userValue = "";
-                let tokenPrice = 0;
-                let tokenDecimals = 0;
-                
-                if (tokenDetails) {
-                    showTokenDetails = true;
-                    tokenDetailClass = "av-b-c";
-                    ens = tokenDetails.user.ens || undefined;
-                    icon = tokenDetails.token.icon || "";
-                    tokenName = tokenDetails.token.name || "";
-                    ethBalance = tokenDetails.user.ethBalance || 0;
-                    userBalance = tokenDetails.user.tokenBalance || 0;
-                    userValue = tokenDetails.user.value || "";
-                    tokenPrice = tokenDetails.token.tokenPrice || 0;
-                    tokenDecimals = tokenDetails.token.decimals || 0;
-                }
+                const {
+                    user: { ens = undefined, ethBalance = 0, tokenBalance: userBalance = 0, value: userValue = "" } = {},
+                    token: { icon = "", name: tokenName = "", price: tokenPrice = 0, decimals: tokenDecimals = 0 } = {}
+                } = tokenDetails || {};
+            
+                const params: TPAccountView = {
+                    modalObj,
+                    ens,
+                    account,
+                    sypher,
+                    ethBalance,
+                    tokenDetailClass: tokenDetails ? "av-b-c" : "av-b-c-hide",
+                    icon,
+                    showTokenDetails: !!tokenDetails,
+                    tokenPrice,
+                    userBalance,
+                    tokenName,
+                    userValue,
+                    mergedProviders
+                };
 
-                const accountView: HTMLElement | null = this.createElement(
-                    {
-                        append: modalObj.body,
-                        type: "div",
-                        id: 'account-view',
-                        children: [
-                            { // Header
-                                type: "div",
-                                classes: ["av-h"],
-                                children: [
-                                    {
-                                        type: "h2",
-                                        classes: ["av-h-ti"],
-                                        innerHTML: ens ? `${sypher.truncate(ens)}` : `${sypher.truncate(account)}`
-                                    },
-                                    {
-                                        type: "h3",
-                                        classes: ["av-h-ba"],
-                                        innerHTML: `${sypher.truncateBalance(parseFloat(ethBalance.toString()))} ETH` // TODO: Update 'ETH' to native token of chain
-                                    }
-                                ]
-                            },
-                            { // Body
-                                type: "div",
-                                classes: ["av-b"],
-                                children: [
-                                    {
-                                        type: "div",
-                                        id: "av-b-td",
-                                        classes: [tokenDetailClass],
-                                        children: [
-                                            {
-                                                type: "div",
-                                                classes: ["av-b-td-ic"],
-                                                children: [
-                                                    {
-                                                        type: "img",
-                                                        classes: ["av-b-td-i"],
-                                                        attributes: {
-                                                            src: icon
-                                                        }
-                                                    },
-                                                    {
-                                                        type: "div",
-                                                        classes: ["av-b-td-n"],
-                                                        innerHTML: showTokenDetails
-                                                            ? `$${sypher.truncateBalance(parseFloat(tokenPrice.toString()))}`
-                                                            : ""
-                                                    }
-                                                ]
+                const accountViewConfig = PAccountView(params);
 
-                                            },
-                                            {
-                                                type: "div",
-                                                classes: ["av-b-td-bal"],
-                                                innerHTML: showTokenDetails
-                                                    ? `${sypher.truncateBalance(parseFloat(userBalance.toString()))} ${tokenName}`
-                                                    : ""
-                                            },
-                                            {
-                                                type: "div",
-                                                classes: ["av-b-td-val"],
-                                                innerHTML: showTokenDetails
-                                                    ? `$${sypher.truncateBalance(parseFloat(userValue.toString()))}`
-                                                    : ""
-                                            }
-                                        ]
-                                    },
-                                    {
-                                        type: "div",
-                                        id: "av-b-provider",
-                                        classes: ["av-b-b"],
-                                        events: {
-                                            click: () => {
-                                                if (accountView) { accountView.style.display = "none"; }
-
-                                                const buttons = document.querySelectorAll('.connect-mi');
-                                                if (buttons) { buttons.forEach((button) => { (button as HTMLDivElement).style.display = "flex"; }); }
-
-                                                modalObj.title.innerHTML = "Change Wallet";
-                                            }
-                                        },
-                                        children: [
-                                            {
-                                                type: "div",
-                                                classes: ["av-b-bn-ic"],
-                                                children: [
-                                                    {
-                                                        type: "img",
-                                                        classes: ["av-b-bn-i"],
-                                                        attributes: {
-                                                            src: mergedProviders[0].info.icon
-                                                        }
-                                                    },
-                                                    {
-                                                        type: "img",
-                                                        classes: ["av-b-bn-i"],
-                                                        attributes: {
-                                                            src: mergedProviders[1].info.icon
-                                                        }
-                                                    }
-                                                ]
-                                            },
-                                            {
-                                                type: "div",
-                                                classes: ["av-b-bn-t"],
-                                                innerHTML: "Change Wallet"
-                                            }
-                                        ],
-                                    }
-                                    // {
-                                    //     type: "div",
-                                    //     id: "av-b-history",
-                                    //     classes: ["av-b-b"],
-                                    //     innerHTML: "Recent Activity"
-                                    // }
-                                ]
-                            },
-                            {// Disconnect
-                                type: "div",
-                                classes: ["av-x"],
-                                events: {
-                                    click: () => {
-                                        sypher.disconnect();
-
-                                        if (accountView && accountView.parentNode) {
-                                            accountView.parentNode.removeChild(accountView);
-                                        }
-
-                                        const buttons = document.querySelectorAll('.connect-mi');
-                                        if (buttons) { buttons.forEach((button) => { (button as HTMLDivElement).style.display = "flex"; }); }
-
-                                        const connectButton = document.getElementById('connect-button');
-                                        if (connectButton && this._connectText) { connectButton.innerHTML = this._connectText; }
-
-                                        modalObj.title.innerHTML = "Connect Wallet";
-                                    }
-                                },
-                                innerHTML: "Disconnect"
-                            }
-                        ]
-                    }
-                );
+                const accountView: HTMLElement | null = this.createElement(accountViewConfig);
                 if (!accountView) { return null; }
             }
             return modalObj;

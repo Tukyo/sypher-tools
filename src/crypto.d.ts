@@ -1,6 +1,10 @@
 // #region INTERFACE
 export interface ICryptoModule {
     /**
+     * The Crypto Module's loading state.
+     */
+    _isLoading?: boolean;
+    /**
      * Connected wallet address.
      */
     _connected?: string | null;
@@ -34,6 +38,11 @@ export interface ICryptoModule {
      * Connected user's ENS name.
      */
     _ens?: string | null | undefined;
+
+    /**
+     * Array of working public rpcs initialized on page load.
+     */
+    _publicProviders?: ethers.providers.JsonRpcProvider[];
 
     /**
      * Initialize the Crypto Module by fetching TCleanedDetails.
@@ -130,7 +139,7 @@ export interface ICryptoModule {
         poolAddress: string,
         pair: string,
         pairAddress: string
-    ): Promise<number | null>;
+    ): Promise<{ price: number, details: TV2Detail } | null>;
 
     /**
      * Get the price of a token in a Uniswap V3 pool.
@@ -147,20 +156,20 @@ export interface ICryptoModule {
         poolAddress: string,
         pair: string,
         pairAddress: string
-    ): Promise<number | null>;
+    ): Promise<{ price: number, details: TV3Detail } | null>;
 
     /**
      * Get the pool details of a Uniswap V3 pool.
      * @param {string} contractAddress - The CA for the token
      * @param {string} poolAddress - The LP address for the token
-     * @returns {Promise<TPoolV3Data | null>} The pool details of the specified Uniswap V3 pool
-     * @see TPoolV3Data
+     * @returns {Promise<TV3Detail | null>} The pool details of the specified Uniswap V3 pool
+     * @see TV3Detail
      */
     getPoolV3(
         chain: string,
         contractAddress: string,
         poolAddress: string
-    ): Promise<TPoolV3Data | null>;
+    ): Promise<TV3Detail | null>;
 
     /**
      * Calculate the value of a user's token holdings.
@@ -189,7 +198,12 @@ export interface ICryptoModule {
     /**
      * Initialize the discovery of all installed wallets.
      */
-    async initProviderSearch(): void;
+    initProviderSearch(): void;
+
+    /**
+     * Initialize the public providers for fetching data.
+     */
+    initPublicProviders(): void;
 
     /**
      * Get the provider for the current wallet connection.
@@ -281,11 +295,11 @@ interface RequestArguments {
      */
     export type TInitParams = {
         chain: string;
+        pair?: string;
+        version: string;
         contractAddress: string;
         poolAddress: string;
         pairAddress: string;
-        version: string;
-        pair?: string;
         detail?: TEIP6963
         icon?: string
     }
@@ -310,6 +324,8 @@ interface RequestArguments {
         userValue: number;
         version: string;
         pair: string;
+        v2Detail?: TV2Detail;
+        v3Detail?: TV3Detail;
     }
     /**
      * Cleaned token details stored in the CryptoModule
@@ -324,7 +340,7 @@ interface RequestArguments {
             value: string;
         },
         token: {
-            contractAddress: string;
+            address: string;
             poolAddress: string;
             pairAddress: string;
             decimals: number;
@@ -332,21 +348,31 @@ interface RequestArguments {
             symbol: string;
             icon: string;
             totalSupply: number;
-            tokenPrice: number;
+            price: number;
             version: string;
             pair: string;
+            v2Detail?: TV2Detail;
+            v3Detail?: TV3Detail;
         }
     }
     /**
      * Uniswap V3 pool
      */
-    export type TPoolV3Data = {
+    export type TV3Detail = {
         sqrtPriceX96: ethers.BigNumber;
         token0: string;
         token1: string;
         decimals0: number;
         decimals1: number;
         liquidity: ethers.BigNumber;
+    }
+    export type TV2Detail = {
+        token0: string;
+        token1: string;
+        decimals0: number;
+        decimals1: number;
+        reserve0: ethers.BigNumber;
+        reserve1: ethers.BigNumber;
     }
     // #endregion TOKEN
 ////

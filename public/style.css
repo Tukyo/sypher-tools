@@ -40,15 +40,3 @@ header {
     /* #endregion Scrollbar */
 /**/
 /* #endregion Root */
-
-/* HTML: <div class="loader"></div> */
-.loader {
-    margin-top: 35%;
-    width: 50px;
-    aspect-ratio: 1;
-    border-radius: 50%;
-    border: 2px solid var(--sypher-color-secondary);
-    border-right-color: var(--sypher-color-primary);
-    animation: l2 1s infinite linear;
-  }
-  @keyframes l2 {to{transform: rotate(1turn)}}

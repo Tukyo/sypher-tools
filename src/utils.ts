@@ -1,31 +1,31 @@
-import { IHelperModule, ILogModule, ITruncationModule, IWindowModule, TScreenDetails, TUserEnvironment } from "./utils.d";
+import { IHelperModule, ILogModule, ITruncationModule, IWindowModule, TLogType, TScreenDetails, TUserEnvironment } from "./utils.d";
 
 export const HelperModule: IHelperModule = {
     validateChain: async function (chain: string): Promise<string | null> {
-        if (!chain) { 
-            throw new Error("CryptoModule.validateChain: Please provide a chain to validate."); 
+        if (!chain) {
+            throw new Error("CryptoModule.validateChain: Please provide a chain to validate.");
         }
-    
+
         try {
-            console.log("Validating chain...");
+            sypher.log("Validating chain...");
 
             const response = await fetch("https://raw.githubusercontent.com/Tukyo/sypher-tools/refs/heads/main/config/chains.min.json");
             if (!response.ok) {
                 throw new Error("CryptoModule.validateChain: Failed to fetch chain data.");
             }
-    
+
             const chainMap = await response.json();
             const chainData = chainMap[chain.toLowerCase()];
-    
+
             if (!chainData || !chainData.id) {
                 throw new Error(`CryptoModule.validateChain: Chain "${chain}" is not supported. Supported Chains: https://github.com/Tukyo/sypher-tools/blob/main/config/chains.json`);
             }
-    
+
             return `0x${chainData.id.toString(16)}`;
         } catch (error: unknown) {
             throw new Error(`CryptoModule.validateChain: ${error instanceof Error ? error.message : JSON.stringify(error)}`);
         }
-    }    
+    }
 }
 export const LogModule: ILogModule = { // TODO: Add error throwing
     initLogger: function () {
@@ -41,7 +41,7 @@ export const LogModule: ILogModule = { // TODO: Add error throwing
         console.error = function (...args) { originalError.apply(console, args); appendLog(args); };
         window.onerror = function (message, source, lineno, colno, error) { appendLog([`Error: ${message} at ${source}:${lineno}:${colno}`, error]); };
         window.addEventListener("unhandledrejection", function (event) { appendLog(["Unhandled Promise Rejection:", event.reason]); });
-    
+
         function appendLog(args: any[]) {
             const logItem = document.createElement("div");
             logItem.className = "log-item";
@@ -52,7 +52,7 @@ export const LogModule: ILogModule = { // TODO: Add error throwing
                     handleSingleArgument(arg, logItem);
                 }
             });
-        
+
             if (logContainer) {
                 logContainer.appendChild(logItem);
                 logContainer.scrollTop = logContainer.scrollHeight;
@@ -60,7 +60,7 @@ export const LogModule: ILogModule = { // TODO: Add error throwing
         }
         function handleSingleArgument(arg: any, logItem: HTMLDivElement) {
             const logDiv = document.createElement("div");
-        
+
             if (arg instanceof Error) {
                 logItem.classList.add("log-error");
                 logDiv.className = "log-object error-object";
@@ -69,11 +69,11 @@ export const LogModule: ILogModule = { // TODO: Add error throwing
                     name: arg.name,
                     stack: arg.stack
                 }, 2))}</pre>`;
-        
+
             } else if (arg instanceof HTMLElement) {
                 logDiv.className = "log-dom";
                 logDiv.innerHTML = `<pre>&lt;${arg.tagName.toLowerCase()} id="${arg.id}" class="${arg.className}"&gt;</pre>`;
-        
+
             } else if (typeof arg === "object" && arg !== null) {
                 logDiv.className = "log-object";
                 try {
@@ -81,15 +81,15 @@ export const LogModule: ILogModule = { // TODO: Add error throwing
                 } catch (e: any) {
                     logDiv.textContent = `[Unserializable object: ${e.message}]`;
                 }
-        
+
             } else if (typeof arg === "string") {
                 logDiv.className = isAddress(arg) ? "log-address" : "log-string";
                 logDiv.textContent = arg;
-        
+
             } else if (typeof arg === "number") {
                 logDiv.className = "log-number";
                 logDiv.textContent = arg.toString();
-        
+
             } else {
                 logDiv.className = "log-unknown";
                 logDiv.textContent = String(arg);
@@ -117,7 +117,7 @@ export const LogModule: ILogModule = { // TODO: Add error throwing
                 /("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(\.\d+)?([eE][+-]?\d+)?)/g,
                 match => {
                     let cls = "log-number";
-        
+
                     if (/^"/.test(match)) {
                         if (/:$/.test(match)) {
                             cls = "log-key";
@@ -155,6 +155,25 @@ export const LogModule: ILogModule = { // TODO: Add error throwing
             }
         }
         toggleLogContainer();
+    },
+    log: function (message: string, params) {
+        try {
+            const logType: TLogType = params?.type || 'log';
+            const userTimezone = sypher.cache()?.user?.environment?.timezone || 'UTC';
+            const timestamp = new Date().toLocaleString('en-US', { timeZone: userTimezone });
+
+            const styleString = params?.styles
+                ? Object.entries(params.styles)
+                    .map(([key, value]) => `${key.replace(/[A-Z]/g, match => `-${match.toLowerCase()}`)}: ${value}`)
+                    .join('; ')
+                : '';
+
+            if (styleString && sypher.prefs().dev.logs.pretty) {
+                console[logType](`%c> ${timestamp} - ${message}`, styleString);
+            } else {
+                console[logType](`> ${timestamp} - ${message}`);
+            }
+        } catch (error) { console.error('Error Printing Log:', error); }
     }
 }
 export const TruncationModule: ITruncationModule = {
@@ -165,8 +184,8 @@ export const TruncationModule: ITruncationModule = {
         return `${string.slice(0, startLength)}...${string.slice(-endLength)}`;
     },
     truncateBalance: function (balance, decimals = 2, maxLength = 8) {
-        if (balance === null || balance === undefined) { 
-            throw new Error("TruncationModule.truncateBalance: Please provide a number to truncate."); 
+        if (balance === null || balance === undefined) {
+            throw new Error("TruncationModule.truncateBalance: Please provide a number to truncate.");
         }
 
         const num = parseFloat(balance.toString());
@@ -191,7 +210,7 @@ export const WindowModule: IWindowModule = {
         if (pageFocused) console.log(`Page Focused...`); else console.log(`Page Unfocused...`);
         return pageFocused;
     },
-    userEnvironment: function() {
+    userEnvironment: function () {
         const userAgent = navigator.userAgent || navigator.vendor;
         const isMobile = /Mobi|Android|iPhone|iPad|iPod|BlackBerry|Windows Phone|webOS/i.test(userAgent);
         const isTablet = /iPad|Tablet/i.test(userAgent);
@@ -240,6 +259,7 @@ export const WindowModule: IWindowModule = {
             timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
         };
 
+        console.log(environment);
         return environment;
     }
 }

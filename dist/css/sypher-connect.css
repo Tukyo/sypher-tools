@@ -4,15 +4,38 @@
     animation: showConnectModal 0.25s ease-in-out forwards;
 }
 
+.connect-button {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border-radius: calc(var(--sypher-border-radius) / 2);
+    background-color: var(--sypher-color-quinary);
+    color: var(--sypher-color-primary);
+    border: none;
+    min-width: 125px;
+    padding: 10px;
+    height: 35px;
+    margin: auto 10px;
+    font-size: 1rem;
+}
+
+.connect-button:hover {
+    cursor: pointer;
+    background-color: var(--sypher-color-quaternary);
+}
+
+.connect-button .loader {
+    margin-top: 0%;
+    width: 1rem;
+    height: 1rem;
+}
+
 #connect-modal {
     position: fixed;
     display: flex;
     justify-content: center;
     align-items: center;
     gap: 10px;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
     height: 100vh;
     width: 100vw;
     background-color: #00000050;
@@ -81,6 +104,11 @@
 #connect-mb .connect-mi:last-child {
     margin-bottom: 10px;
 }
+#connect-mb .loader {
+    margin-top: 35%;
+    width: 3rem;
+    height: 3rem;
+}
 
 .connect-mi {
     display: flex;
@@ -127,7 +155,7 @@
     align-items: center;
     gap: 10px;
     width: 100%;
-    height: 100%;
+    min-height: 300px;
 }
 
 .connect-s {

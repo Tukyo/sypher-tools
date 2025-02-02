@@ -1,9 +1,11 @@
 import { HelperModule, LogModule, TruncationModule, WindowModule } from "./utils";
 import { InterfaceModule } from "./interface";
 import { CryptoModule } from "./crypto";
+import { PrefsModule } from "./prefs";
 
 export type SypherNamespace =
-    typeof CryptoModule
+    typeof PrefsModule
+    & typeof CryptoModule
     & typeof HelperModule
     & typeof LogModule
     & typeof InterfaceModule
@@ -12,6 +14,7 @@ export type SypherNamespace =
 
 (function (global: any) {
     const sypher: SypherNamespace = {
+        ...PrefsModule,
         ...CryptoModule,
         ...HelperModule,
         ...LogModule,

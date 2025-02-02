@@ -18,3 +18,20 @@
     --log-color-unknown: #ffffff;
     --log-color-error: #4b1515;
 }
+
+
+/* #region Loader */
+.loader {
+    aspect-ratio: 1;
+    border-radius: 50%;
+    border: 4px solid var(--sypher-color-secondary);
+    border-right-color: var(--sypher-color-primary);
+    animation: l2 1s infinite linear;
+}
+
+@keyframes l2 {
+    to {
+        transform: rotate(1turn)
+    }
+}
+/* #endregion Loader */
