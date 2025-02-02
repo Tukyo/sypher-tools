@@ -75,10 +75,15 @@
     color: var(--log-color-address);
     font-weight: bold;
 }
+.log-timestamp {
+    color: var(--log-color-timestamp);
+    font-weight: bold;
+}
 .log-string { color: var(--log-color-string); }
 .log-number { color: var(--log-color-number); }
 .log-key { color: var(--log-color-key); }
-.log-boolean { color: var(--log-color-boolean); }
+.log-bool-true { color: var(--log-color-bool-true); }
+.log-bool-false { color: var(--log-color-bool-false); }
 .log-null {
     color: var(--log-color-null);
     font-style: italic;

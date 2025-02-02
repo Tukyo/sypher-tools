@@ -39,7 +39,16 @@ const LogModule = {
         function appendLog(args) {
             const logItem = document.createElement("div");
             logItem.className = "log-item";
-            args.forEach(arg => {
+            const userTimezone = sypher.cache()?.user?.environment?.timezone || 'UTC';
+            const timestamp = new Date().toLocaleString('en-US', { timeZone: userTimezone });
+            // Remove `%c` and associated inline CSS styles
+            const filteredArgs = args.filter((arg, index, arr) => {
+                return !(typeof arg === "string" &&
+                    (arg.startsWith("%c") || (index > 0 && typeof arr[index - 1] === "string" && arr[index - 1].startsWith("%c"))));
+            });
+            // Prepend the timestamp to the log
+            filteredArgs.unshift(`[${timestamp}]`);
+            filteredArgs.forEach(arg => {
                 if (Array.isArray(arg)) {
                     arg.forEach(item => handleSingleArgument(item, logItem));
                 }
@@ -54,7 +63,11 @@ const LogModule = {
         }
         function handleSingleArgument(arg, logItem) {
             const logDiv = document.createElement("div");
-            if (arg instanceof Error) {
+            if (typeof arg === "string" && arg.match(/^\[\d{1,2}\/\d{1,2}\/\d{4}, \d{1,2}:\d{2}:\d{2} (AM|PM)\]$/)) {
+                logDiv.className = "log-timestamp";
+                logDiv.textContent = arg;
+            }
+            else if (arg instanceof Error) {
                 logItem.classList.add("log-error");
                 logDiv.className = "log-object error-object";
                 logDiv.innerHTML = `<pre>${syntaxHighlight(safeStringify({
@@ -116,8 +129,11 @@ const LogModule = {
                         cls = "log-string";
                     }
                 }
-                else if (/true|false/.test(match)) {
-                    cls = "log-boolean";
+                else if (/true/.test(match)) {
+                    cls = "log-bool-true";
+                }
+                else if (/false/.test(match)) {
+                    cls = "log-bool-false";
                 }
                 else if (/null/.test(match)) {
                     cls = "log-null";
@@ -150,25 +166,18 @@ const LogModule = {
         }
         toggleLogContainer();
     },
-    log: function (message, params) {
-        try {
-            const logType = params?.type || 'log';
-            const userTimezone = sypher.cache()?.user?.environment?.timezone || 'UTC';
-            const timestamp = new Date().toLocaleString('en-US', { timeZone: userTimezone });
-            const styleString = params?.styles
-                ? Object.entries(params.styles)
-                    .map(([key, value]) => `${key.replace(/[A-Z]/g, match => `-${match.toLowerCase()}`)}: ${value}`)
-                    .join('; ')
-                : '';
-            if (styleString && sypher.prefs().dev.logs.pretty) {
-                console[logType](`%c> ${timestamp} - ${message}`, styleString);
-            }
-            else {
-                console[logType](`> ${timestamp} - ${message}`);
-            }
+    log: function (...args) {
+        if (!sypher.prefs().dev.logs.enabled)
+            return;
+        const userTimezone = sypher.cache()?.user?.environment?.timezone || 'UTC';
+        const timestamp = new Date().toLocaleString('en-US', { timeZone: userTimezone });
+        // If the first argument is a styled message (starts with %c)
+        if (typeof args[0] === "string" && args[0].startsWith("%c")) {
+            const [firstArg, ...restArgs] = args;
+            console.log(`%c[${timestamp}] %c${firstArg.slice(2)}`, "color: gray; font-weight: bold;", ...restArgs);
         }
-        catch (error) {
-            console.error('Error Printing Log:', error);
+        else {
+            console.log(`%c[${timestamp}]`, "color: gray; font-weight: bold;", ...args);
         }
     }
 };
@@ -210,9 +219,9 @@ const WindowModule = {
     pageFocus: function () {
         const pageFocused = document.visibilityState === "visible";
         if (pageFocused)
-            console.log(`Page Focused...`);
+            sypher.log(`Page Focused...`);
         else
-            console.log(`Page Unfocused...`);
+            sypher.log(`Page Unfocused...`);
         return pageFocused;
     },
     userEnvironment: function () {
@@ -274,7 +283,7 @@ const WindowModule = {
             screenDetails: screenDetails,
             timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
         };
-        console.log(environment);
+        sypher.log(environment);
         return environment;
     }
 };
@@ -604,7 +613,7 @@ const InterfaceModule = {
                 ? () => sypher.connect(initCrypto.chain !== "none" ? initCrypto.chain : "ethereum")
                 : onClick;
             if (modal) {
-                console.log("Modal Enabled...");
+                sypher.log("Modal Enabled...");
                 button.onclick = () => this.createModal({ append: document.body, type: "connect", theme: appliedTheme, initCrypto });
                 sypher.initProviderSearch();
             }
@@ -622,6 +631,8 @@ const InterfaceModule = {
             modalItem.id = text.toLowerCase().replace(/\s+/g, '-');
             modalItem.classList.add('connect-mi');
             modalItem.addEventListener('click', onClick);
+            const modalIconContainer = document.createElement('div');
+            modalIconContainer.classList.add('connect-mic');
             const modalItemIcon = document.createElement('img');
             modalItemIcon.classList.add('connect-mim');
             modalItemIcon.src = icon;
@@ -630,7 +641,8 @@ const InterfaceModule = {
             modalItemName.innerText = text;
             this.applyStyle([modalItem, modalItemIcon, modalItemName], themeParams);
             append.appendChild(modalItem);
-            modalItem.appendChild(modalItemIcon);
+            modalItem.appendChild(modalIconContainer);
+            modalIconContainer.appendChild(modalItemIcon);
             modalItem.appendChild(modalItemName);
             return modalItem;
         }
@@ -680,7 +692,7 @@ const InterfaceModule = {
             modalObj.head.appendChild(modalObj.title);
             modalObj.head.appendChild(modalObj.toggle);
             modalObj.container.appendChild(modalObj.body);
-            // TODO: Create isLogging check - console.log(PLACEHOLDER_PROVIDERS);
+            // sypher.log(PLACEHOLDER_PROVIDERS); // TODO: Find a better way to have default initial providers
             const mergedProviders = [
                 ...PLACEHOLDER_PROVIDERS.map((placeholder) => {
                     const match = DISCOVERED_PROVIDERS.find((discovered) => discovered.info.name === placeholder.info.name);
@@ -703,7 +715,7 @@ const InterfaceModule = {
                 }),
                 ...DISCOVERED_PROVIDERS.filter((discovered) => !PLACEHOLDER_PROVIDERS.some((placeholder) => placeholder.info.name === discovered.info.name)),
             ];
-            // TODO: Create isLogging check - console.log(mergedProviders);
+            sypher.log("[EIP-6963] Providers:", mergedProviders);
             const account = sypher.getConnected();
             mergedProviders.forEach((providerDetail) => {
                 const { name, icon } = providerDetail.info;
@@ -766,6 +778,30 @@ const InterfaceModule = {
                     return null;
                 }
             }
+            const branding = document.createElement('div');
+            branding.classList.add('sypher-connect-brand');
+            const brandingText = document.createElement('p');
+            brandingText.classList.add('sypher-connect-brand-text');
+            brandingText.innerHTML = `Powered by`;
+            const brandingLogo = document.createElement('div');
+            brandingLogo.classList.add('sypher-connect-brand-logo');
+            brandingLogo.innerHTML = `
+                    <svg id="sypher-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 105.87 120.22">
+                        <g id="Layer_2" data-name="Layer 2">
+                            <g id="svg1">
+                                <g id="layer1">
+                                    <g id="g28">
+                                        <path id="path18-6-3" class="cls-1"
+                                            d="M15.16,0h7V16.56H42.35V0h7V16.56h52.22l2.3,2.54q-5,20.15-15.54,34.48a83.94,83.94,0,0,1-18,17.81h30l4.19,3.72A117.92,117.92,0,0,1,86.24,95.7l-5.07-4.62a100.71,100.71,0,0,0,13-13.1H80.54l-.07,7.41q0,12.7-4.19,20.5a43,43,0,0,1-12.32,14l-5.2-5.23a33,33,0,0,0,11.59-12q3.77-7,3.76-17.24L74,78H55.62V71.39A77.14,77.14,0,0,0,81.19,51.5a70.26,70.26,0,0,0,14.18-28H80.46C80,25.78,77.65,35.39,66.37,49.46A193.42,193.42,0,0,1,47.31,68.51v41.68h-7V74.26Q26,85,15.17,89.2l-3.93-6.43Q36.8,73.55,61,44.84s11.5-14.36,11.39-21.32H64.51v0H49.35v12.7a28.57,28.57,0,0,1-5.9,17A36,36,0,0,1,26.89,65.61l-4.43-6.88Q31.84,56.35,37.1,50a21.06,21.06,0,0,0,5.25-13.57V23.56H22.16V40.27h-7V23.56H0v-7H15.16ZM76.61,113.11l29,.12.27,7-29-.12Z" />
+                                    </g>
+                                </g>
+                            </g>
+                        </g>
+                    </svg>
+            `;
+            branding.appendChild(brandingText);
+            branding.appendChild(brandingLogo);
+            modalObj.parent.appendChild(branding);
             return modalObj;
         }
         else {
@@ -932,7 +968,7 @@ const InterfaceModule = {
             console.warn(`InterfaceModule.parallax: Parallax enabled, but no elements found with the [data-speed] attribute.`);
             return;
         }
-        console.log("Parallax enabled on ", parallaxElements.length, " elements.");
+        sypher.log("Parallax enabled on ", parallaxElements.length, " elements.");
         function applyParallax() {
             parallaxElements.forEach(element => {
                 const speed = parseFloat(element.dataset.speed || '0.5');
@@ -953,7 +989,7 @@ const InterfaceModule = {
             console.warn(`InterfaceModule.fade: Fade enabled, but no elements found with the [data-fade] attribute.`);
             return;
         }
-        console.log("Fade enabled on ", elements.length, " elements.");
+        sypher.log("Fade enabled on ", elements.length, " elements.");
         elements.forEach(el => {
             el.style.opacity = "0";
             el.style.transform = `translateY(${distance})`;
@@ -1014,7 +1050,7 @@ const CryptoModule = {
             if (ethBalance === null || ethBalance === undefined) {
                 return null;
             }
-            console.log("Getting details for:", params);
+            sypher.log("Getting details for:", params);
             const tokenDetails = await this.getTokenDetails(params.chain, params.contractAddress);
             if (!tokenDetails) {
                 return null;
@@ -1094,6 +1130,7 @@ const CryptoModule = {
         }
         finally {
             this._isLoading = false;
+            sypher.log("%c🔵 Init Success! 🔵", "color: #0972C6;");
             let text;
             if (this._ens) {
                 text = sypher.truncate(this._ens) ?? sypher.getUI().connectText;
@@ -1114,7 +1151,8 @@ const CryptoModule = {
         if (!chain) {
             throw new Error("CryptoModule.connect: Chain is required");
         }
-        console.log("Chain:", chain, "Detail:", providerDetail);
+        sypher.log("Chain:", chain);
+        sypher.log("Chosen Provider:", providerDetail);
         const connectButton = document.getElementById("connect-button") || null;
         if (connectButton) {
             sypher.toggleLoader({ element: connectButton });
@@ -1144,13 +1182,12 @@ const CryptoModule = {
             this._EIP6963 = details;
             try {
                 const provider = details.provider;
-                console.log("[EIP-6963] Using provider:", details.info.name);
+                sypher.log("[EIP-6963]", details.info.name);
                 const accounts = await provider.request({ method: "eth_requestAccounts" });
                 if (!Array.isArray(accounts) || !accounts.length) {
                     throw new Error("No accounts returned by the chosen provider.");
                 }
                 const primaryAccount = accounts[0];
-                console.log("[EIP-6963] Connection Success!");
                 await this.switchChain(chain);
                 this._connected = primaryAccount;
                 if (connectBody) {
@@ -1169,6 +1206,8 @@ const CryptoModule = {
                     setTimeout(() => { connectModal.style.opacity = "0%"; }, 5000);
                     setTimeout(() => { connectModal.remove(); }, 6000);
                 }
+                sypher.log("%c[EIP-6963] ✔️ Connection Success! ✔️", "color: #00a82a; font-weight: bold;");
+                sypher.log(primaryAccount);
                 window.dispatchEvent(new CustomEvent("sypher:connect", { detail: primaryAccount }));
                 this.accountChange(true);
                 const ethBalance = await this.getETH();
@@ -1179,7 +1218,7 @@ const CryptoModule = {
             catch (error) {
                 const detailedError = error instanceof Error ? `${error.message}\n${error.stack}` : JSON.stringify(error, Object.getOwnPropertyNames(error));
                 if (error.code === 4001) {
-                    console.log("User denied wallet access...");
+                    sypher.log("%c❌ User Denied Wallet Access ❌", "color: #ff0000; font-weight: bold;");
                     window.dispatchEvent(new CustomEvent("sypher:connectFail", { detail: "User denied wallet access" }));
                     if (connectBody) {
                         const params = {
@@ -1230,7 +1269,8 @@ const CryptoModule = {
                 }
                 await this.switchChain(chain);
                 this._connected = primaryAccount;
-                console.log("[WINDOW] Connection Success!");
+                sypher.log("%c[WINDOW] ✔️ Connection Success! ✔️", "color: #00a82a; font-weight: bold;");
+                sypher.log(primaryAccount);
                 window.dispatchEvent(new CustomEvent("sypher:connect", { detail: primaryAccount }));
                 this.accountChange(true);
                 const ethBalance = await this.getETH();
@@ -1276,7 +1316,7 @@ const CryptoModule = {
             return;
         }
         if (active) {
-            console.log("Listening for account changes...");
+            sypher.log("Listening for account changes...");
             provider.on("accountsChanged", (accounts) => {
                 if (!accounts.length) {
                     this.disconnect();
@@ -1334,14 +1374,14 @@ const CryptoModule = {
             if (isApple || isAndroid) {
                 const platform = isApple ? "ios" : "android";
                 const fallbackTimer = setTimeout(() => {
-                    console.log("Deeplink failed, prompting user for App Store redirection...");
+                    sypher.log("Deeplink failed, prompting user for App Store redirection...");
                     if (platform === "ios") {
                         const userConfirmed = confirm("Unable to open the app. Please click confirm to download from the app store.");
                         if (userConfirmed) {
                             window.location.href = fallback[platform];
                         }
                         else {
-                            console.log("User canceled App Store redirection.");
+                            sypher.log("User canceled App Store redirection.");
                         }
                     }
                     else {
@@ -1371,7 +1411,7 @@ const CryptoModule = {
         const signer = web3.getSigner();
         const balance = await signer.getBalance();
         const eth = parseFloat(ethers.utils.formatEther(balance));
-        console.log("ETH Balance:", eth);
+        sypher.log("ETH Balance:", eth);
         return eth;
     },
     getENS: async function (address) {
@@ -1391,7 +1431,7 @@ const CryptoModule = {
                 try {
                     const ens = await provider.lookupAddress(address);
                     if (ens) {
-                        console.log("[ENS Found]:", ens);
+                        sypher.log("[ENS Found]:", ens);
                         this._ens = ens;
                         if (!this._isLoading) {
                             window.dispatchEvent(new CustomEvent("sypher:ens", { detail: ens }));
@@ -1411,7 +1451,6 @@ const CryptoModule = {
         }
     },
     getChain: function () {
-        // console.log(this._chain);
         return this._chain;
     },
     switchChain: async function (chain) {
@@ -1441,7 +1480,7 @@ const CryptoModule = {
                 }
                 return;
             }
-            console.log(`Switching to ${chain} chain...`);
+            sypher.log(`Switching to ${chain} chain...`);
             await provider.request({
                 method: 'wallet_switchEthereumChain',
                 params: [{ chainId: targetChainId }]
@@ -1486,7 +1525,7 @@ const CryptoModule = {
             if (!response.ok)
                 throw new Error(`Chain data for ID ${chainId} not found`);
             const data = await response.json();
-            console.log(`Fetched chain data:`, data);
+            sypher.log(`Fetched chain data:`, data);
             let iconData = undefined;
             if (data.icon) {
                 try {
@@ -1540,12 +1579,12 @@ const CryptoModule = {
                 throw new Error(`CryptoModule.getPriceFeed: No data found for ${pair}. Reference: https://github.com/Tukyo/sypher-tools/blob/main/config/chainlink.json`);
             }
             const availableQuotes = Object.keys(pairData);
-            console.log(`Available quotes for ${pair}:`, availableQuotes);
+            sypher.log(`Available quotes for ${pair}:`, availableQuotes);
             let quoteDetails = pairData["usd"] || pairData["eth"];
             if (!quoteDetails) {
                 throw new Error(`CryptoModule.getPriceFeed: No USD, ETH, or BTC quote found for ${pair}`);
             }
-            console.log("Chosen Quote Details:", quoteDetails);
+            sypher.log("Chosen Quote Details:", quoteDetails);
             const { proxy, decimals } = quoteDetails;
             const providers = await this.getProvider(true);
             if (!Array.isArray(providers)) {
@@ -1558,7 +1597,7 @@ const CryptoModule = {
                     const roundData = await contract.latestRoundData();
                     const description = await contract.description();
                     const price = ethers.utils.formatUnits(roundData.answer, decimals);
-                    console.log(`${description}: ${price}`);
+                    sypher.log(`${description}: ${price}`);
                     if (pairData["usd"]) {
                         this._pairPrice = { value: price, timestamp: Date.now() };
                         return price;
@@ -1569,7 +1608,7 @@ const CryptoModule = {
                         const ethUSDRoundData = await ethUSDContract.latestRoundData();
                         const ethUSDPrice = ethers.utils.formatUnits(ethUSDRoundData.answer, 8);
                         const finalPrice = (parseFloat(price) * parseFloat(ethUSDPrice)).toFixed(8);
-                        console.log(`Final Price for ${pair}: $${finalPrice}`);
+                        sypher.log(`Final Price for ${pair}: $${finalPrice}`);
                         this._pairPrice = { value: finalPrice.toString(), timestamp: Date.now() };
                         return finalPrice.toString();
                     }
@@ -1617,7 +1656,7 @@ const CryptoModule = {
             const name = await contract.name();
             const symbol = await contract.symbol();
             const totalSupply = await contract.totalSupply();
-            console.log("Raw Details:", { balance, decimals, name, symbol, totalSupply });
+            sypher.log("Raw Details:", { balance, decimals, name, symbol, totalSupply });
             return { balance, decimals, name, symbol, totalSupply };
         }
         catch (error) {
@@ -1678,12 +1717,12 @@ const CryptoModule = {
             const token1Contract = new ethers.Contract(token1, ERC20_ABI, signer);
             const decimals0 = await token0Contract.decimals();
             const decimals1 = await token1Contract.decimals();
-            console.log("Reserve 0:", reserve0);
-            console.log("Reserve 1:", reserve1);
-            console.log("Token 0:", token0);
-            console.log("Token 1:", token1);
-            console.log("Decimals 0:", decimals0);
-            console.log("Decimals 1:", decimals1);
+            sypher.log("Reserve 0:", reserve0);
+            sypher.log("Reserve 1:", reserve1);
+            sypher.log("Token 0:", token0);
+            sypher.log("Token 1:", token1);
+            sypher.log("Decimals 0:", decimals0);
+            sypher.log("Decimals 1:", decimals1);
             if (!decimals0 || !decimals1 || !reserve0 || !reserve1 || !token0 || !token1) {
                 return null;
             }
@@ -1705,7 +1744,7 @@ const CryptoModule = {
                 throw new Error(`CryptoModule.getPriceV2: Neither token is ${pair}`);
             }
             const tokenPriceUSD = priceRatio * parseFloat(chainlinkResult);
-            console.log(`V2 Price for token in pool ${poolAddress}: $${tokenPriceUSD}`);
+            sypher.log(`V2 Price for token in pool ${poolAddress}: $${tokenPriceUSD}`);
             const v2Detail = { token0, token1, decimals0, decimals1, reserve0: reserve0BN, reserve1: reserve1BN };
             return { price: tokenPriceUSD, details: v2Detail };
         }
@@ -1791,7 +1830,7 @@ const CryptoModule = {
                 return null;
             // 5: Convert token price from WETH to USD
             const tokenPriceUSD = tokenRatio * parseFloat(chainlinkResult);
-            console.log(`V3 Price for token in pool ${sypher.truncate(poolAddress)}: $${tokenPriceUSD}`);
+            sypher.log(`V3 Price for token in pool ${sypher.truncate(poolAddress)}: $${tokenPriceUSD}`);
             return { price: tokenPriceUSD, details: v3Detail };
         }
         catch (error) {
@@ -1839,19 +1878,19 @@ const CryptoModule = {
             const pool = new ethers.Contract(poolAddress, UNISWAP_V3_POOL_ABI, signer);
             const slot0 = await pool.slot0();
             const sqrtPriceX96 = slot0.sqrtPriceX96;
-            console.log("Sqrt Price X96:", sqrtPriceX96);
+            sypher.log("Sqrt Price X96:", sqrtPriceX96);
             const token0 = await pool.token0();
             const token1 = await pool.token1();
-            console.log("Token 0:", token0);
-            console.log("Token 1:", token1);
+            sypher.log("Token 0:", token0);
+            sypher.log("Token 1:", token1);
             const token0Contract = new ethers.Contract(token0, ERC20_ABI, signer);
             const token1Contract = new ethers.Contract(token1, ERC20_ABI, signer);
             const decimals0 = await token0Contract.decimals();
             const decimals1 = await token1Contract.decimals();
-            console.log("Decimals 0:", decimals0);
-            console.log("Decimals 1:", decimals1);
+            sypher.log("Decimals 0:", decimals0);
+            sypher.log("Decimals 1:", decimals1);
             const liquidity = await pool.liquidity();
-            console.log("Liquidity:", liquidity);
+            sypher.log("Liquidity:", liquidity);
             const poolData = { sqrtPriceX96, token0, token1, decimals0, decimals1, liquidity };
             return poolData;
         }
@@ -1874,7 +1913,7 @@ const CryptoModule = {
         }
         try {
             const value = parseFloat(balance.toString()) * parseFloat(price.toString());
-            console.log(`User Value: ${value}`);
+            sypher.log(`User Value: ${value}`);
             return value;
         }
         catch (error) {
@@ -1920,18 +1959,17 @@ const CryptoModule = {
             }
         }
         this._details = cleanedDetails;
-        console.log("Details:", cleanedDetails);
+        sypher.log("Cleaned Details:", cleanedDetails);
         return cleanedDetails;
     },
     getCleaned: function () {
-        console.log(this._details);
         return this._details ?? null;
     },
     initProviderSearch: function () {
         window.addEventListener("eip6963:announceProvider", (event) => {
             const customEvent = event;
             DISCOVERED_PROVIDERS.push(customEvent.detail);
-            // TODO: Create isLogging check - console.log("[EIP-6963]:", (customEvent.detail));
+            sypher.log("[EIP-6963] Provider Announced:", (customEvent.detail.info.name));
         });
         window.dispatchEvent(new Event("eip6963:requestProvider"));
     },
@@ -1940,7 +1978,7 @@ const CryptoModule = {
             try {
                 const provider = new ethers.providers.JsonRpcProvider(rpc);
                 await provider.getBlockNumber(); // Quick test to see if the provider is working
-                console.log(`[Public RPC]: ${rpc}`);
+                sypher.log(`[Public RPC]: ${rpc}`);
                 if (!this._publicProviders) {
                     this._publicProviders = [];
                 }
@@ -1961,13 +1999,13 @@ const CryptoModule = {
         }
         else {
             if (this._EIP6963) {
-                console.log("[EIP6963]: ", this._EIP6963.provider);
+                sypher.log("[EIP6963] Stored Provider: ", this._EIP6963.provider);
                 return this._EIP6963.provider;
             }
             if (typeof window === "undefined" || !window.ethereum) {
                 throw new Error("CryptoModule.getProvider: No Ethereum provider found.");
             }
-            console.log("[WINDOW]:", window.ethereum);
+            sypher.log("[WINDOW]:", window.ethereum);
             return window.ethereum;
         }
     },
@@ -1976,7 +2014,7 @@ const CryptoModule = {
     },
     flush: function () {
         if (this._connected === null || this._connected === undefined) {
-            console.log("Nothing to flush...");
+            sypher.log("Nothing to flush...");
             return;
         }
         this._connected = undefined;
@@ -2008,7 +2046,6 @@ const PrefsModule = {
         dev: {
             logs: {
                 enabled: false,
-                pretty: false,
                 modal: false
             }
         }
@@ -2066,6 +2103,9 @@ const PrefsModule = {
     }
 };
 
+const version = "1.0.0";
+const website = "https://sypher.tools";
+const repo = "https://github.com/Tukyo/sypher-tools";
 (function (global) {
     const sypher = {
         ...PrefsModule,
@@ -2077,6 +2117,25 @@ const PrefsModule = {
         ...WindowModule,
     };
     global.sypher = sypher;
-    console.log("Sypher Modules Initialized");
+    const info = console.info.bind(console);
+    const styles = [
+        "color: #fff",
+        "background: linear-gradient(45deg, #ff0066, #6600ff)",
+        "font-size: 12px",
+        "font-weight: bold",
+        "padding: 5px 10px",
+        "border-radius: 5px",
+        "text-shadow: 1px 1px 3px rgba(0,0,0,0.3)"
+    ].join(";");
+    function brandLog() {
+        console.groupCollapsed("%cSypher Initialized", styles);
+        info(`🔗 Website: ${website}`);
+        info(`📖 Repo: ${repo}`);
+        info(`⚙️ Version: ${version}`);
+        console.groupEnd();
+    }
+    setTimeout(brandLog, 0);
 })(window);
+
+export { repo, version, website };
 //# sourceMappingURL=sypher.esm.js.map

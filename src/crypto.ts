@@ -28,7 +28,7 @@ export const CryptoModule: ICryptoModule = {
             const ethBalance = connection.ethBalance;
             if (ethBalance === null || ethBalance === undefined) { return null; }
 
-            console.log("Getting details for:", params);
+            sypher.log("Getting details for:", params);
 
             const tokenDetails = await this.getTokenDetails(params.chain, params.contractAddress);
             if (!tokenDetails) { return null; }
@@ -86,7 +86,6 @@ export const CryptoModule: ICryptoModule = {
             if (!cleanedDetails) { return null; }
 
             const detailsObj: TCleanedDetails = cleanedDetails;
-
             window.dispatchEvent(new CustomEvent("sypher:initCrypto", { detail: detailsObj }));
 
             const text = ens ? sypher.truncate(ens) : sypher.truncate(address);
@@ -98,6 +97,8 @@ export const CryptoModule: ICryptoModule = {
         } finally {
             this._isLoading = false;
             
+            sypher.log("%c🔵 Init Success! 🔵", "color: #0972C6;");
+
             let text: string;
             if (this._ens) { text = sypher.truncate(this._ens) ?? sypher.getUI().connectText;
             } else if (this._connected) { text = sypher.truncate(this._connected) ?? sypher.getUI().connectText;
@@ -108,7 +109,8 @@ export const CryptoModule: ICryptoModule = {
     connect: async function (chain, providerDetail: TEIP6963 | null = null) {
         if (!chain) { throw new Error("CryptoModule.connect: Chain is required"); }
 
-        console.log("Chain:", chain, "Detail:", providerDetail);
+        sypher.log("Chain:", chain);
+        sypher.log("Chosen Provider:", providerDetail)
 
         const connectButton = document.getElementById("connect-button") || null;
         if (connectButton) { sypher.toggleLoader({ element: connectButton }); (connectButton as HTMLButtonElement).disabled = true; };
@@ -139,7 +141,7 @@ export const CryptoModule: ICryptoModule = {
 
             try {
                 const provider = details.provider;
-                console.log("[EIP-6963] Using provider:", details.info.name);
+                sypher.log("[EIP-6963]", details.info.name);
 
                 const accounts = await provider.request({ method: "eth_requestAccounts" });
                 if (!Array.isArray(accounts) || !accounts.length) {
@@ -147,10 +149,7 @@ export const CryptoModule: ICryptoModule = {
                 }
 
                 const primaryAccount = accounts[0];
-                console.log("[EIP-6963] Connection Success!");
-
                 await this.switchChain(chain);
-
                 this._connected = primaryAccount;
 
                 if (connectBody) {
@@ -169,6 +168,8 @@ export const CryptoModule: ICryptoModule = {
                     setTimeout(() => { connectModal.remove(); }, 6000);
                 }
 
+                sypher.log("%c[EIP-6963] ✔️ Connection Success! ✔️", "color: #00a82a; font-weight: bold;");
+                sypher.log(primaryAccount);
                 window.dispatchEvent(new CustomEvent("sypher:connect", { detail: primaryAccount }));
                 this.accountChange(true);
 
@@ -181,7 +182,7 @@ export const CryptoModule: ICryptoModule = {
             } catch (error: unknown) {
                 const detailedError = error instanceof Error ? `${error.message}\n${error.stack}` : JSON.stringify(error, Object.getOwnPropertyNames(error));
                 if ((error as any).code === 4001) {
-                    console.log("User denied wallet access...");
+                    sypher.log("%c❌ User Denied Wallet Access ❌", "color: #ff0000; font-weight: bold;");
                     window.dispatchEvent(new CustomEvent("sypher:connectFail", { detail: "User denied wallet access" }));
 
                     if (connectBody) {
@@ -224,7 +225,8 @@ export const CryptoModule: ICryptoModule = {
                 await this.switchChain(chain);
 
                 this._connected = primaryAccount;
-                console.log("[WINDOW] Connection Success!");
+                sypher.log("%c[WINDOW] ✔️ Connection Success! ✔️", "color: #00a82a; font-weight: bold;");
+                sypher.log(primaryAccount);
                 window.dispatchEvent(new CustomEvent("sypher:connect", { detail: primaryAccount }));
                 this.accountChange(true);
 
@@ -260,7 +262,7 @@ export const CryptoModule: ICryptoModule = {
         if (this._connected === null || this._connected === undefined) { return; }
 
         if (active) {
-            console.log("Listening for account changes...");
+            sypher.log("Listening for account changes...");
             provider.on("accountsChanged", (accounts: string[]) => {
                 if (!accounts.length) { this.disconnect(); return; }
                 this._connected = accounts[0];
@@ -308,14 +310,14 @@ export const CryptoModule: ICryptoModule = {
                 const platform = isApple ? "ios" : "android";
 
                 const fallbackTimer = setTimeout(() => {
-                    console.log("Deeplink failed, prompting user for App Store redirection...");
+                    sypher.log("Deeplink failed, prompting user for App Store redirection...");
 
                     if (platform === "ios") {
                         const userConfirmed = confirm("Unable to open the app. Please click confirm to download from the app store.");
 
                         if (userConfirmed) {
                             window.location.href = fallback[platform];
-                        } else { console.log("User canceled App Store redirection."); }
+                        } else { sypher.log("User canceled App Store redirection."); }
                     } else {
                         const link = document.createElement("a");
                         link.href = fallback[platform];
@@ -341,7 +343,7 @@ export const CryptoModule: ICryptoModule = {
         const balance = await signer.getBalance();
         const eth = parseFloat(ethers.utils.formatEther(balance));
 
-        console.log("ETH Balance:", eth);
+        sypher.log("ETH Balance:", eth);
 
         return eth;
     },
@@ -362,7 +364,7 @@ export const CryptoModule: ICryptoModule = {
                 try {
                     const ens = await provider.lookupAddress(address);
                     if (ens) {
-                        console.log("[ENS Found]:", ens);
+                        sypher.log("[ENS Found]:", ens);
                         this._ens = ens;
                         if (!this._isLoading) { window.dispatchEvent(new CustomEvent("sypher:ens", { detail: ens })); }
                         return ens;
@@ -379,7 +381,6 @@ export const CryptoModule: ICryptoModule = {
         }
     },
     getChain: function () {
-        // console.log(this._chain);
         return this._chain;
     },
     switchChain: async function (chain) {
@@ -403,7 +404,7 @@ export const CryptoModule: ICryptoModule = {
                 return;
             }
 
-            console.log(`Switching to ${chain} chain...`);
+            sypher.log(`Switching to ${chain} chain...`);
             await provider.request({
                 method: 'wallet_switchEthereumChain',
                 params: [{ chainId: targetChainId }]
@@ -440,7 +441,7 @@ export const CryptoModule: ICryptoModule = {
             if (!response.ok) throw new Error(`Chain data for ID ${chainId} not found`);
 
             const data = await response.json();
-            console.log(`Fetched chain data:`, data);
+            sypher.log(`Fetched chain data:`, data);
 
             let iconData = undefined;
             if (data.icon) {
@@ -493,13 +494,13 @@ export const CryptoModule: ICryptoModule = {
             if (!pairData) { throw new Error(`CryptoModule.getPriceFeed: No data found for ${pair}. Reference: https://github.com/Tukyo/sypher-tools/blob/main/config/chainlink.json`); }
 
             const availableQuotes = Object.keys(pairData);
-            console.log(`Available quotes for ${pair}:`, availableQuotes);
+            sypher.log(`Available quotes for ${pair}:`, availableQuotes);
 
             let quoteDetails = pairData["usd"] || pairData["eth"];
             if (!quoteDetails) {
                 throw new Error(`CryptoModule.getPriceFeed: No USD, ETH, or BTC quote found for ${pair}`);
             }
-            console.log("Chosen Quote Details:", quoteDetails);
+            sypher.log("Chosen Quote Details:", quoteDetails);
 
             const { proxy, decimals } = quoteDetails;
 
@@ -516,7 +517,7 @@ export const CryptoModule: ICryptoModule = {
                     const description = await contract.description();
                     const price = ethers.utils.formatUnits(roundData.answer, decimals);
 
-                    console.log(`${description}: ${price}`);
+                    sypher.log(`${description}: ${price}`);
         
                     if (pairData["usd"]) { this._pairPrice = { value: price, timestamp: Date.now() }; return price; }
                     else {
@@ -526,7 +527,7 @@ export const CryptoModule: ICryptoModule = {
                         const ethUSDPrice = ethers.utils.formatUnits(ethUSDRoundData.answer, 8);
         
                         const finalPrice = (parseFloat(price) * parseFloat(ethUSDPrice)).toFixed(8);
-                        console.log(`Final Price for ${pair}: $${finalPrice}`);
+                        sypher.log(`Final Price for ${pair}: $${finalPrice}`);
         
                         this._pairPrice = { value: finalPrice.toString(), timestamp: Date.now() };
                         return finalPrice.toString();
@@ -566,7 +567,7 @@ export const CryptoModule: ICryptoModule = {
             const symbol = await contract.symbol();
             const totalSupply = await contract.totalSupply();
 
-            console.log("Raw Details:", { balance, decimals, name, symbol, totalSupply });
+            sypher.log("Raw Details:", { balance, decimals, name, symbol, totalSupply });
             return { balance, decimals, name, symbol, totalSupply };
         } catch (error: unknown) {
             throw new Error(`CryptoModule.getTokenDetails: ${error instanceof Error ? error.message : JSON.stringify(error)}`);
@@ -615,12 +616,12 @@ export const CryptoModule: ICryptoModule = {
             const decimals0 = await token0Contract.decimals();
             const decimals1 = await token1Contract.decimals();
 
-            console.log("Reserve 0:", reserve0);
-            console.log("Reserve 1:", reserve1);
-            console.log("Token 0:", token0);
-            console.log("Token 1:", token1);
-            console.log("Decimals 0:", decimals0);
-            console.log("Decimals 1:", decimals1);
+            sypher.log("Reserve 0:", reserve0);
+            sypher.log("Reserve 1:", reserve1);
+            sypher.log("Token 0:", token0);
+            sypher.log("Token 1:", token1);
+            sypher.log("Decimals 0:", decimals0);
+            sypher.log("Decimals 1:", decimals1);
 
             if (!decimals0 || !decimals1 || !reserve0 || !reserve1 || !token0 || !token1) { return null; }
 
@@ -643,7 +644,7 @@ export const CryptoModule: ICryptoModule = {
             }
 
             const tokenPriceUSD = priceRatio * parseFloat(chainlinkResult);
-            console.log(`V2 Price for token in pool ${poolAddress}: $${tokenPriceUSD}`);
+            sypher.log(`V2 Price for token in pool ${poolAddress}: $${tokenPriceUSD}`);
 
             const v2Detail: TV2Detail = { token0, token1, decimals0, decimals1, reserve0: reserve0BN, reserve1: reserve1BN };
 
@@ -713,7 +714,7 @@ export const CryptoModule: ICryptoModule = {
 
             // 5: Convert token price from WETH to USD
             const tokenPriceUSD = tokenRatio * parseFloat(chainlinkResult);
-            console.log(`V3 Price for token in pool ${sypher.truncate(poolAddress)}: $${tokenPriceUSD}`);
+            sypher.log(`V3 Price for token in pool ${sypher.truncate(poolAddress)}: $${tokenPriceUSD}`);
 
             return { price: tokenPriceUSD, details: v3Detail };
         } catch (error: unknown) {
@@ -748,23 +749,23 @@ export const CryptoModule: ICryptoModule = {
             const slot0 = await pool.slot0();
 
             const sqrtPriceX96: ethers.BigNumber = slot0.sqrtPriceX96;
-            console.log("Sqrt Price X96:", sqrtPriceX96);
+            sypher.log("Sqrt Price X96:", sqrtPriceX96);
 
             const token0: string = await pool.token0();
             const token1: string = await pool.token1();
-            console.log("Token 0:", token0);
-            console.log("Token 1:", token1);
+            sypher.log("Token 0:", token0);
+            sypher.log("Token 1:", token1);
 
             const token0Contract = new ethers.Contract(token0, ERC20_ABI, signer);
             const token1Contract = new ethers.Contract(token1, ERC20_ABI, signer);
 
             const decimals0: number = await token0Contract.decimals();
             const decimals1: number = await token1Contract.decimals();
-            console.log("Decimals 0:", decimals0);
-            console.log("Decimals 1:", decimals1);
+            sypher.log("Decimals 0:", decimals0);
+            sypher.log("Decimals 1:", decimals1);
 
             const liquidity: ethers.BigNumber = await pool.liquidity();
-            console.log("Liquidity:", liquidity);
+            sypher.log("Liquidity:", liquidity);
 
             const poolData: TV3Detail = { sqrtPriceX96, token0, token1, decimals0, decimals1, liquidity };
 
@@ -781,7 +782,7 @@ export const CryptoModule: ICryptoModule = {
 
         try {
             const value = parseFloat(balance.toString()) * parseFloat(price.toString());
-            console.log(`User Value: ${value}`);
+            sypher.log(`User Value: ${value}`);
             return value;
         } catch (error: unknown) {
             throw new Error(`CryptoModule.getUserValue: ${error instanceof Error ? error.message : JSON.stringify(error)}`);
@@ -826,11 +827,10 @@ export const CryptoModule: ICryptoModule = {
         }
         this._details = cleanedDetails;
 
-        console.log("Details:", cleanedDetails);
+        sypher.log("Cleaned Details:", cleanedDetails);
         return cleanedDetails;
     },
     getCleaned: function () {
-        console.log(this._details);
         return this._details ?? null;
     },
     initProviderSearch: function () {
@@ -839,7 +839,7 @@ export const CryptoModule: ICryptoModule = {
 
             DISCOVERED_PROVIDERS.push(customEvent.detail);
 
-            // TODO: Create isLogging check - console.log("[EIP-6963]:", (customEvent.detail));
+            sypher.log("[EIP-6963] Provider Announced:", (customEvent.detail.info.name));
         });
         window.dispatchEvent(new Event("eip6963:requestProvider"));
     },
@@ -849,7 +849,7 @@ export const CryptoModule: ICryptoModule = {
                 const provider = new ethers.providers.JsonRpcProvider(rpc);
                 await provider.getBlockNumber(); // Quick test to see if the provider is working
 
-                console.log(`[Public RPC]: ${rpc}`);
+                sypher.log(`[Public RPC]: ${rpc}`);
 
                 if (!this._publicProviders) { this._publicProviders = []; }
                 this._publicProviders.push(provider);
@@ -866,11 +866,11 @@ export const CryptoModule: ICryptoModule = {
             return workingProviders;
         } else {
             if (this._EIP6963) {
-                console.log("[EIP6963]: ", this._EIP6963.provider);
+                sypher.log("[EIP6963] Stored Provider: ", this._EIP6963.provider);
                 return this._EIP6963.provider;
             }
             if (typeof window === "undefined" || !window.ethereum) { throw new Error("CryptoModule.getProvider: No Ethereum provider found."); }
-            console.log("[WINDOW]:", window.ethereum);
+            sypher.log("[WINDOW]:", window.ethereum);
             return window.ethereum as EIP1193Provider;
         }
     },
@@ -879,7 +879,7 @@ export const CryptoModule: ICryptoModule = {
     },
     flush: function () {
         if (this._connected === null || this._connected === undefined) {
-            console.log("Nothing to flush...");
+            sypher.log("Nothing to flush...");
             return;
         }
 

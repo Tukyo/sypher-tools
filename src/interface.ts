@@ -95,7 +95,7 @@ export const InterfaceModule: IInterfaceModule = {
                 : onClick;
 
             if (modal) {
-                console.log("Modal Enabled...");
+                sypher.log("Modal Enabled...");
                 button.onclick = () => this.createModal({ append: document.body, type: "connect", theme: appliedTheme, initCrypto });
                 sypher.initProviderSearch();
             } else { button.onclick = finalOnClick; }
@@ -112,6 +112,9 @@ export const InterfaceModule: IInterfaceModule = {
 
             modalItem.addEventListener('click', onClick);
 
+            const modalIconContainer = document.createElement('div');
+            modalIconContainer.classList.add('connect-mic');
+
             const modalItemIcon = document.createElement('img');
             modalItemIcon.classList.add('connect-mim');
             modalItemIcon.src = icon;
@@ -123,7 +126,8 @@ export const InterfaceModule: IInterfaceModule = {
             this.applyStyle([modalItem, modalItemIcon, modalItemName], themeParams);
 
             append.appendChild(modalItem);
-            modalItem.appendChild(modalItemIcon);
+            modalItem.appendChild(modalIconContainer);
+            modalIconContainer.appendChild(modalItemIcon);
             modalItem.appendChild(modalItemName);
             return modalItem;
         } else { return null; } //TODO: Throw error
@@ -167,7 +171,7 @@ export const InterfaceModule: IInterfaceModule = {
             modalObj.head.appendChild(modalObj.toggle);
             modalObj.container.appendChild(modalObj.body);
 
-            // TODO: Create isLogging check - console.log(PLACEHOLDER_PROVIDERS);
+            // sypher.log(PLACEHOLDER_PROVIDERS); // TODO: Find a better way to have default initial providers
 
             const mergedProviders: TEIP6963[] = [
                 ...PLACEHOLDER_PROVIDERS.map((placeholder) => {
@@ -201,7 +205,7 @@ export const InterfaceModule: IInterfaceModule = {
                 ),
             ];
 
-            // TODO: Create isLogging check - console.log(mergedProviders);
+            sypher.log("[EIP-6963] Providers:", mergedProviders);
 
             const account = sypher.getConnected();
 
@@ -247,7 +251,7 @@ export const InterfaceModule: IInterfaceModule = {
                     user: { ens = undefined, ethBalance = 0, tokenBalance: userBalance = 0, value: userValue = "" } = {},
                     token: { icon = "", name: tokenName = "", price: tokenPrice = 0, decimals: tokenDecimals = 0 } = {}
                 } = tokenDetails || {};
-            
+
                 const params: TPAccountView = {
                     modalObj,
                     ens,
@@ -269,6 +273,36 @@ export const InterfaceModule: IInterfaceModule = {
                 const accountView: HTMLElement | null = this.createElement(accountViewConfig);
                 if (!accountView) { return null; }
             }
+
+            const branding = document.createElement('div');
+            branding.classList.add('sypher-connect-brand');
+
+            const brandingText = document.createElement('p');
+            brandingText.classList.add('sypher-connect-brand-text');
+            brandingText.innerHTML = `Powered by`;
+
+            const brandingLogo = document.createElement('div');
+            brandingLogo.classList.add('sypher-connect-brand-logo');
+            brandingLogo.innerHTML = `
+                    <svg id="sypher-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 105.87 120.22">
+                        <g id="Layer_2" data-name="Layer 2">
+                            <g id="svg1">
+                                <g id="layer1">
+                                    <g id="g28">
+                                        <path id="path18-6-3" class="cls-1"
+                                            d="M15.16,0h7V16.56H42.35V0h7V16.56h52.22l2.3,2.54q-5,20.15-15.54,34.48a83.94,83.94,0,0,1-18,17.81h30l4.19,3.72A117.92,117.92,0,0,1,86.24,95.7l-5.07-4.62a100.71,100.71,0,0,0,13-13.1H80.54l-.07,7.41q0,12.7-4.19,20.5a43,43,0,0,1-12.32,14l-5.2-5.23a33,33,0,0,0,11.59-12q3.77-7,3.76-17.24L74,78H55.62V71.39A77.14,77.14,0,0,0,81.19,51.5a70.26,70.26,0,0,0,14.18-28H80.46C80,25.78,77.65,35.39,66.37,49.46A193.42,193.42,0,0,1,47.31,68.51v41.68h-7V74.26Q26,85,15.17,89.2l-3.93-6.43Q36.8,73.55,61,44.84s11.5-14.36,11.39-21.32H64.51v0H49.35v12.7a28.57,28.57,0,0,1-5.9,17A36,36,0,0,1,26.89,65.61l-4.43-6.88Q31.84,56.35,37.1,50a21.06,21.06,0,0,0,5.25-13.57V23.56H22.16V40.27h-7V23.56H0v-7H15.16ZM76.61,113.11l29,.12.27,7-29-.12Z" />
+                                    </g>
+                                </g>
+                            </g>
+                        </g>
+                    </svg>
+            `;
+
+
+            branding.appendChild(brandingText);
+            branding.appendChild(brandingLogo);
+            modalObj.parent.appendChild(branding);
+
             return modalObj;
         } else { return null; } //TODO: Throw error
     },
@@ -413,7 +447,7 @@ export const InterfaceModule: IInterfaceModule = {
             return;
         }
 
-        console.log("Parallax enabled on ", parallaxElements.length, " elements.");
+        sypher.log("Parallax enabled on ", parallaxElements.length, " elements.");
 
         function applyParallax() {
             parallaxElements.forEach(element => {
@@ -436,7 +470,7 @@ export const InterfaceModule: IInterfaceModule = {
             return;
         }
 
-        console.log("Fade enabled on ", elements.length, " elements.");
+        sypher.log("Fade enabled on ", elements.length, " elements.");
 
         elements.forEach(el => {
             el.style.opacity = "0";

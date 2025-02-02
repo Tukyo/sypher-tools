@@ -35,7 +35,6 @@ export type TPrefs = {
     dev: {
         logs: {
             enabled: boolean;
-            pretty: boolean;
             modal: boolean;
         }
     }

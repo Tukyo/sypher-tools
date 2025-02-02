@@ -23,18 +23,15 @@ document.addEventListener('DOMContentLoaded', function () {
         },
         crypto: crypto,
         dev: {
-            logs: true,
-            pretty: true,
-            modal: false
+            logs: {
+                enabled: true,
+                modal: false
+            }
         }
     });
 });
 
 window.addEventListener('sypher:connect', function (e) {
-    console.log("-------------------->", e.detail);
-
     const chain = sypher.getChain();
-    console.log("Chain: ", chain);
     const logo = chain.icon[0].url;
-    console.log("Logo: ", logo);
 });

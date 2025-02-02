@@ -35,10 +35,11 @@
     display: flex;
     justify-content: center;
     align-items: center;
+    flex-direction: column;
     gap: 10px;
     height: 100vh;
     width: 100vw;
-    background-color: #00000050;
+    background-color: var(--sypher-shadow-medium);
     backdrop-filter: blur(10px);
     z-index: 12;
 }
@@ -100,10 +101,13 @@
     min-height: 400px;
     background: var(--sypher-color-quaternary);
     border-radius: 0 0 calc(var(--sypher-border-radius) * 4) calc(var(--sypher-border-radius) * 4);
+    clip-path: inset(0px 0px 0px 0px round 0 0 calc(var(--sypher-border-radius) * 4) calc(var(--sypher-border-radius) * 4));
 }
+
 #connect-mb .connect-mi:last-child {
     margin-bottom: 10px;
 }
+
 #connect-mb .loader {
     margin-top: 35%;
     width: 3rem;
@@ -111,6 +115,7 @@
 }
 
 .connect-mi {
+    position: relative;
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -119,30 +124,54 @@
     margin-top: 10px;
     width: 90%;
     min-height: 75px;
-    background: var(--sypher-color-secondary);
-    border-radius: calc(var(--sypher-border-radius) * 3);
+    background: linear-gradient(145deg, var(--sypher-color-secondary), var(--sypher-color-quaternary));
+    background-size: 200% 200%;
+    background-position: 0% 0%;
+    border-radius: calc(var(--sypher-border-radius) * 6);
+    box-shadow: 6px 6px 12px var(--sypher-shadow-light), -6px -6px 12px var(--sypher-dark-overlay);
+    border: 1px solid #1f1d1d99;
+    transition: background-position 0.5s ease-in-out, box-shadow 0.3s ease-in-out, transform 0.2s ease-in-out;
 }
 
 .connect-mi:hover {
-    background: var(--sypher-color-quinary);
+    box-shadow: 4px 4px 8px var(--sypher-shadow-soft), -4px -4px 8px var(--sypher-dark-shadow);
+    background-position: 100% 100%;
+    transform: translateY(2px);
     cursor: pointer;
 }
 
-.connect-mim {
+.connect-mic {
     display: flex;
     justify-content: center;
     align-items: center;
+    margin: 15px;
     width: 50px;
     height: 50px;
     border-radius: 50px;
     pointer-events: none;
     user-select: none;
+    clip-path: border-box;
+}
+
+#metamask .connect-mic,
+#trust-wallet .connect-mic {
+    clip-path: none;
+}
+
+.connect-mim {
+    width: 100%;
+    height: 100%;
 }
 
 .connect-min {
+    position: absolute;
+    left: 55%;
+    transform: translateX(-50%);
+    white-space: nowrap;
     font-weight: bold;
     font-size: 1.25rem;
-    color: var(--sypher-color-primary);
+    text-shadow: 5px 3px 20px var(--sypher-shadow-strong);
+    color: var(--sypher-color-accent);
     margin: 0px auto;
     pointer-events: none;
     user-select: none;
@@ -175,6 +204,27 @@
 
 .height-a {
     height: auto !important;
+}
+
+.sypher-connect-brand {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 450px;
+    height: 75px;
+    gap: 10px;
+}
+
+.sypher-connect-brand-text {
+    color: var(--sypher-color-quaternary);
+    font-weight: 600;
+    font-size: 1.05rem;
+}
+
+.sypher-connect-brand-logo {
+    width: 25px;
+    height: 25px;
+    filter: invert(0.35);
 }
 
 @keyframes showConnectModal {
