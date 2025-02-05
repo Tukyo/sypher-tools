@@ -87,6 +87,7 @@ export const CryptoModule: ICryptoModule = {
 
             const detailsObj: TCleanedDetails = cleanedDetails;
             window.dispatchEvent(new CustomEvent("sypher:initCrypto", { detail: detailsObj }));
+            sypher.log("%c🔵 Init Success! 🔵", "color: #0972C6;");
 
             const text = ens ? sypher.truncate(ens) : sypher.truncate(address);
             if (connectButton && text) { sypher.toggleLoader({ element: connectButton, isEnabled: false, newText: text }) };
@@ -96,8 +97,6 @@ export const CryptoModule: ICryptoModule = {
             throw new Error(`CryptoModule.initCrypto: ${error instanceof Error ? error.message : JSON.stringify(error)}`);
         } finally {
             this._isLoading = false;
-            
-            sypher.log("%c🔵 Init Success! 🔵", "color: #0972C6;");
 
             let text: string;
             if (this._ens) { text = sypher.truncate(this._ens) ?? sypher.getUI().connectText;
@@ -124,6 +123,7 @@ export const CryptoModule: ICryptoModule = {
             const connectBody = document.getElementById("connect-mb");
             const connectModalC = document.getElementById("connect-mc");
             const connectModal = document.getElementById("connect-modal");
+            
             if (connectButtons.length > 0) {
                 connectButtons.forEach((button) => { (button as HTMLButtonElement).style.display = "none"; });
             }
@@ -184,6 +184,8 @@ export const CryptoModule: ICryptoModule = {
                 if ((error as any).code === 4001) {
                     sypher.log("%c❌ User Denied Wallet Access ❌", "color: #ff0000; font-weight: bold;");
                     window.dispatchEvent(new CustomEvent("sypher:connectFail", { detail: "User denied wallet access" }));
+
+                    this.disconnect();
 
                     if (connectBody) {
                         const params: TLoaderParams = {
@@ -874,6 +876,10 @@ export const CryptoModule: ICryptoModule = {
             return window.ethereum as EIP1193Provider;
         }
     },
+    getProviderDetail: function () {
+        if (this._EIP6963) { return this._EIP6963; }
+        else { throw new Error("CryptoModule.getProviderDetail: No provider details found."); }
+    },
     getConnected(): string | null {
         return this._connected ?? null;
     },
@@ -899,5 +905,8 @@ export const CryptoModule: ICryptoModule = {
 
         const txt = sypher.getUI().connectText;
         if (button) { button.innerHTML = txt; }
+
+        const currentProv = document.getElementById("current-provider-container");
+        if (currentProv) { currentProv.style.display = "none"; }
     }
 };

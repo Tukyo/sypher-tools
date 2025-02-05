@@ -1,5 +1,5 @@
 import { HelperModule, LogModule, TruncationModule, WindowModule } from "./utils";
-import { InterfaceModule } from "./interface";
+import { InterfaceModule, ViewsModule } from "./interface";
 import { CryptoModule } from "./crypto";
 import { PrefsModule } from "./prefs";
 
@@ -13,6 +13,7 @@ export type SypherNamespace =
     & typeof HelperModule
     & typeof LogModule
     & typeof InterfaceModule
+    & typeof ViewsModule
     & typeof TruncationModule
     & typeof WindowModule;
 
@@ -23,6 +24,7 @@ export type SypherNamespace =
         ...HelperModule,
         ...LogModule,
         ...InterfaceModule,
+        ...ViewsModule,
         ...TruncationModule,
         ...WindowModule,
     };

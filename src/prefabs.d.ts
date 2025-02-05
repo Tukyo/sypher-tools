@@ -1,17 +1,42 @@
 import { SypherNamespace } from ".";
 
 export type TPAccountView = {
-    modalObj: { body: HTMLElement; title: HTMLElement },
-    ens: string | undefined,
-    account: string,
     sypher: SypherNamespace,
-    ethBalance: number,
-    tokenDetailClass: string,
-    icon: string,
-    showTokenDetails: boolean,
-    tokenPrice: number,
-    userBalance: number,
-    tokenName: string,
-    userValue: string,
-    mergedProviders: { info: { icon: string } }[]
+    modalObj: { body: HTMLElement; title: HTMLElement },
+    mergedProviders: { info: { icon: string } }[],
+    user: {
+        ens: string | undefined,
+        account: string,
+        ethBalance: number,
+    },
+    token: {
+        tokenDetailClass: string,
+        showTokenDetails: boolean,
+        address: string,
+        icon: string,
+        tokenPrice: number,
+        userBalance: number,
+        tokenSymbol: string,
+        userValue: string,
+        tokenDecimals: number,
+    },
+    chain: {
+        name: string,
+        icon: [{
+            url: string
+        }],
+        nativeCurrency: {
+            symbol: string,
+            decimals: number
+        },
+        explorers: [{
+            name: string,
+            url: string,
+            icon: string
+        }]
+    }
+}
+
+export type TPBranding = {
+    modalObj: { parent: HTMLElement },
 }

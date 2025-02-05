@@ -110,6 +110,10 @@ export interface IInterfaceModule {
         connectText: string
     };
 }
+// export interface IViewsModule {
+//     connectView(): void;
+//     accountView(): void;
+// }
 // #endregion INTERFACE
 ////
 // #region TYPES

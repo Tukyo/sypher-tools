@@ -31,7 +31,7 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 });
 
-window.addEventListener('sypher:connect', function (e) {
+window.addEventListener('sypher:initCrypto', function (e) {
     const chain = sypher.getChain();
-    const logo = chain.icon[0].url;
+    console.log("--------------------------------", chain);
 });

@@ -1,7 +1,4 @@
 /* #region Root */
-* {
-    transition: all 0.1s ease-in-out;
-}
 body {
     display: flex;
     margin: 0;

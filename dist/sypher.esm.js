@@ -206,7 +206,8 @@ const TruncationModule = {
             return `${(num / 1e6).toFixed(decimals)}M`;
         if (num >= 1e3)
             return `${(num / 1e3).toFixed(decimals)}K`;
-        const [intPart, decPart = ""] = num.toString().split(".");
+        const formatted = num.toFixed(decimals);
+        const [intPart, decPart = ""] = formatted.split(".");
         if (intPart.length >= maxLength) {
             return intPart;
         }
@@ -385,12 +386,38 @@ function PAccountView(params) {
                     {
                         type: "h2",
                         classes: ["av-h-ti"],
-                        innerHTML: params.ens ? `${sypher.truncate(params.ens)}` : `${sypher.truncate(params.account)}`
+                        innerHTML: params.user.ens ? `${sypher.truncate(params.user.ens)}` : `${sypher.truncate(params.user.account)}`,
+                        attributes: {
+                            "s-data": `${params.user.account}`
+                        }
                     },
                     {
-                        type: "h3",
+                        type: "div",
+                        classes: ["av-h-ch-c"],
+                        children: [
+                            {
+                                type: "img",
+                                classes: ["av-h-ch-i"],
+                                attributes: {
+                                    src: `https://ipfs.io/ipfs/${params.chain.icon[0].url.replace("ipfs://", "")}`
+                                }
+                            },
+                            {
+                                type: "img",
+                                classes: ["av-h-ch-ar"],
+                                attributes: {
+                                    src: 'https://raw.githubusercontent.com/leungwensen/svg-icon/8b84d725b0d2be8f5d87cac7f2c386682ce43563/dist/svg/zero/arrow-down-l.svg'
+                                }
+                            },
+                        ]
+                    },
+                    {
+                        type: "h2",
                         classes: ["av-h-ba"],
-                        innerHTML: `${sypher.truncateBalance(parseFloat(params.ethBalance.toString()))} ETH` // TODO: Update 'ETH' to native token of chain
+                        innerHTML: `${sypher.truncateBalance(parseFloat(params.user.ethBalance.toString()))} ${params.chain.nativeCurrency.symbol}`,
+                        attributes: {
+                            "s-data": `${params.user.ethBalance}`
+                        }
                     }
                 ]
             },
@@ -401,7 +428,7 @@ function PAccountView(params) {
                     {
                         type: "div",
                         id: "av-b-td",
-                        classes: [params.tokenDetailClass],
+                        classes: [params.token.tokenDetailClass],
                         children: [
                             {
                                 type: "div",
@@ -411,31 +438,46 @@ function PAccountView(params) {
                                         type: "img",
                                         classes: ["av-b-td-i"],
                                         attributes: {
-                                            src: params.icon
+                                            src: params.token.icon
                                         }
                                     },
                                     {
                                         type: "div",
                                         classes: ["av-b-td-n"],
-                                        innerHTML: params.showTokenDetails
-                                            ? `$${sypher.truncateBalance(parseFloat(params.tokenPrice.toString()))}`
+                                        innerHTML: params.token.showTokenDetails
+                                            ? `$${sypher.truncateBalance(parseFloat(params.token.tokenPrice.toString()), params.token.tokenDecimals)}`
                                             : ""
                                     }
+                                ],
+                                attributes: {
+                                    "s-data": `${params.token.address}`
+                                }
+                            },
+                            {
+                                type: "div",
+                                classes: ["av-b-td-bc"],
+                                children: [
+                                    {
+                                        type: "div",
+                                        classes: ["av-b-td-bal"],
+                                        innerHTML: params.token.showTokenDetails
+                                            ? `${sypher.truncateBalance(parseFloat(params.token.userBalance.toString()))} ${params.token.tokenSymbol}`
+                                            : "",
+                                        attributes: {
+                                            "s-data": `${params.token.userBalance}`
+                                        }
+                                    },
+                                    {
+                                        type: "div",
+                                        classes: ["av-b-td-val"],
+                                        innerHTML: params.token.showTokenDetails
+                                            ? `$${sypher.truncateBalance(parseFloat(params.token.userValue.toString()))}`
+                                            : "",
+                                        attributes: {
+                                            "s-data": `${sypher.truncateBalance(parseFloat(params.token.userValue.toString()))}`
+                                        }
+                                    }
                                 ]
-                            },
-                            {
-                                type: "div",
-                                classes: ["av-b-td-bal"],
-                                innerHTML: params.showTokenDetails
-                                    ? `${sypher.truncateBalance(parseFloat(params.userBalance.toString()))} ${params.tokenName}`
-                                    : ""
-                            },
-                            {
-                                type: "div",
-                                classes: ["av-b-td-val"],
-                                innerHTML: params.showTokenDetails
-                                    ? `$${sypher.truncateBalance(parseFloat(params.userValue.toString()))}`
-                                    : ""
                             }
                         ]
                     },
@@ -449,11 +491,53 @@ function PAccountView(params) {
                                 if (accountView) {
                                     accountView.style.display = "none";
                                 }
+                                let providerName = "";
+                                const providerDetail = sypher.getProviderDetail();
+                                if (providerDetail) {
+                                    providerName = providerDetail.info.name.replace(/\s+/g, '').toLowerCase();
+                                }
                                 const buttons = document.querySelectorAll(".connect-mi");
                                 buttons.forEach(button => {
-                                    button.style.display = "flex";
+                                    const buttonElement = button;
+                                    if (buttonElement.id.replace(/[\s-]+/g, '').toLowerCase() === providerName) {
+                                        buttonElement.style.display = "none";
+                                    }
+                                    else {
+                                        buttonElement.style.display = "flex";
+                                    }
                                 });
+                                const modalBody = document.getElementById("connect-mb");
+                                if (modalBody) {
+                                    modalBody.style.padding = "15px";
+                                }
                                 params.modalObj.title.innerHTML = "Change Wallet";
+                                if (providerDetail) {
+                                    const providerContainer = document.getElementById("current-provider-container");
+                                    if (providerContainer) {
+                                        const providerName = document.getElementById("current-provider-name");
+                                        const providerIcon = document.getElementById("current-provider-icon");
+                                        if (providerName) {
+                                            providerName.innerHTML = providerDetail.info.name;
+                                        }
+                                        if (providerIcon) {
+                                            providerIcon.setAttribute("src", providerDetail.info.icon);
+                                        }
+                                        providerContainer.style.display = "flex";
+                                        providerContainer.onclick = () => {
+                                            if (accountView) {
+                                                accountView.style.display = "flex";
+                                            }
+                                            buttons.forEach(button => {
+                                                button.style.display = "none";
+                                            });
+                                            if (modalBody) {
+                                                modalBody.style.padding = "0px";
+                                            }
+                                            params.modalObj.title.innerHTML = "Account";
+                                            providerContainer.style.display = "none";
+                                        };
+                                    }
+                                }
                             }
                         },
                         children: [
@@ -512,6 +596,44 @@ function PAccountView(params) {
         ]
     };
 }
+function PBranding(params) {
+    return {
+        append: params.modalObj.parent,
+        type: "div",
+        classes: ["sypher-connect-brand"],
+        children: [
+            {
+                type: "p",
+                classes: ["sypher-connect-brand-text"],
+                innerHTML: "Powered by"
+            },
+            {
+                type: "div",
+                classes: ["sypher-connect-brand-logo-container"],
+                events: { click: () => window.open("https://sypher.tools", "_blank") },
+                children: [
+                    {
+                        type: "div",
+                        classes: ["sypher-connect-brand-logo"],
+                        innerHTML: `
+                            <svg id="sypher-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 105.87 120.22">
+                                <g id="Layer_2" data-name="Layer 2">
+                                    <g id="svg1">
+                                        <g id="layer1">
+                                            <g id="g28">
+                                                <path id="path18-6-3" class="cls-1"
+                                                    d="M15.16,0h7V16.56H42.35V0h7V16.56h52.22l2.3,2.54q-5,20.15-15.54,34.48a83.94,83.94,0,0,1-18,17.81h30l4.19,3.72A117.92,117.92,0,0,1,86.24,95.7l-5.07-4.62a100.71,100.71,0,0,0,13-13.1H80.54l-.07,7.41q0,12.7-4.19,20.5a43,43,0,0,1-12.32,14l-5.2-5.23a33,33,0,0,0,11.59-12q3.77-7,3.76-17.24L74,78H55.62V71.39A77.14,77.14,0,0,0,81.19,51.5a70.26,70.26,0,0,0,14.18-28H80.46C80,25.78,77.65,35.39,66.37,49.46A193.42,193.42,0,0,1,47.31,68.51v41.68h-7V74.26Q26,85,15.17,89.2l-3.93-6.43Q36.8,73.55,61,44.84s11.5-14.36,11.39-21.32H64.51v0H49.35v12.7a28.57,28.57,0,0,1-5.9,17A36,36,0,0,1,26.89,65.61l-4.43-6.88Q31.84,56.35,37.1,50a21.06,21.06,0,0,0,5.25-13.57V23.56H22.16V40.27h-7V23.56H0v-7H15.16ZM76.61,113.11l29,.12.27,7-29-.12Z" />
+                                            </g>
+                                        </g>
+                                    </g>
+                                </g>
+                            </svg>`
+                    }
+                ]
+            }
+        ]
+    };
+}
 
 const InterfaceModule = {
     initTheme: function (theme = "default") {
@@ -549,6 +671,7 @@ const InterfaceModule = {
         if (!this._theme) {
             this.initTheme(theme);
         }
+        elements.forEach((element) => { element.classList.add(`sypher`); });
         const typeStylesheetId = `sypher-${type}`;
         if (!document.getElementById(typeStylesheetId)) {
             const typeLink = document.createElement('link');
@@ -692,7 +815,8 @@ const InterfaceModule = {
             modalObj.head.appendChild(modalObj.title);
             modalObj.head.appendChild(modalObj.toggle);
             modalObj.container.appendChild(modalObj.body);
-            // sypher.log(PLACEHOLDER_PROVIDERS); // TODO: Find a better way to have default initial providers
+            sypher.currentProviderView(modalObj);
+            const account = sypher.getConnected();
             const mergedProviders = [
                 ...PLACEHOLDER_PROVIDERS.map((placeholder) => {
                     const match = DISCOVERED_PROVIDERS.find((discovered) => discovered.info.name === placeholder.info.name);
@@ -716,7 +840,6 @@ const InterfaceModule = {
                 ...DISCOVERED_PROVIDERS.filter((discovered) => !PLACEHOLDER_PROVIDERS.some((placeholder) => placeholder.info.name === discovered.info.name)),
             ];
             sypher.log("[EIP-6963] Providers:", mergedProviders);
-            const account = sypher.getConnected();
             mergedProviders.forEach((providerDetail) => {
                 const { name, icon } = providerDetail.info;
                 const onClick = providerDetail.info.onboard?.bool
@@ -754,54 +877,8 @@ const InterfaceModule = {
                 }
             });
             if (account !== null && account !== undefined) {
-                modalObj.title.innerHTML = "Account";
-                const tokenDetails = sypher.getCleaned();
-                const { user: { ens = undefined, ethBalance = 0, tokenBalance: userBalance = 0, value: userValue = "" } = {}, token: { icon = "", name: tokenName = "", price: tokenPrice = 0, decimals: tokenDecimals = 0 } = {} } = tokenDetails || {};
-                const params = {
-                    modalObj,
-                    ens,
-                    account,
-                    sypher,
-                    ethBalance,
-                    tokenDetailClass: tokenDetails ? "av-b-c" : "av-b-c-hide",
-                    icon,
-                    showTokenDetails: !!tokenDetails,
-                    tokenPrice,
-                    userBalance,
-                    tokenName,
-                    userValue,
-                    mergedProviders
-                };
-                const accountViewConfig = PAccountView(params);
-                const accountView = this.createElement(accountViewConfig);
-                if (!accountView) {
-                    return null;
-                }
+                sypher.accountView(account, modalObj, mergedProviders);
             }
-            const branding = document.createElement('div');
-            branding.classList.add('sypher-connect-brand');
-            const brandingText = document.createElement('p');
-            brandingText.classList.add('sypher-connect-brand-text');
-            brandingText.innerHTML = `Powered by`;
-            const brandingLogo = document.createElement('div');
-            brandingLogo.classList.add('sypher-connect-brand-logo');
-            brandingLogo.innerHTML = `
-                    <svg id="sypher-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 105.87 120.22">
-                        <g id="Layer_2" data-name="Layer 2">
-                            <g id="svg1">
-                                <g id="layer1">
-                                    <g id="g28">
-                                        <path id="path18-6-3" class="cls-1"
-                                            d="M15.16,0h7V16.56H42.35V0h7V16.56h52.22l2.3,2.54q-5,20.15-15.54,34.48a83.94,83.94,0,0,1-18,17.81h30l4.19,3.72A117.92,117.92,0,0,1,86.24,95.7l-5.07-4.62a100.71,100.71,0,0,0,13-13.1H80.54l-.07,7.41q0,12.7-4.19,20.5a43,43,0,0,1-12.32,14l-5.2-5.23a33,33,0,0,0,11.59-12q3.77-7,3.76-17.24L74,78H55.62V71.39A77.14,77.14,0,0,0,81.19,51.5a70.26,70.26,0,0,0,14.18-28H80.46C80,25.78,77.65,35.39,66.37,49.46A193.42,193.42,0,0,1,47.31,68.51v41.68h-7V74.26Q26,85,15.17,89.2l-3.93-6.43Q36.8,73.55,61,44.84s11.5-14.36,11.39-21.32H64.51v0H49.35v12.7a28.57,28.57,0,0,1-5.9,17A36,36,0,0,1,26.89,65.61l-4.43-6.88Q31.84,56.35,37.1,50a21.06,21.06,0,0,0,5.25-13.57V23.56H22.16V40.27h-7V23.56H0v-7H15.16ZM76.61,113.11l29,.12.27,7-29-.12Z" />
-                                    </g>
-                                </g>
-                            </g>
-                        </g>
-                    </svg>
-            `;
-            branding.appendChild(brandingText);
-            branding.appendChild(brandingLogo);
-            modalObj.parent.appendChild(branding);
             return modalObj;
         }
         else {
@@ -900,6 +977,7 @@ const InterfaceModule = {
             element.id = id;
         }
         element.classList.add(`sypher-${appliedTheme}-element`);
+        element.classList.add('sypher');
         if (classes) {
             classes.forEach((className) => { element.classList.add(className); });
         }
@@ -921,6 +999,7 @@ const InterfaceModule = {
                 const childElement = this.createElement(childParams);
                 if (childElement) {
                     element.appendChild(childElement);
+                    childElement.classList.add('sypher');
                 }
             });
         }
@@ -1015,6 +1094,85 @@ const InterfaceModule = {
             theme: this._theme || '',
             connectText: this._connectText || ''
         };
+    }
+};
+const ViewsModule = {
+    brandingView: function (modalObj) {
+        const brandingConfig = PBranding({ modalObj });
+        const branding = sypher.createElement(brandingConfig);
+        if (!branding) {
+            return null;
+        }
+    },
+    connectView: function () {
+    },
+    accountView: function (account, modalObj, mergedProviders) {
+        modalObj.title.innerHTML = "Account";
+        modalObj.body.style.padding = "0px";
+        const tokenDetails = sypher.getCleaned();
+        const chainDetails = sypher.getChain();
+        const { user: { ens = undefined, ethBalance = 0, tokenBalance: userBalance = 0, value: userValue = "" } = {}, token: { address: address = "", icon: tokenIcon = "", symbol: tokenSymbol = "", price: tokenPrice = 0, decimals: tokenDecimals = 0 } = {} } = tokenDetails || {};
+        const { name: chainName = "", icon = [{ url: "" }], nativeCurrency: { symbol: nativeCurrencySymbol = "", decimals: nativeCurrencyDecimals = 0 } = {}, explorers = [{ name: "", url: "", icon: "" }] } = chainDetails || {};
+        const params = {
+            sypher,
+            modalObj,
+            mergedProviders,
+            user: {
+                ens,
+                account,
+                ethBalance
+            },
+            token: {
+                tokenDetailClass: tokenDetails ? "av-b-c" : "av-b-c-hide",
+                showTokenDetails: !!tokenDetails,
+                address,
+                icon: tokenIcon,
+                tokenPrice,
+                tokenDecimals,
+                userBalance,
+                tokenSymbol,
+                userValue
+            },
+            chain: {
+                name: chainName,
+                icon,
+                nativeCurrency: {
+                    symbol: nativeCurrencySymbol,
+                    decimals: nativeCurrencyDecimals
+                },
+                explorers
+            }
+        };
+        const accountViewConfig = PAccountView(params);
+        const accountView = sypher.createElement(accountViewConfig);
+        if (!accountView) {
+            return null;
+        }
+    },
+    currentProviderView: function (modalObj) {
+        const currentProviderContainer = document.createElement('div');
+        currentProviderContainer.id = "current-provider-container";
+        const currentProviderInfoContainer = document.createElement('div');
+        currentProviderInfoContainer.id = "current-provider-info-container";
+        const currentProviderIconContainer = document.createElement('div');
+        currentProviderIconContainer.id = "current-provider-icon-container";
+        const currentProviderIcon = document.createElement('img');
+        currentProviderIcon.id = "current-provider-icon";
+        const currentProviderName = document.createElement('span');
+        currentProviderName.id = "current-provider-name";
+        const backButton = document.createElement('div');
+        backButton.id = "sypher-back";
+        const backButtonIcon = document.createElement('img');
+        backButtonIcon.id = "sypher-back-icon";
+        backButtonIcon.src = "https://raw.githubusercontent.com/leungwensen/svg-icon/8b84d725b0d2be8f5d87cac7f2c386682ce43563/dist/svg/zero/arrow-left-l.svg";
+        modalObj.body.appendChild(currentProviderContainer);
+        currentProviderContainer.appendChild(backButton);
+        backButton.appendChild(backButtonIcon);
+        currentProviderContainer.appendChild(currentProviderInfoContainer);
+        currentProviderInfoContainer.appendChild(currentProviderName);
+        currentProviderInfoContainer.appendChild(currentProviderIconContainer);
+        currentProviderIconContainer.appendChild(currentProviderIcon);
+        currentProviderContainer.style.display = "none";
     }
 };
 
@@ -1118,6 +1276,7 @@ const CryptoModule = {
             }
             const detailsObj = cleanedDetails;
             window.dispatchEvent(new CustomEvent("sypher:initCrypto", { detail: detailsObj }));
+            sypher.log("%c🔵 Init Success! 🔵", "color: #0972C6;");
             const text = ens ? sypher.truncate(ens) : sypher.truncate(address);
             if (connectButton && text) {
                 sypher.toggleLoader({ element: connectButton, isEnabled: false, newText: text });
@@ -1130,7 +1289,6 @@ const CryptoModule = {
         }
         finally {
             this._isLoading = false;
-            sypher.log("%c🔵 Init Success! 🔵", "color: #0972C6;");
             let text;
             if (this._ens) {
                 text = sypher.truncate(this._ens) ?? sypher.getUI().connectText;
@@ -1220,6 +1378,7 @@ const CryptoModule = {
                 if (error.code === 4001) {
                     sypher.log("%c❌ User Denied Wallet Access ❌", "color: #ff0000; font-weight: bold;");
                     window.dispatchEvent(new CustomEvent("sypher:connectFail", { detail: "User denied wallet access" }));
+                    this.disconnect();
                     if (connectBody) {
                         const params = {
                             element: connectBody,
@@ -2009,6 +2168,14 @@ const CryptoModule = {
             return window.ethereum;
         }
     },
+    getProviderDetail: function () {
+        if (this._EIP6963) {
+            return this._EIP6963;
+        }
+        else {
+            throw new Error("CryptoModule.getProviderDetail: No provider details found.");
+        }
+    },
     getConnected() {
         return this._connected ?? null;
     },
@@ -2032,6 +2199,10 @@ const CryptoModule = {
         const txt = sypher.getUI().connectText;
         if (button) {
             button.innerHTML = txt;
+        }
+        const currentProv = document.getElementById("current-provider-container");
+        if (currentProv) {
+            currentProv.style.display = "none";
         }
     }
 };
@@ -2113,6 +2284,7 @@ const repo = "https://github.com/Tukyo/sypher-tools";
         ...HelperModule,
         ...LogModule,
         ...InterfaceModule,
+        ...ViewsModule,
         ...TruncationModule,
         ...WindowModule,
     };

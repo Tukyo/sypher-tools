@@ -207,11 +207,14 @@ export const TruncationModule: ITruncationModule = {
         if (num >= 1e6) return `${(num / 1e6).toFixed(decimals)}M`;
         if (num >= 1e3) return `${(num / 1e3).toFixed(decimals)}K`;
 
-        const [intPart, decPart = ""] = num.toString().split(".");
+        const formatted = num.toFixed(decimals);
+
+        const [intPart, decPart = ""] = formatted.split(".");
         if (intPart.length >= maxLength) { return intPart; }
 
         const remainingLength = maxLength - intPart.length - 1;
         const truncatedDecimal = decPart.slice(0, Math.max(remainingLength, 0));
+
         return truncatedDecimal ? `${intPart}.${truncatedDecimal}` : intPart;
     }
 }

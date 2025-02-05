@@ -214,6 +214,11 @@ export interface ICryptoModule {
     getProvider(isPublic: boolean = false): EIP1193Provider | any;
 
     /**
+     * Gets the EIP6963 provider details.
+     */
+    getProviderDetail(): TEIP6963 | null;
+
+    /**
      * Get the connected wallet address.
      * @returns {string | null} The connected wallet address or `null` if no wallet is connected
      */

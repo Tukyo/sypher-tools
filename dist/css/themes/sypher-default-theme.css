@@ -9,7 +9,9 @@
     --sypher-color-quinary: #444444;
     --sypher-color-emphasis: #40eedf;
 
-    --sypher-shadow-strong: #00000085;  /* 52% opacity */
+    --sypher-inner-shadow: inset 0px 0px 14px var(--sypher-shadow-strong);
+
+    --sypher-shadow-strong: #00000080;  /* 50% opacity */
     --sypher-shadow-medium: #00000050;  /* 31% opacity */
     --sypher-shadow-light: #00000025;   /* 14% opacity */
     --sypher-shadow-soft: #0000001a;    /* 10% opacity */
@@ -28,8 +30,14 @@
     --log-color-unknown: #ffffff;
     --log-color-error: #4b1515;
     --log-color-timestamp: #808080;
+
+    --sypher-transition-style: all 0.1s ease-in-out;
 }
 
+.sypher {
+    font-family: inherit;
+    transition: var(--sypher-transition-style);
+}
 
 /* #region Loader */
 .loader {
