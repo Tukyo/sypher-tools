@@ -167,7 +167,7 @@ const LogModule = {
         toggleLogContainer();
     },
     log: function (...args) {
-        if (!sypher.prefs().dev.logs.enabled)
+        if (!sypher.prefs().dev || !sypher.prefs().dev.logs || !sypher.prefs().dev.logs.enabled)
             return;
         const userTimezone = sypher.cache()?.user?.environment?.timezone || 'UTC';
         const timestamp = new Date().toLocaleString('en-US', { timeZone: userTimezone });
@@ -804,11 +804,9 @@ const InterfaceModule = {
         }
         else if (modalObj.type === "connect") {
             this.applyStyle([modalObj.parent, modalObj.container, modalObj.toggle, modalObj.head, modalObj.title, modalObj.body], mergedParams);
-            modalObj.parent.addEventListener('click', (e) => {
-                if (e.target === modalObj.parent) {
-                    modalObj.parent.remove();
-                }
-            });
+            modalObj.parent.addEventListener('click', (e) => { if (e.target === modalObj.parent) {
+                modalObj.parent.remove();
+            } });
             append.appendChild(modalObj.parent);
             modalObj.parent.appendChild(modalObj.container);
             modalObj.container.appendChild(modalObj.head);
@@ -817,73 +815,20 @@ const InterfaceModule = {
             modalObj.container.appendChild(modalObj.body);
             sypher.currentProviderView(modalObj);
             const account = sypher.getConnected();
-            const mergedProviders = [
-                ...PLACEHOLDER_PROVIDERS.map((placeholder) => {
-                    const match = DISCOVERED_PROVIDERS.find((discovered) => discovered.info.name === placeholder.info.name);
-                    const merged = match || placeholder;
-                    if (match) {
-                        if (!merged.info.onboard) {
-                            merged.info.onboard = {
-                                bool: false,
-                                link: "",
-                                deeplink: "",
-                                fallback: {
-                                    ios: "",
-                                    android: "",
-                                },
-                            };
-                        }
-                        merged.info.onboard.bool = false;
-                    }
-                    return merged;
-                }),
-                ...DISCOVERED_PROVIDERS.filter((discovered) => !PLACEHOLDER_PROVIDERS.some((placeholder) => placeholder.info.name === discovered.info.name)),
-            ];
-            sypher.log("[EIP-6963] Providers:", mergedProviders);
-            mergedProviders.forEach((providerDetail) => {
-                const { name, icon } = providerDetail.info;
-                const onClick = providerDetail.info.onboard?.bool
-                    ? () => { sypher.onboard(providerDetail); }
-                    : () => {
-                        if (initCrypto.chain !== "none") {
-                            sypher.initCrypto({
-                                chain: initCrypto.chain,
-                                contractAddress: initCrypto.contractAddress,
-                                poolAddress: initCrypto.poolAddress,
-                                pairAddress: initCrypto.pairAddress,
-                                version: initCrypto.version,
-                                detail: providerDetail,
-                                icon: initCrypto.icon
-                            });
-                        }
-                        else {
-                            sypher.connect(initCrypto.chain, providerDetail);
-                        }
-                    };
-                const button = this.createButton({
-                    append: modalObj.body,
-                    type: "provider",
-                    text: name,
-                    icon: icon,
-                    modal: false,
-                    theme: appliedTheme,
-                    onClick: onClick,
-                    initCrypto: initCrypto
-                });
-                if (button !== null) {
-                    if (account !== null && account !== undefined) {
-                        button.style.display = "none";
-                    }
-                }
-            });
+            const mergedProviders = sypher.providerSelectView(account, modalObj, initCrypto, appliedTheme);
             if (account !== null && account !== undefined) {
                 sypher.accountView(account, modalObj, mergedProviders);
             }
+            sypher.brandingView(modalObj);
+            return modalObj;
+        }
+        else if (modalObj.type === "mint") {
+            // TODO: Create mint modal
             return modalObj;
         }
         else {
-            return null;
-        } //TODO: Throw error
+            throw new Error(`InterfaceModule.createModal: Type '${type}' not found.`);
+        }
     },
     initModal: function (type, theme = "custom") {
         if (!type || typeof type !== "string") {
@@ -946,8 +891,16 @@ const InterfaceModule = {
             };
             return modalObj;
         }
+        else if (type === "mint") {
+            const modalObj = {
+                type: type,
+                parent: document.body,
+                container: document.body
+            };
+            return modalObj;
+        }
         else {
-            return null;
+            throw new Error(`InterfaceModule.initModal: Type '${type}' not found.`);
         }
     },
     createElement: function (params) {
@@ -1104,8 +1057,6 @@ const ViewsModule = {
             return null;
         }
     },
-    connectView: function () {
-    },
     accountView: function (account, modalObj, mergedProviders) {
         modalObj.title.innerHTML = "Account";
         modalObj.body.style.padding = "0px";
@@ -1173,6 +1124,68 @@ const ViewsModule = {
         currentProviderInfoContainer.appendChild(currentProviderIconContainer);
         currentProviderIconContainer.appendChild(currentProviderIcon);
         currentProviderContainer.style.display = "none";
+    },
+    providerSelectView: function (account, modalObj, initCrypto, appliedTheme) {
+        const mergedProviders = [
+            ...PLACEHOLDER_PROVIDERS.map((placeholder) => {
+                const match = DISCOVERED_PROVIDERS.find((discovered) => discovered.info.name === placeholder.info.name);
+                const merged = match || placeholder;
+                if (match) {
+                    if (!merged.info.onboard) {
+                        merged.info.onboard = {
+                            bool: false,
+                            link: "",
+                            deeplink: "",
+                            fallback: {
+                                ios: "",
+                                android: "",
+                            },
+                        };
+                    }
+                    merged.info.onboard.bool = false;
+                }
+                return merged;
+            }),
+            ...DISCOVERED_PROVIDERS.filter((discovered) => !PLACEHOLDER_PROVIDERS.some((placeholder) => placeholder.info.name === discovered.info.name)),
+        ];
+        sypher.log("[EIP-6963] Providers:", mergedProviders);
+        mergedProviders.forEach((providerDetail) => {
+            const { name, icon } = providerDetail.info;
+            const onClick = providerDetail.info.onboard?.bool
+                ? () => { sypher.onboard(providerDetail); }
+                : () => {
+                    if (initCrypto.chain !== "none") {
+                        sypher.initCrypto({
+                            chain: initCrypto.chain,
+                            contractAddress: initCrypto.contractAddress,
+                            poolAddress: initCrypto.poolAddress,
+                            pairAddress: initCrypto.pairAddress,
+                            version: initCrypto.version,
+                            detail: providerDetail,
+                            icon: initCrypto.icon
+                        });
+                    }
+                    else {
+                        sypher.connect(initCrypto.chain, providerDetail);
+                    }
+                };
+            const button = sypher.createButton({
+                append: modalObj.body,
+                type: "provider",
+                text: name,
+                icon: icon,
+                modal: false,
+                theme: appliedTheme,
+                onClick: onClick,
+                initCrypto: initCrypto
+            });
+            if (button !== null) {
+                if (account !== null && account !== undefined) {
+                    button.style.display = "none";
+                }
+            }
+        });
+        return mergedProviders;
     }
 };
 
@@ -2228,7 +2241,7 @@ const PrefsModule = {
     },
     init: function (params) {
         this._prefs = params;
-        if (params.dev.logs.modal) {
+        if (params.dev?.logs?.modal) {
             if (!params.dev.logs.enabled) {
                 console.warn('Cannot create a log modal when logs are disabled.');
             }

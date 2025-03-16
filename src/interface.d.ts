@@ -44,7 +44,7 @@ export interface IInterfaceModule {
      */
     createModal(
         params: { append: HTMLElement, type: string, theme: string, initCrypto?: TInitParams }
-    ): Promise<TLogModal | TConnectModal | null>;
+    ): Promise<TLogModal | TConnectModal | TMintModal | null>;
 
     /**
      * @description Initializes a modal based on the provided type.
@@ -52,7 +52,7 @@ export interface IInterfaceModule {
      * @param theme - The theme to apply to the modal
      * @returns The initialized modal object, or null if the type is invalid.
      */
-    initModal(type: string, theme: string): TLogModal | TConnectModal | null;
+    initModal(type: string, theme: string): TLogModal | TConnectModal | TMintModal | null;
 
     /**
      * @description Creates a view on the page with the given params
@@ -110,13 +110,33 @@ export interface IInterfaceModule {
         connectText: string
     };
 }
-// export interface IViewsModule {
-//     connectView(): void;
-//     accountView(): void;
-// }
+export interface IViewsModule {
+    brandingView(
+        modalObj: TConnectModal
+    ): void;
+    accountView(
+        account: string,
+        modalObj: TConnectModal,
+        mergedProviders: TEIP6963[]
+    ): void;
+    currentProviderView(
+        modalObj: TConnectModal,
+    ): void;
+    providerSelectView(
+        account: string | null,
+        modalObj: TConnectModal,
+        initCrypto: TInitParams,
+        appliedTheme: string
+    ): TEIP6963[];
+}
 // #endregion INTERFACE
 ////
 // #region TYPES
+export type TMintModal = {
+    type: "mint";
+    parent: HTMLElement;
+    container: HTMLElement;
+}
 export type TLogModal = {
     type: "log";
     parent: HTMLElement;

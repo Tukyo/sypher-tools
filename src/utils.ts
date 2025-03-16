@@ -173,7 +173,7 @@ export const LogModule: ILogModule = { // TODO: Add error throwing
         toggleLogContainer();
     },
     log: function (...args: any[]) {
-        if (!sypher.prefs().dev.logs.enabled) return;
+        if (!sypher.prefs().dev || !sypher.prefs().dev.logs || !sypher.prefs().dev.logs.enabled) return;
     
         const userTimezone = sypher.cache()?.user?.environment?.timezone || 'UTC';
         const timestamp = new Date().toLocaleString('en-US', { timeZone: userTimezone });

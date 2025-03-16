@@ -28,7 +28,7 @@ export const PrefsModule: IPrefsModule = {
     init: function (params: TPrefs): void {
         this._prefs = params;
         
-        if (params.dev.logs.modal) {
+        if (params.dev?.logs?.modal) {
             if (!params.dev.logs.enabled) { console.warn('Cannot create a log modal when logs are disabled.'); }
             else {
                 sypher.createModal({
